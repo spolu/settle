@@ -23,7 +23,8 @@ The FactService returns a JSON body representing the newly created fact:
 {
   "id": "fact_1a1ed89jh10dj0123",
   "type": "email",
-  "value": "polu.stanislas@gmail.com"
+  "value": "polu.stanislas@gmail.com",
+  "operation_xdr": "..."
 }
 ```
 
