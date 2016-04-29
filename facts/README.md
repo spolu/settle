@@ -1,11 +1,12 @@
 # Facts
 
 Facts are typed values related to an entity along with a list of certifying
-entities signatures asserting that the fact is true. Facts are created on
-public FactServices using the following API. `type` and `value` are strings
-whose validation is left to the discretion of the service. Once created, a fact
-type and value is immutable. Facts can only be created by the entity they
-relate to.
+entities signatures asserting that the fact is true. Facts are created and
+retrievable on a public Fact API using the endpoints described in this
+document. `type` and `value` are strings whose validation is left to the
+discretion of the service running the Fact API. Once created, a fact (type,
+value, entity) is immutable. Facts can only be created by the entity they
+relate to, also called the fact owner.
 
 ```
 curl -XPOST https://settl.net/facts \
@@ -15,7 +16,7 @@ curl -XPOST https://settl.net/facts \
   -d signature=$sig(action=assert&entity=$pk0&type=$type&value=$value)
 ```
 
-The service returns a JSON body representing the newly created assertion:
+The Fact API returns a JSON body representing the newly created assertion:
 
 ```
 {
@@ -36,26 +37,26 @@ Creating a fact implicitely assert that the fact is true.
 
 Facts are then publicized as Stellar accounts Data fields using the following
 format as key `fact:$domain:$type` and the unique `$id` returned by the
-FactService as value:
+Fact API as value:
 
 ```
 {
   ...
-  "fact:settl.net:email": "fact_1a1ed89jh10dj0123_PK0...",
+  "fact:settl.net:email": "fact_$pk0_1a1ed89jh10dj0123",
   ...
 }
 
 ```
-It is invalid to publicize a fact that does not rely to the entiy publicizing
-it.  Fore easy validation without querying the FactService, fact IDs include
-the public key of the entity they relate to.
+It is invalid to publicize a fact that is not owned by the entiy publicizing
+it. For easy in-place validation (without querying the associated Fact API),
+fact IDs include the public key of their owner.
 
-Facts can be signed and certified true by other Stellar accounts representing
+Facts can be signed and certified by other Stellar accounts representing
 official or unofficial entities using the following public endpoints:
 
 ```
 curl -XPOST https://settl.net/facts/$id/signatures \
-  -d public_key=$pk1
+  -d public_key=$pk1 \
   -d signature=$sig(action=assert&entity=$pk0&type=$type&value=$value)
 ```
 
@@ -75,25 +76,30 @@ curl -XGET https://settl.net/facts/$id
 ```
 
 Facts signatures (and indirectly facts) can be revoked using the following API.
-Once a revocation is made, it permanently invalidates all previous and future
-signatures on this particular fact. If the fact owner revokes it, it
-permanently hides the fact from the FactService API, effectively making the
-fact invalid.
+Once a revocation is made, it hides the signature from the list of signatures
+for the fact. If the owner of a fact revokes its signature, it permanently
+hides the fact from the API.
 
 ```
 curl -XPOST https://sett.eu/facts/$id/revocations \
-  -d public_key=$pk0 \
+  -d public_key=$pk1 \
   -d signature=$sig(action=revoke&entity=$pk0&type=$type&value=$value)
 ```
+
+Facts cannot be revoked without being previously signed.
 
 # Settl Fact Types
 
 - `name`: Full name of a individual, company or organization.
+- `type`: Entity type (individual, for-profit, non-profit, state).
+- `date_of_birth`: Date of birth.
+- `date_of_creation`: Date of creation of an organization.
 - `email`: Fully qualified email address.
 - `url`: Fully qualified URL.
 - `phone`: Fully qualified phone number.
-- `twitter`: Twitter handle.
-- `hashed_bank_account`: The hash of a bank account number using the Stellar
+- `twitter`: Twitter handle without preceeding `@`.
+- `github`: Github handle.
+- `bank_account_hash`: The hash of a bank account number using the Stellar
    account public key as nonce.
 - `hashed_tax_id`: The hash of the Tax ID (SSN, EIN, ...) using the Stellar
    account public key as nonce.
