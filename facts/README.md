@@ -20,17 +20,19 @@ The Fact API returns a JSON body representing the newly created assertion:
 
 ```
 {
-  "id": "fact_1a1ed89jh10dj0123_PK0...",
-  "entity": "PK0...",
-  "type": "email",
-  "value": "polu.stanislas@gmail.com",
-  "operation_xdr": "..."
-  "signatures": [{
-    "id": "signature_d9ceqw09dfwife0wef",
-    "public_key": "PK0...",
-    "signature": "sca239afsd0..."
-  }],
-  "revocations": []
+  "fact": {
+    "id": "fact_$pk0_1a1ed89jh10dj0123",
+    "entity": "$pk0",
+    "type": "email",
+    "value": "polu.stanislas@gmail.com",
+    "operation_xdr": "..."
+    "signatures": [{
+      "id": "signature_d9ceqw09dfwife0wef",
+      "public_key": "$pk0",
+      "signature": "sca239afsd0..."
+    }],
+    "revocations": []
+  }
 }
 ```
 Creating a fact implicitely assert that the fact is true.
@@ -63,9 +65,11 @@ curl -XPOST https://settl.net/facts/$id/signatures \
 Returning a JSON body representing the newly created signature:
 ```
 {
-  "id": "signature_d9ceqw09dfwife0wef",
-  "public_key": "ASD...",
-  "signature": "sca239afsd0..."
+  "signature": {
+    "id": "signature_$pk1_d9ceqw09dfwife0wef",
+    "public_key": "$pk1",
+    "signature": "sca239afsd0..."
+  }
 }
 ```
 
