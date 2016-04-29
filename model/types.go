@@ -3,9 +3,6 @@ package model
 // PublicKey represents a Stellar public key.
 type PublicKey string
 
-// Entity represents an entity as its public key.
-type Entity PublicKey
-
 // FctType are the possible types for a Settl fact.
 type FctType string
 

@@ -16,11 +16,9 @@ import (
 
 func panicError() errors.ConcreteUserError {
 	return errors.ConcreteUserError{
-		Type: errors.InternalError,
-		Code: "api_error",
-		Message: "Sorry! There was an error while processing your request. " +
-			"We have already been notified of the problem, but please contact " +
-			"support@stripe.com with any questions you may have.",
+		Type:    errors.InternalError,
+		Code:    "api_error",
+		Message: "Sorry! There was an error while processing your request.",
 	}
 }
 
@@ -50,8 +48,6 @@ func errorResponse(
 	resp := svc.Resp{
 		"error": format.JSONPtr(err),
 	}
-
-	injectContext(ctx, &resp)
 	return resp
 }
 
@@ -62,7 +58,6 @@ func Success(
 	w http.ResponseWriter,
 	resp svc.Resp,
 ) {
-	injectContext(ctx, &resp)
 	Respond(ctx, w, http.StatusOK, nil, resp)
 }
 
@@ -96,7 +91,6 @@ func Error(
 		for _, line := range errors.ErrorStack(err) {
 			logging.Logf(ctx, "  %s", line)
 		}
-		errors.Sentry(ctx, err)
 
 		resp := errorResponse(ctx, body)
 		Respond(ctx, w, http.StatusInternalServerError, nil, resp)

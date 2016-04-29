@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/spolu/settl/util/errors"
 )
 
 var svc *dynamodb.DynamoDB
@@ -22,7 +23,7 @@ func init() {
 	params := &dynamodb.ListTablesInput{}
 	resp, err := svc.ListTables(params)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(errors.Trace(err))
 	}
 
 	fmt.Println("Initialized models with tables:")

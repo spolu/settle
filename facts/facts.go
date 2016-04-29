@@ -1,6 +1,9 @@
 package facts
 
-import "goji.io/pat"
+import (
+	"goji.io"
+	"goji.io/pat"
+)
 
 // Configuration is used to create and bind the APi controller
 type Configuration struct {
@@ -9,11 +12,12 @@ type Configuration struct {
 
 // Init initializes the API controller
 func (c *Configuration) Init() error {
+	return nil
 }
 
 // Bind registers the API routes
 func (c *Configuration) Bind(
-	mux *web.Mux,
+	mux *goji.Mux,
 ) {
 	mux.HandleFuncC(pat.Post("/facts"), c.controller.CreateFact)
 	mux.HandleFuncC(pat.Post("/facts/:fact_id/signatures"), c.controller.CreateSignature)
