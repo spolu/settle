@@ -31,3 +31,13 @@ const (
 	// FctTaxIDHash hash of the TaxID (SSN,...) using the entity as nonce.
 	FctTaxIDHash FctType = "tax_id_hash"
 )
+
+// FctAction are the possible action that can be taken relative to a fact.
+type FctAction string
+
+const (
+	//FaAssert assert the fact is true.
+	FaAssert FctAction = "assert"
+	//FaRevoke revoke any previous assertion that the fact is true.
+	FaRevoke FctAction = "revoke"
+)

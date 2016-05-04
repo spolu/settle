@@ -27,11 +27,19 @@ func (c *controller) CreateFact(
 		Signature: model.PublicKeySignature(r.PostFormValue("signature")),
 	}
 
-	_, err := keypair.Parse(string(params.Account))
+	from, err := keypair.Parse(string(params.Account))
 	if err != nil {
 		respond.Error(ctx, w, errors.Trace(err))
 		return
 	}
+	_ = from
+
+	fact := model.NewFact(params.Account, params.Type, params.Value)
+	assertion := model.NewAssertion(fact.ID, params.Account, params.Signature)
+
+	if ok := assertion.Verify(fact); !ok {
+	}
+
 }
 
 func (c *controller) CreateSignature(

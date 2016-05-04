@@ -1,7 +1,7 @@
 # Facts
 
 Facts are typed values related to a Stellar account along with a list of
-certifying accounts signatures asserting that the fact is true. Facts are
+assertions from arbitrary accounts asserting that the fact is true. Facts are
 created and retrievable on a public Fact API using the endpoints described in
 this document. `type` and `value` are strings whose validation is left to the
 discretion of the service running the Fact API. Once created, a fact (type,
@@ -26,8 +26,8 @@ The Fact API returns a JSON body representing the newly created assertion:
     "type": "email",
     "value": "polu.stanislas@gmail.com",
     "operation_xdr": "..."
-    "signatures": [{
-      "id": "signature_d9ceqw09dfwife0wef",
+    "assertions": [{
+      "id": "assertion_d9ceqw09dfwife0wef",
       "account": "$pk0",
       "signature": "sca239afsd0..."
     }],
@@ -57,16 +57,16 @@ Facts can be signed and certified by other Stellar accounts representing
 official or unofficial entities using the following public endpoints:
 
 ```
-curl -XPOST https://settl.net/facts/$id/signatures \
+curl -XPOST https://settl.net/facts/$id/assertions \
   -d account=$pk1 \
   -d signature=$sig(action=assert&account=$pk0&type=$type&value=$value)
 ```
 
-Returning a JSON body representing the newly created signature:
+Returning a JSON body representing the newly created assertion:
 ```
 {
-  "signature": {
-    "id": "signature_$pk1_d9ceqw09dfwife0wef",
+  "assertion": {
+    "id": "assertion_$pk1_d9ceqw09dfwife0wef",
     "account": "$pk1",
     "signature": "sca239afsd0..."
   }
@@ -79,9 +79,9 @@ Facts and Signatures can be retrieved publicly using the following endpoints:
 curl -XGET https://settl.net/facts/$id
 ```
 
-Facts signatures (and indirectly facts) can be revoked using the following API.
-Once a revocation is made, it hides the signature from the list of signatures
-for the fact. If the owner of a fact revokes its signature, it permanently
+Facts assertions (and indirectly facts) can be revoked using the following API.
+Once a revocation is made, it hides the assertion from the list of assertions
+for the fact. If the owner of a fact revokes its assertion, it permanently
 hides the fact from the API.
 
 ```

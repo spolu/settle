@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -15,29 +16,29 @@ import (
 type Fact struct {
 	ID      string
 	Created int64
-	Entity  PublicKey
+	Account PublicKey
 	Type    FctType
 	Value   string
 }
 
-var factProjectExpr = "s_id, s_created, s_entity, s_type, s_value"
+var factProjectExpr = "s_id, s_created, s_account, s_type, s_value"
 var factUpdateExpr = "SET " +
 	"s_created = :s_created, " +
-	"s_entity = :s_entity, " +
+	"s_account = :s_account, " +
 	"s_type = :s_type, " +
 	"s_value = :s_value"
 var factTableName = "facts"
 
 // NewFact creates a new Fact.
 func NewFact(
-	entity PublicKey,
+	account PublicKey,
 	t FctType,
 	v string,
 ) *Fact {
 	return &Fact{
-		ID:      token.New("fact", string(entity)),
+		ID:      token.New("fact", string(account)),
 		Created: time.Now().UnixNano(),
-		Entity:  entity,
+		Account: account,
 		Type:    t,
 		Value:   v,
 	}
@@ -68,7 +69,7 @@ func LoadFact(
 	return &Fact{
 		ID:      ID,
 		Created: created,
-		Entity:  PublicKey(*resp.Item["s_entity"].S),
+		Account: PublicKey(*resp.Item["s_account"].S),
 		Type:    FctType(*resp.Item["s_type"].S),
 		Value:   *resp.Item["s_value"].S,
 	}, nil
@@ -83,7 +84,7 @@ func (f *Fact) Save() error {
 		TableName: aws.String(factTableName),
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
 			":s_created": {N: aws.String(fmt.Sprintf("%d", f.Created))},
-			":s_entity":  {S: aws.String(string(f.Entity))},
+			":s_account": {S: aws.String(string(f.Account))},
 			":s_type":    {S: aws.String(string(f.Type))},
 			":s_value":   {S: aws.String(f.Value)},
 		},
@@ -95,4 +96,18 @@ func (f *Fact) Save() error {
 	}
 
 	return nil
+}
+
+// PayloadForAction constructs the payload to be signed for a particular action
+// related to a fact.
+func (f *Fact) PayloadForAction(
+	action FctAction,
+) string {
+	payload := url.Values{}
+	payload.Set("action", string(action))
+	payload.Set("account", string(f.Account))
+	payload.Set("type", string(f.Type))
+	payload.Set("value", string(f.Value))
+
+	return payload.Encode()
 }

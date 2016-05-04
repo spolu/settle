@@ -25,7 +25,7 @@ func main() {
 	}
 	fmt.Printf("Retrieved fact: %+v\n", f)
 
-	s := model.NewSignature(
+	s := model.NewAssertion(
 		f.ID,
 		model.PublicKey("TESTENTITY"),
 		"TEST_SIGNATURE_SIG",
@@ -34,13 +34,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("Saved signature: %+v\n", s)
+	fmt.Printf("Saved assertion: %+v\n", s)
 
-	s, err = model.LoadSignature(s.ID, s.Fact)
+	s, err = model.LoadAssertion(s.ID, s.Fact)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("Retrieved signature: %+v\n", s)
+	fmt.Printf("Retrieved assertion: %+v\n", s)
 
 	r := model.NewRevocation(
 		f.ID,

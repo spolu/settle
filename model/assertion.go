@@ -11,8 +11,8 @@ import (
 	"github.com/spolu/settl/util/token"
 )
 
-// Revocation represents the storage model for a revocation.
-type Revocation struct {
+// Assertion represents the storage model for an assertion.
+type Assertion struct {
 	ID        string
 	Created   int64
 	Fact      string
@@ -20,21 +20,21 @@ type Revocation struct {
 	Signature PublicKeySignature
 }
 
-var revocationProjectExpr = "s_id, s_created, s_fact, s_account, s_signature"
-var revocationUpdateExpr = "SET " +
+var assertionProjectExpr = "s_id, s_created, s_fact, s_account, s_signature"
+var assertionUpdateExpr = "SET " +
 	"s_created = :s_created, " +
 	"s_account = :s_account, " +
 	"s_signature = :s_signature"
-var revocationTableName = "revocations"
+var assertionTableName = "assertions"
 
-// NewRevocation creates a new revocation.
-func NewRevocation(
+// NewAssertion creates a new assertion.
+func NewAssertion(
 	fact string,
 	account PublicKey,
 	signature PublicKeySignature,
-) *Revocation {
-	return &Revocation{
-		ID:        token.New("revocation", string(account)),
+) *Assertion {
+	return &Assertion{
+		ID:        token.New("assertion", string(account)),
 		Created:   time.Now().UnixNano(),
 		Fact:      fact,
 		Account:   account,
@@ -42,19 +42,19 @@ func NewRevocation(
 	}
 }
 
-// LoadRevocation loads a Revocation from its ID and the associated Fact ID.
-func LoadRevocation(
+// LoadAssertion loads a Assertion from its ID and the associated Fact ID.
+func LoadAssertion(
 	ID string,
 	fact string,
-) (*Revocation, error) {
+) (*Assertion, error) {
 	params := &dynamodb.GetItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
 			"s_id":   {S: aws.String(ID)},
 			"s_fact": {S: aws.String(fact)},
 		},
-		TableName:            aws.String(revocationTableName),
+		TableName:            aws.String(assertionTableName),
 		ConsistentRead:       aws.Bool(true),
-		ProjectionExpression: aws.String(revocationProjectExpr),
+		ProjectionExpression: aws.String(assertionProjectExpr),
 	}
 	resp, err := svc.GetItem(params)
 	if err != nil {
@@ -66,7 +66,7 @@ func LoadRevocation(
 		return nil, errors.Trace(err)
 	}
 
-	return &Revocation{
+	return &Assertion{
 		ID:        ID,
 		Created:   created,
 		Fact:      *resp.Item["s_fact"].S,
@@ -75,20 +75,20 @@ func LoadRevocation(
 	}, nil
 }
 
-// Save creates or updates the Revocation.
-func (r *Revocation) Save() error {
+// Save creates or updates the Assertion.
+func (s *Assertion) Save() error {
 	params := &dynamodb.UpdateItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
-			"s_id":   {S: aws.String(r.ID)},
-			"s_fact": {S: aws.String(r.Fact)},
+			"s_id":   {S: aws.String(s.ID)},
+			"s_fact": {S: aws.String(s.Fact)},
 		},
-		TableName: aws.String(revocationTableName),
+		TableName: aws.String(assertionTableName),
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
-			":s_created":   {N: aws.String(fmt.Sprintf("%d", r.Created))},
-			":s_account":   {S: aws.String(string(r.Account))},
-			":s_signature": {S: aws.String(string(r.Signature))},
+			":s_created":   {N: aws.String(fmt.Sprintf("%d", s.Created))},
+			":s_account":   {S: aws.String(string(s.Account))},
+			":s_signature": {S: aws.String(string(s.Signature))},
 		},
-		UpdateExpression: aws.String(revocationUpdateExpr),
+		UpdateExpression: aws.String(assertionUpdateExpr),
 	}
 	_, err := svc.UpdateItem(params)
 	if err != nil {
@@ -96,4 +96,12 @@ func (r *Revocation) Save() error {
 	}
 
 	return nil
+}
+
+// Verify verifies (in memory) that the assertion corresponds to the fact
+// passed as argument and is properly signed.
+func (s *Assertion) Verify(
+	fact *Fact,
+) bool {
+	return false
 }
