@@ -1,9 +1,10 @@
 package model
 
-// PublicKey represents a Stellar public key.
+// PublicKey represents a Stellar public key (using the accout ID format).
 type PublicKey string
 
-// PublicKeySignature represents a signature associated with a Stellar public key.
+// PublicKeySignature is a base64 encoded signature associated with a Stellar
+// public key.
 type PublicKeySignature string
 
 // FctType are the possible types for a Settl fact.

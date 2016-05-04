@@ -4,9 +4,6 @@ import (
 	"net/http"
 
 	"github.com/spolu/settl/model"
-	"github.com/spolu/settl/util/errors"
-	"github.com/spolu/settl/util/respond"
-	"github.com/stellar/go-stellar-base/keypair"
 
 	"golang.org/x/net/context"
 )
@@ -26,13 +23,6 @@ func (c *controller) CreateFact(
 		Account:   model.PublicKey(r.PostFormValue("account")),
 		Signature: model.PublicKeySignature(r.PostFormValue("signature")),
 	}
-
-	from, err := keypair.Parse(string(params.Account))
-	if err != nil {
-		respond.Error(ctx, w, errors.Trace(err))
-		return
-	}
-	_ = from
 
 	fact := model.NewFact(params.Account, params.Type, params.Value)
 	assertion := model.NewAssertion(fact.ID, params.Account, params.Signature)

@@ -1,6 +1,7 @@
 package model
 
 import (
+	"encoding/base64"
 	"fmt"
 	"strconv"
 	"time"
@@ -9,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/spolu/settl/util/errors"
 	"github.com/spolu/settl/util/token"
+	"github.com/stellar/go-stellar-base/keypair"
 )
 
 // Assertion represents the storage model for an assertion.
@@ -76,17 +78,17 @@ func LoadAssertion(
 }
 
 // Save creates or updates the Assertion.
-func (s *Assertion) Save() error {
+func (a *Assertion) Save() error {
 	params := &dynamodb.UpdateItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
-			"s_id":   {S: aws.String(s.ID)},
-			"s_fact": {S: aws.String(s.Fact)},
+			"s_id":   {S: aws.String(a.ID)},
+			"s_fact": {S: aws.String(a.Fact)},
 		},
 		TableName: aws.String(assertionTableName),
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
-			":s_created":   {N: aws.String(fmt.Sprintf("%d", s.Created))},
-			":s_account":   {S: aws.String(string(s.Account))},
-			":s_signature": {S: aws.String(string(s.Signature))},
+			":s_created":   {N: aws.String(fmt.Sprintf("%d", a.Created))},
+			":s_account":   {S: aws.String(string(a.Account))},
+			":s_signature": {S: aws.String(string(a.Signature))},
 		},
 		UpdateExpression: aws.String(assertionUpdateExpr),
 	}
@@ -100,8 +102,23 @@ func (s *Assertion) Save() error {
 
 // Verify verifies (in memory) that the assertion corresponds to the fact
 // passed as argument and is properly signed.
-func (s *Assertion) Verify(
+func (a *Assertion) Verify(
 	fact *Fact,
 ) bool {
-	return false
+	s, err := base64.StdEncoding.DecodeString(string(a.Signature))
+	if err != nil {
+		return false
+	}
+
+	from, err := keypair.Parse(string(a.Account))
+	if err != nil {
+		return false
+	}
+
+	err = from.Verify([]byte(fact.PayloadForAction(FaAssert)), s)
+	if err != nil {
+		return false
+	}
+
+	return true
 }
