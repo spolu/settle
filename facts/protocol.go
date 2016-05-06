@@ -1,16 +1,28 @@
 package facts
 
-import "github.com/spolu/settl/model"
+import (
+	"github.com/spolu/settl/model"
+	"golang.org/x/net/context"
+)
 
 // Resources
 
-// SignatureResource represents a signature as returned by the API.
-type SignatureResource struct {
+// AssertionResource represents an assertion as returned by the API.
+type AssertionResource struct {
 	ID        string                   `json:"id"`
 	Created   int64                    `json:"created"`
 	Fact      string                   `json:"fact"`
 	Account   model.PublicKey          `json:"entity"`
 	Signature model.PublicKeySignature `json:"signature"`
+}
+
+// NewFactResource renders a new FactResource from a fact object and its
+// associated assertions and revocations ordered by created time.
+func NewFactResource(
+	ctx context.Context,
+	assertions *Assertion,
+	revocations []*Revocation,
+) (*FactResource, error) {
 }
 
 // RevocationResource reprensents a revocation as returned by the API.
@@ -20,9 +32,10 @@ type RevocationResource struct {
 	Fact      string                   `json:"fact"`
 	Account   model.PublicKey          `json:"entity"`
 	Signature model.PublicKeySignature `json:"signature"`
+	Assertion AssertionResource        `json:"assertion"`
 }
 
-// FactResource represent the fact as returned by the API
+// FactResource represents a fact as returned by the API.
 type FactResource struct {
 	ID          string               `json:"id"`
 	Created     int64                `json:"created"`
@@ -33,12 +46,22 @@ type FactResource struct {
 	Revocations []RevocationResource `json:"revocation"`
 }
 
+// NewFactResource renders a new FactResource from a fact object and its
+// associated assertions and revocations ordered by created time.
+func NewFactResource(
+	ctx context.Context,
+	fact *Fact,
+	assertions []*Assertion,
+	revocations []*Revocation,
+) (*FactResource, error) {
+}
+
 // Params
 
 // FactParams are the parameters used to create a fact.
 type FactParams struct {
+	Account   model.PublicKey          `json:"public_key"`
 	Type      model.FctType            `json:"type"`
 	Value     string                   `json:"value"`
-	Account   model.PublicKey          `json:"public_key"`
 	Signature model.PublicKeySignature `json:"signature"`
 }

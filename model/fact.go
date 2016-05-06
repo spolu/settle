@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/spolu/settl/util/errors"
@@ -21,13 +23,20 @@ type Fact struct {
 	Value   string
 }
 
-var factProjectExpr = "s_id, s_created, s_account, s_type, s_value"
-var factUpdateExpr = "SET " +
-	"s_created = :s_created, " +
-	"s_account = :s_account, " +
-	"s_type = :s_type, " +
-	"s_value = :s_value"
-var factTableName = "facts"
+const (
+	factTableName   string = "facts"
+	factProjectExpr string = "s_id, s_created, s_account, s_type, s_value"
+	factUpdateExpr  string = "SET " +
+		"s_account = :s_account, " +
+		"s_type = :s_type, " +
+		"s_value = :s_value"
+
+	factAccountTypeIndex                string = "s_account-s_type-index"
+	factAccountTypeIndexProjectExpr     string = "s_id"
+	factLoadByAccountAndTypeKeyCondExpr string = "" +
+		"s_account = :s_account AND " +
+		"s_type = :s_type"
+)
 
 // NewFact creates a new Fact.
 func NewFact(
@@ -46,6 +55,7 @@ func NewFact(
 
 // LoadFact loads a Fact from its ID.
 func LoadFact(
+	ctx context.Context,
 	ID string,
 ) (*Fact, error) {
 	params := &dynamodb.GetItemInput{
@@ -59,6 +69,9 @@ func LoadFact(
 	resp, err := svc.GetItem(params)
 	if err != nil {
 		return nil, errors.Trace(err)
+	}
+	if _, ok := resp.Item["s_id"]; !ok {
+		return nil, nil
 	}
 
 	created, err := strconv.ParseInt(*resp.Item["s_created"].N, 10, 64)
@@ -76,14 +89,16 @@ func LoadFact(
 }
 
 // Save creates or updates the Fact.
-func (f *Fact) Save() error {
+func (f *Fact) Save(
+	ctx context.Context,
+) error {
 	params := &dynamodb.UpdateItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
-			"s_id": {S: aws.String(f.ID)},
+			"s_id":      {S: aws.String(f.ID)},
+			"s_created": {N: aws.String(fmt.Sprintf("%d", f.Created))},
 		},
 		TableName: aws.String(factTableName),
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
-			":s_created": {N: aws.String(fmt.Sprintf("%d", f.Created))},
 			":s_account": {S: aws.String(string(f.Account))},
 			":s_type":    {S: aws.String(string(f.Type))},
 			":s_value":   {S: aws.String(f.Value)},
@@ -96,6 +111,59 @@ func (f *Fact) Save() error {
 	}
 
 	return nil
+}
+
+// LoadFactsByAccountAndType loads a fact for a given account and type.
+func LoadFactsByAccountAndType(
+	ctx context.Context,
+	account PublicKey,
+	t FctType,
+) ([]*Fact, error) {
+	params := &dynamodb.QueryInput{
+		TableName:              aws.String(factTableName),
+		IndexName:              aws.String(factAccountTypeIndex),
+		ProjectionExpression:   aws.String(factAccountTypeIndexProjectExpr),
+		KeyConditionExpression: aws.String(factLoadByAccountAndTypeKeyCondExpr),
+		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+			":s_account": {S: aws.String(string(account))},
+			":s_type":    {S: aws.String(string(t))},
+		},
+	}
+	resp, err := svc.Query(params)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	facts := []*Fact{}
+	for _, it := range *resp.Items {
+		f, err := LoadFact(ctx, *it["s_id"].S)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		facts = append(facts, f)
+	}
+	return facts, nil
+}
+
+// LoadLatestFactByAccountAndType loads the most recent fact for a given
+// account and type.
+func LoadLatestFactByAccountAndType(
+	ctx context.Context,
+	account PublicKey,
+	t FctType,
+) (*Fact, error) {
+	facts, err := LoadFactsByAccountAndType(ctx, account, t)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	latest := *Fact(nil)
+	for _, f := range facts {
+		if latest == nil || f.Created > latest.Created {
+			latest = f
+		}
+	}
+	return latest, nil
 }
 
 // PayloadForAction constructs the payload to be signed for a particular action

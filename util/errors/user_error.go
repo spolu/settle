@@ -1,48 +1,86 @@
 package errors
 
-// ErrorType is an enumeration of acceptable error types that can be exposed to
-// external clients of the system. Error types informs the nature of the error
-// and whether that error is due to the request or an internal error.
-type ErrorType string
+import "fmt"
 
-const (
-	// NonUserError unset ErroType
-	NonUserError ErrorType = ""
-	// InvalidRequest the request is missing a paramter or invalid
-	InvalidRequest ErrorType = "invalid_request"
-	// ActionFailed the request is valid but failed
-	ActionFailed ErrorType = "action_failed"
-	// NotFound the path/resource requested is not found
-	NotFound ErrorType = "not_found"
-	// InternalError something went wrong internally
-	InternalError ErrorType = "internal_error"
-)
-
-// UserError is the interface an error has to comply to to be consumable by an
-// external client.
+// UserError is the error interface that can be returned by the API
 type UserError interface {
-	Type() ErrorType
+	Cause() error
+	Status() int
 	Code() string
 	Message() string
-	Metadata() map[string]string
-	Cause() error
+	Error() string
 }
 
-// ConcreteUserError is the materialization of the UserError for marshalling
+// ConcreteUserError is a concrete type that implements the UserError
+// interface.
 type ConcreteUserError struct {
-	Type     ErrorType         `json:"type"`
-	Code     string            `json:"code"`
-	Message  string            `json:"message"`
-	Metadata map[string]string `json:"metadata,omitempty"`
+	ErrCause   error  `json:"-"`
+	ErrStatus  int    `json:"-"`
+	ErrCode    string `json:"code"`
+	ErrMessage string `json:"message"`
 }
 
-// Build constructs a ConcreteUserError from a UserError. It also assigns a
-// unique ID to the ConcreteUserError for log/reply correlation.
-func Build(err UserError) ConcreteUserError {
-	return ConcreteUserError{
-		Type:     err.Type(),
-		Code:     err.Code(),
-		Message:  err.Message(),
-		Metadata: err.Metadata(),
+// Build constructs a ConcreteUserError from a UserError.
+func Build(err UserError) *ConcreteUserError {
+	return &ConcreteUserError{
+		ErrCause:   err.Cause(),
+		ErrStatus:  err.Status(),
+		ErrCode:    err.Code(),
+		ErrMessage: err.Message(),
 	}
+}
+
+// Error complies to the UserError and error interface.
+func (e *ConcreteUserError) Error() string {
+	if e.ErrCause != nil {
+		return e.ErrCause.Error()
+	}
+	return ""
+}
+
+// Cause complies to the UserError interface.
+func (e *ConcreteUserError) Cause() error {
+	return e.ErrCause
+}
+
+// Status complies to the UserError interface.
+func (e *ConcreteUserError) Status() int {
+	return e.ErrStatus
+}
+
+// Code complies to the UserError interface.
+func (e *ConcreteUserError) Code() string {
+	return e.ErrCode
+}
+
+// Message complies to the UserError interface.
+func (e *ConcreteUserError) Message() string {
+	return e.ErrMessage
+}
+
+// NewUserError is an helper function to construct a new UserError.
+func NewUserError(
+	err error,
+	status int,
+	code string,
+	message string,
+) UserError {
+	return &ConcreteUserError{
+		ErrCause:   err,
+		ErrStatus:  status,
+		ErrCode:    code,
+		ErrMessage: message,
+	}
+}
+
+// NewUserErrorf is an helper function to construct a new UserError.
+func NewUserErrorf(
+	err error,
+	status int,
+	code string,
+	format string,
+	args ...interface{},
+) UserError {
+	message := fmt.Sprintf(format, args)
+	return NewUserError(err, status, code, message)
 }

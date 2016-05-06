@@ -1,61 +1,65 @@
 package main
 
 import (
-	"fmt"
+	"flag"
 	"log"
+	"net"
+	"net/http"
+	"time"
 
-	"github.com/spolu/settl/model"
+	"goji.io"
+
+	"github.com/spolu/settl/facts"
+	"github.com/spolu/settl/util/errors"
+	"github.com/zenazn/goji/bind"
+	"github.com/zenazn/goji/graceful"
 )
 
+func init() {
+	bind.WithFlag()
+	if fl := log.Flags(); fl&log.Ltime != 0 {
+		log.SetFlags(fl | log.Lmicroseconds)
+	}
+	graceful.DoubleKickWindow(2 * time.Second)
+}
+
+// Serve starts the given mux using reasonable defaults.
+func Serve(mux *goji.Mux) {
+	if !flag.Parsed() {
+		flag.Parse()
+	}
+
+	ServeListener(mux, bind.Default())
+}
+
+// ServeListener is like Serve, but runs `mux` on top of an arbitrary
+// net.Listener.
+func ServeListener(mux *goji.Mux, listener net.Listener) {
+	// Install our handler at the root of the standard net/http default mux.
+	// This allows packages like expvar to continue working as expected.
+	http.Handle("/", mux)
+
+	log.Println("Starting Goji on", listener.Addr())
+
+	graceful.HandleSignals()
+	bind.Ready()
+	graceful.PreHook(func() { log.Printf("Goji received signal, gracefully stopping") })
+	graceful.PostHook(func() { log.Printf("Goji stopped") })
+
+	err := graceful.Serve(listener, http.DefaultServeMux)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	graceful.Wait()
+}
+
 func main() {
-	f := model.NewFact(
-		model.PublicKey("TESTENTITY"),
-		model.FctName,
-		"Stanislas Polu",
-	)
-	err := f.Save()
+	mux, err := facts.Build()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(errors.Details(err))
 	}
-	fmt.Printf("Saved fact: %+v\n", f)
 
-	f, err = model.LoadFact(f.ID)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("Retrieved fact: %+v\n", f)
-
-	s := model.NewAssertion(
-		f.ID,
-		model.PublicKey("TESTENTITY"),
-		"TEST_SIGNATURE_SIG",
-	)
-	err = s.Save()
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("Saved assertion: %+v\n", s)
-
-	s, err = model.LoadAssertion(s.ID, s.Fact)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("Retrieved assertion: %+v\n", s)
-
-	r := model.NewRevocation(
-		f.ID,
-		model.PublicKey("TESTENTITY"),
-		"TEST_REVOCATION_SIG",
-	)
-	err = r.Save()
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("Saved revocation: %+v\n", r)
-
-	r, err = model.LoadRevocation(r.ID, r.Fact)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("Retrieved revocation: %+v\n", r)
+	Serve(mux)
 }

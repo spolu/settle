@@ -3,7 +3,6 @@ package respond
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 
@@ -14,36 +13,19 @@ import (
 	"golang.org/x/net/context"
 )
 
-func panicError() errors.ConcreteUserError {
-	return errors.ConcreteUserError{
-		Type:    errors.InternalError,
-		Code:    "api_error",
-		Message: "Sorry! There was an error while processing your request.",
-	}
-}
-
-// userStatusCode maps from UserError ErrorType to HTTP status code.
-func userStatusCode(
-	err errors.UserError,
-) int {
-	switch err.Type() {
-	case errors.InvalidRequest:
-		return http.StatusBadRequest
-	case errors.ActionFailed:
-		return http.StatusPaymentRequired
-	case errors.NotFound:
-		return http.StatusNotFound
-	case errors.InternalError:
-		return http.StatusInternalServerError
-	}
-	return http.StatusInternalServerError
+func panicError() errors.UserError {
+	return errors.NewUserError(nil,
+		http.StatusInternalServerError,
+		"internal_error",
+		"There was an error while processing your request.",
+	)
 }
 
 // errorResponse generates an res.Resp object based on a ConcreteUserError,
 // injecting data from the context in the process.
 func errorResponse(
 	ctx context.Context,
-	err errors.ConcreteUserError,
+	err *errors.ConcreteUserError,
 ) svc.Resp {
 	resp := svc.Resp{
 		"error": format.JSONPtr(err),
@@ -69,30 +51,24 @@ func Error(
 	err error,
 ) {
 	// Handle UserError
-	if errors.IsUserError(err) {
-		if e, ok := err.(errors.UserError); ok {
-			logging.Logf(ctx,
-				"Responding with UserError: code=%q message=%q",
-				e.Code(), e.Message())
-			b := errors.Build(e)
-			for _, line := range errors.ErrorStack(err) {
-				logging.Logf(ctx, "  %s", line)
-			}
-
-			resp := errorResponse(ctx, b)
-			Respond(ctx, w, userStatusCode(e), nil, resp)
-		} else {
-			panic(fmt.Errorf("Unexpected non-UserError"))
-		}
-	} else {
+	if e := errors.ExtractUserError(err); e != nil {
 		logging.Logf(ctx,
-			"Responding with non-UserError: error=%q", err.Error())
-		body := panicError()
+			"Responding with UserError: status=%d code=%q message=%q",
+			e.Status(), e.Code(), e.Message())
 		for _, line := range errors.ErrorStack(err) {
 			logging.Logf(ctx, "  %s", line)
 		}
 
-		resp := errorResponse(ctx, body)
+		resp := errorResponse(ctx, errors.Build(e))
+		Respond(ctx, w, e.Status(), nil, resp)
+	} else {
+		logging.Logf(ctx,
+			"Responding with unexpected Error: error=%q", err.Error())
+		for _, line := range errors.ErrorStack(err) {
+			logging.Logf(ctx, "  %s", line)
+		}
+
+		resp := errorResponse(ctx, errors.Build(panicError()))
 		Respond(ctx, w, http.StatusInternalServerError, nil, resp)
 	}
 }
@@ -129,7 +105,7 @@ func formatJSON(
 	w io.Writer,
 ) error {
 	var b bytes.Buffer
-	formatted, err := json.Marshal(response)
+	formatted, err := json.MarshalIndent(response, "", "  ")
 	if err != nil {
 		return err
 	}

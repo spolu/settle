@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/spolu/settl/util/errors"
@@ -22,12 +24,19 @@ type Assertion struct {
 	Signature PublicKeySignature
 }
 
-var assertionProjectExpr = "s_id, s_created, s_fact, s_account, s_signature"
-var assertionUpdateExpr = "SET " +
-	"s_created = :s_created, " +
-	"s_account = :s_account, " +
-	"s_signature = :s_signature"
-var assertionTableName = "assertions"
+const (
+	assertionTableName   string = "assertions"
+	assertionProjectExpr string = "s_id, s_created, s_fact, s_account, s_signature"
+	assertionUpdateExpr  string = "SET " +
+		"s_fact = :s_fact, " +
+		"s_account = :s_account, " +
+		"s_signature = :s_signature"
+
+	assertionFactCreatedIndex            string = "s_fact-s_created-index"
+	assertionFactCreatedIndexProjectExpr string = "s_id"
+	assertionLoadByFactKeyCondExpr       string = "" +
+		"s_fact = :s_fact AND"
+)
 
 // NewAssertion creates a new assertion.
 func NewAssertion(
@@ -44,15 +53,14 @@ func NewAssertion(
 	}
 }
 
-// LoadAssertion loads a Assertion from its ID and the associated Fact ID.
+// LoadAssertion loads a Assertion from its ID
 func LoadAssertion(
+	ctx context.Context,
 	ID string,
-	fact string,
 ) (*Assertion, error) {
 	params := &dynamodb.GetItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
-			"s_id":   {S: aws.String(ID)},
-			"s_fact": {S: aws.String(fact)},
+			"s_id": {S: aws.String(ID)},
 		},
 		TableName:            aws.String(assertionTableName),
 		ConsistentRead:       aws.Bool(true),
@@ -61,6 +69,9 @@ func LoadAssertion(
 	resp, err := svc.GetItem(params)
 	if err != nil {
 		return nil, errors.Trace(err)
+	}
+	if _, ok := resp.Item["s_id"]; !ok {
+		return nil, nil
 	}
 
 	created, err := strconv.ParseInt(*resp.Item["s_created"].N, 10, 64)
@@ -78,15 +89,17 @@ func LoadAssertion(
 }
 
 // Save creates or updates the Assertion.
-func (a *Assertion) Save() error {
+func (a *Assertion) Save(
+	ctx context.Context,
+) error {
 	params := &dynamodb.UpdateItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
-			"s_id":   {S: aws.String(a.ID)},
-			"s_fact": {S: aws.String(a.Fact)},
+			"s_id":      {S: aws.String(a.ID)},
+			"s_created": {N: aws.String(fmt.Sprintf("%d", a.Created))},
 		},
 		TableName: aws.String(assertionTableName),
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
-			":s_created":   {N: aws.String(fmt.Sprintf("%d", a.Created))},
+			":s_fact":      {S: aws.String(a.Fact)},
 			":s_account":   {S: aws.String(string(a.Account))},
 			":s_signature": {S: aws.String(string(a.Signature))},
 		},
@@ -98,6 +111,39 @@ func (a *Assertion) Save() error {
 	}
 
 	return nil
+}
+
+// LoadAssertionsByFact loads all assertions related to a fact ordered by
+// created date.
+func LoadAssertionsByFact(
+	ctx context.Context,
+	fact string,
+) ([]*Assertion, error) {
+	params := &dynamodb.QueryInput{
+		TableName:              aws.String(assertionTableName),
+		IndexName:              aws.String(assertionFactCreatedIndex),
+		ProjectionExpression:   aws.String(assertionFactCreatedIndexProjectExpr),
+		KeyConditionExpression: aws.String(assertionLoadByFactKeyCondExpr),
+		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+			":s_fact": {S: aws.String(string(fact))},
+		},
+		ScanIndexForward: aws.Bool(false),
+	}
+
+	resp, err := svc.Query(params)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	assertions := []*Assertion{}
+	for _, it := range *resp.Items {
+		a, err := LoadAssertion(ctx, *it["s_id"].S)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		assertions = append(facts, a)
+	}
+	return assertions, nil
 }
 
 // Verify verifies (in memory) that the assertion corresponds to the fact
