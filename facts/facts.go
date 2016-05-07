@@ -19,7 +19,7 @@ func (c *Configuration) Init() error {
 func (c *Configuration) Bind(
 	mux *goji.Mux,
 ) {
-	mux.HandleFuncC(pat.Post("/facts"), c.controller.CreateFact)
-	mux.HandleFuncC(pat.Post("/facts/:fact_id/signatures"), c.controller.CreateSignature)
-	mux.HandleFuncC(pat.Post("/facts/:fact_id/revocations"), c.controller.CreateRevocation)
+	mux.HandleFuncC(pat.Post("/:account/facts"), c.controller.CreateFact)
+	mux.HandleFuncC(pat.Post("/:account/facts/:fact/signatures"), c.controller.CreateSignature)
+	mux.HandleFuncC(pat.Post("/:account/facts/:fact/revocations"), c.controller.CreateRevocation)
 }

@@ -25,17 +25,17 @@ type Assertion struct {
 }
 
 const (
-	assertionTableName   string = "assertions"
+	assertionTableName   string = "facts_assertions"
 	assertionProjectExpr string = "s_id, s_created, s_fact, s_account, s_signature"
 	assertionUpdateExpr  string = "SET " +
 		"s_fact = :s_fact, " +
-		"s_account = :s_account, " +
+		"s_created = :s_created, " +
 		"s_signature = :s_signature"
 
 	assertionFactCreatedIndex            string = "s_fact-s_created-index"
-	assertionFactCreatedIndexProjectExpr string = "s_id"
+	assertionFactCreatedIndexProjectExpr string = "s_account, s_id"
 	assertionLoadByFactKeyCondExpr       string = "" +
-		"s_fact = :s_fact AND"
+		"s_fact = :s_fact"
 )
 
 // NewAssertion creates a new assertion.
@@ -45,7 +45,7 @@ func NewAssertion(
 	signature PublicKeySignature,
 ) *Assertion {
 	return &Assertion{
-		ID:        token.New("assertion", string(account)),
+		ID:        token.New("assertion"),
 		Created:   time.Now().UnixNano(),
 		Fact:      fact,
 		Account:   account,
@@ -56,11 +56,13 @@ func NewAssertion(
 // LoadAssertion loads a Assertion from its ID
 func LoadAssertion(
 	ctx context.Context,
+	account PublicKey,
 	ID string,
 ) (*Assertion, error) {
 	params := &dynamodb.GetItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
-			"s_id": {S: aws.String(ID)},
+			"s_account": {S: aws.String(string(account))},
+			"s_id":      {S: aws.String(ID)},
 		},
 		TableName:            aws.String(assertionTableName),
 		ConsistentRead:       aws.Bool(true),
@@ -80,7 +82,7 @@ func LoadAssertion(
 	}
 
 	return &Assertion{
-		ID:        ID,
+		ID:        *resp.Item["s_id"].S,
 		Created:   created,
 		Fact:      *resp.Item["s_fact"].S,
 		Account:   PublicKey(*resp.Item["s_account"].S),
@@ -95,12 +97,12 @@ func (a *Assertion) Save(
 	params := &dynamodb.UpdateItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
 			"s_id":      {S: aws.String(a.ID)},
-			"s_created": {N: aws.String(fmt.Sprintf("%d", a.Created))},
+			"s_account": {S: aws.String(string(a.Account))},
 		},
 		TableName: aws.String(assertionTableName),
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
 			":s_fact":      {S: aws.String(a.Fact)},
-			":s_account":   {S: aws.String(string(a.Account))},
+			":s_created":   {N: aws.String(fmt.Sprintf("%d", a.Created))},
 			":s_signature": {S: aws.String(string(a.Signature))},
 		},
 		UpdateExpression: aws.String(assertionUpdateExpr),
@@ -118,7 +120,7 @@ func (a *Assertion) Save(
 func LoadAssertionsByFact(
 	ctx context.Context,
 	fact string,
-) ([]*Assertion, error) {
+) ([]Assertion, error) {
 	params := &dynamodb.QueryInput{
 		TableName:              aws.String(assertionTableName),
 		IndexName:              aws.String(assertionFactCreatedIndex),
@@ -135,13 +137,17 @@ func LoadAssertionsByFact(
 		return nil, errors.Trace(err)
 	}
 
-	assertions := []*Assertion{}
-	for _, it := range *resp.Items {
-		a, err := LoadAssertion(ctx, *it["s_id"].S)
+	assertions := []Assertion{}
+	for _, it := range resp.Items {
+		a, err := LoadAssertion(
+			ctx, PublicKey(*it["s_account"].S), *it["s_id"].S)
 		if err != nil {
 			return nil, errors.Trace(err)
+		} else if a == nil {
+			return nil, errors.Newf(
+				"Failed to load assertion: %s", *it["s_id"].S)
 		}
-		assertions = append(facts, a)
+		assertions = append(assertions, *a)
 	}
 	return assertions, nil
 }

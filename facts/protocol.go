@@ -5,6 +5,16 @@ import (
 	"golang.org/x/net/context"
 )
 
+// Params
+
+// FactParams are the parameters used to create a fact.
+type FactParams struct {
+	Account   model.PublicKey          `json:"public_key"`
+	Type      model.FctType            `json:"type"`
+	Value     string                   `json:"value"`
+	Signature model.PublicKeySignature `json:"signature"`
+}
+
 // Resources
 
 // AssertionResource represents an assertion as returned by the API.
@@ -16,13 +26,19 @@ type AssertionResource struct {
 	Signature model.PublicKeySignature `json:"signature"`
 }
 
-// NewFactResource renders a new FactResource from a fact object and its
-// associated assertions and revocations ordered by created time.
-func NewFactResource(
+// NewAssertionResource renders a new AssertionResource from an assertion
+// model.
+func NewAssertionResource(
 	ctx context.Context,
-	assertions *Assertion,
-	revocations []*Revocation,
-) (*FactResource, error) {
+	assertion model.Assertion,
+) *AssertionResource {
+	return &AssertionResource{
+		ID:        assertion.ID,
+		Created:   assertion.Created,
+		Fact:      assertion.Fact,
+		Account:   assertion.Account,
+		Signature: assertion.Signature,
+	}
 }
 
 // RevocationResource reprensents a revocation as returned by the API.
@@ -32,7 +48,24 @@ type RevocationResource struct {
 	Fact      string                   `json:"fact"`
 	Account   model.PublicKey          `json:"entity"`
 	Signature model.PublicKeySignature `json:"signature"`
-	Assertion AssertionResource        `json:"assertion"`
+	Assertion *AssertionResource       `json:"assertion"`
+}
+
+// NewRevocationResource renders a new RevocationResource from a revocation
+// model along with the assertion it revokes.
+func NewRevocationResource(
+	ctx context.Context,
+	revocation model.Revocation,
+	assertion model.Assertion,
+) *RevocationResource {
+	return &RevocationResource{
+		ID:        revocation.ID,
+		Created:   revocation.Created,
+		Fact:      revocation.Fact,
+		Account:   revocation.Account,
+		Signature: revocation.Signature,
+		Assertion: NewAssertionResource(ctx, assertion),
+	}
 }
 
 // FactResource represents a fact as returned by the API.
@@ -42,7 +75,7 @@ type FactResource struct {
 	Account     model.PublicKey      `json:"entity"`
 	Type        model.FctType        `json:"type"`
 	Value       string               `json:"value"`
-	Signatures  []SignatureResource  `json:"signatures"`
+	Assertions  []AssertionResource  `json:"assertions"`
 	Revocations []RevocationResource `json:"revocation"`
 }
 
@@ -50,18 +83,9 @@ type FactResource struct {
 // associated assertions and revocations ordered by created time.
 func NewFactResource(
 	ctx context.Context,
-	fact *Fact,
-	assertions []*Assertion,
-	revocations []*Revocation,
+	fact model.Fact,
+	assertions []model.Assertion,
+	revocations []model.Revocation,
 ) (*FactResource, error) {
-}
-
-// Params
-
-// FactParams are the parameters used to create a fact.
-type FactParams struct {
-	Account   model.PublicKey          `json:"public_key"`
-	Type      model.FctType            `json:"type"`
-	Value     string                   `json:"value"`
-	Signature model.PublicKeySignature `json:"signature"`
+	return nil, nil
 }

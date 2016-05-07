@@ -26,8 +26,8 @@ func init() {
 		log.Fatal(errors.Trace(err))
 	}
 
-	fmt.Println("Initialized models with tables:")
+	fmt.Println("Initialized models with Tables:")
 	for _, t := range resp.TableNames {
-		fmt.Println(*t)
+		fmt.Println("  " + *t)
 	}
 }

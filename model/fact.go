@@ -27,7 +27,7 @@ const (
 	factTableName   string = "facts"
 	factProjectExpr string = "s_id, s_created, s_account, s_type, s_value"
 	factUpdateExpr  string = "SET " +
-		"s_account = :s_account, " +
+		"s_created = :s_created, " +
 		"s_type = :s_type, " +
 		"s_value = :s_value"
 
@@ -45,7 +45,7 @@ func NewFact(
 	v string,
 ) *Fact {
 	return &Fact{
-		ID:      token.New("fact", string(account)),
+		ID:      token.New("fact"),
 		Created: time.Now().UnixNano(),
 		Account: account,
 		Type:    t,
@@ -56,11 +56,13 @@ func NewFact(
 // LoadFact loads a Fact from its ID.
 func LoadFact(
 	ctx context.Context,
+	account PublicKey,
 	ID string,
 ) (*Fact, error) {
 	params := &dynamodb.GetItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
-			"s_id": {S: aws.String(ID)},
+			"s_account": {S: aws.String(string(account))},
+			"s_id":      {S: aws.String(ID)},
 		},
 		TableName:            aws.String(factTableName),
 		ConsistentRead:       aws.Bool(true),
@@ -80,7 +82,7 @@ func LoadFact(
 	}
 
 	return &Fact{
-		ID:      ID,
+		ID:      *resp.Item["s_id"].S,
 		Created: created,
 		Account: PublicKey(*resp.Item["s_account"].S),
 		Type:    FctType(*resp.Item["s_type"].S),
@@ -94,12 +96,12 @@ func (f *Fact) Save(
 ) error {
 	params := &dynamodb.UpdateItemInput{
 		Key: map[string]*dynamodb.AttributeValue{
+			"s_account": {S: aws.String(string(f.Account))},
 			"s_id":      {S: aws.String(f.ID)},
-			"s_created": {N: aws.String(fmt.Sprintf("%d", f.Created))},
 		},
 		TableName: aws.String(factTableName),
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
-			":s_account": {S: aws.String(string(f.Account))},
+			":s_created": {N: aws.String(fmt.Sprintf("%d", f.Created))},
 			":s_type":    {S: aws.String(string(f.Type))},
 			":s_value":   {S: aws.String(f.Value)},
 		},
@@ -118,7 +120,7 @@ func LoadFactsByAccountAndType(
 	ctx context.Context,
 	account PublicKey,
 	t FctType,
-) ([]*Fact, error) {
+) ([]Fact, error) {
 	params := &dynamodb.QueryInput{
 		TableName:              aws.String(factTableName),
 		IndexName:              aws.String(factAccountTypeIndex),
@@ -134,13 +136,16 @@ func LoadFactsByAccountAndType(
 		return nil, errors.Trace(err)
 	}
 
-	facts := []*Fact{}
-	for _, it := range *resp.Items {
-		f, err := LoadFact(ctx, *it["s_id"].S)
+	facts := []Fact{}
+	for _, it := range resp.Items {
+		f, err := LoadFact(ctx, account, *it["s_id"].S)
 		if err != nil {
 			return nil, errors.Trace(err)
+		} else if f == nil {
+			return nil, errors.Newf(
+				"Failed to load fact: %s", *it["s_id"].S)
 		}
-		facts = append(facts, f)
+		facts = append(facts, *f)
 	}
 	return facts, nil
 }
@@ -157,10 +162,10 @@ func LoadLatestFactByAccountAndType(
 		return nil, errors.Trace(err)
 	}
 
-	latest := *Fact(nil)
+	var latest *Fact
 	for _, f := range facts {
 		if latest == nil || f.Created > latest.Created {
-			latest = f
+			latest = &f
 		}
 	}
 	return latest, nil

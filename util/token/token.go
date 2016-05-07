@@ -53,9 +53,8 @@ func init() {
 // New generates a random token prefixed by prefix
 func New(
 	name string,
-	prefix string,
 ) string {
-	return name + "_" + prefix + "_" + RandStr()
+	return name + "_" + RandStr()
 }
 
 // RandStr generates a random string

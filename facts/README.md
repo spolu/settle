@@ -9,7 +9,7 @@ value, account) is immutable. Facts can only be created by the account they
 relate to, also called the fact owner.
 
 ```
-curl -XPOST https://settl.net/facts \
+curl -XPOST https://settl.net/$pk0/facts \
   -d type=$type \
   -d value=$value \
   -d account=$pk0 \
@@ -57,7 +57,7 @@ Facts can be signed and certified by other Stellar accounts representing
 official or unofficial entities using the following public endpoints:
 
 ```
-curl -XPOST https://settl.net/facts/$id/assertions \
+curl -XPOST https://settl.net/$pk0/facts/$id/assertions \
   -d account=$pk1 \
   -d signature=$sig(action=assert&account=$pk0&type=$type&value=$value)
 ```
@@ -85,7 +85,7 @@ for the fact. If the owner of a fact revokes its assertion, it permanently
 hides the fact from the API.
 
 ```
-curl -XPOST https://sett.eu/facts/$id/revocations \
+curl -XPOST https://sett.eu/$pk0/facts/$id/revocations \
   -d account=$pk1 \
   -d signature=$sig(action=revoke&account=$pk0&type=$type&value=$value)
 ```
