@@ -1,27 +1,27 @@
-# Facts
+# Fact Protocol
 
 Facts are typed values related to a Stellar account along with a list of
 assertions from arbitrary accounts asserting that the fact is true. Facts are
-created and retrievable on a public Fact API using the endpoints described in
+created and retrievable on public APIs using the Fact Protocol described in
 this document. `type` and `value` are strings whose validation is left to the
-discretion of the service running the Fact API. Once created, a fact (type,
-value, account) is immutable. Facts can only be created by the account they
-relate to, also called the fact owner.
+discretion of the service running the Fact Protocol. Once created, a fact
+(type, value, account) is immutable. Facts can only be created by the account
+they relate to, also called the fact owner:
 
 ```
-curl -XPOST https://settl.net/$pk0/facts \
+curl -XPOST https://facts.settl.net/$pk0/facts \
   -d type=$type \
   -d value=$value \
   -d account=$pk0 \
   -d signature=$sig(action=assert&account=$pk0&type=$type&value=$value)
 ```
 
-The Fact API returns a JSON body representing the newly created assertion:
+The API returns a JSON body representing the newly created fact:
 
 ```
 {
   "fact": {
-    "id": "fact_$pk0_1a1ed89jh10dj0123",
+    "id": "fact_1a1ed89jh10dj0123",
     "account": "$pk0",
     "type": "email",
     "value": "polu.stanislas@gmail.com",
@@ -35,7 +35,8 @@ The Fact API returns a JSON body representing the newly created assertion:
   }
 }
 ```
-Creating a fact implicitely assert that the fact is true.
+Creating a fact implicitely assert that the fact is true, hence automatically
+creating an assertion from the fact owner.
 
 Facts are then publicized as Stellar accounts Data fields using the following
 format as key `fact:$domain:$type` and the unique `$id` returned by the
@@ -44,7 +45,7 @@ Fact API as value:
 ```
 {
   ...
-  "fact:settl.net:email": "fact_$pk0_1a1ed89jh10dj0123",
+  "fact:facts.settl.net:email": "fact_1a1ed89jh10dj0123",
   ...
 }
 
@@ -53,11 +54,11 @@ It is invalid to publicize a fact that is not owned by the entiy publicizing
 it. For easy in-place validation (without querying the associated Fact API),
 fact IDs include the account (public key) of their owner.
 
-Facts can be signed and certified by other Stellar accounts representing
-official or unofficial entities using the following public endpoints:
+Facts can be asserted by other Stellar accounts representing arbitrary entities
+using the following public endpoints:
 
 ```
-curl -XPOST https://settl.net/$pk0/facts/$id/assertions \
+curl -XPOST https://facts.settl.net/$pk0/facts/$id/assertions \
   -d account=$pk1 \
   -d signature=$sig(action=assert&account=$pk0&type=$type&value=$value)
 ```
@@ -66,17 +67,18 @@ Returning a JSON body representing the newly created assertion:
 ```
 {
   "assertion": {
-    "id": "assertion_$pk1_d9ceqw09dfwife0wef",
+    "id": "assertion_d9ceqw09dfwife0wef",
     "account": "$pk1",
     "signature": "sca239afsd0..."
   }
 }
 ```
 
-Facts and Signatures can be retrieved publicly using the following endpoints:
+Facts, assertions and revocations can be retrieved publicly using the following
+endpoints:
 
 ```
-curl -XGET https://settl.net/facts/$id
+curl -XGET https://facts.settl.net/facts/$id
 ```
 
 Facts assertions (and indirectly facts) can be revoked using the following API.
@@ -85,12 +87,12 @@ for the fact. If the owner of a fact revokes its assertion, it permanently
 hides the fact from the API.
 
 ```
-curl -XPOST https://sett.eu/$pk0/facts/$id/revocations \
+curl -XPOST https://facts.settl.net/$pk0/facts/$id/revocations \
   -d account=$pk1 \
   -d signature=$sig(action=revoke&account=$pk0&type=$type&value=$value)
 ```
 
-Facts cannot be revoked without being previously signed.
+Facts cannot be revoked without being previously asserted.
 
 # Settl Fact Types
 

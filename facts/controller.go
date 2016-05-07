@@ -8,7 +8,9 @@ import (
 
 	"github.com/spolu/settl/model"
 	"github.com/spolu/settl/util/errors"
+	"github.com/spolu/settl/util/format"
 	"github.com/spolu/settl/util/respond"
+	"github.com/spolu/settl/util/svc"
 	"github.com/stellar/go-stellar-base/horizon"
 
 	"golang.org/x/net/context"
@@ -136,6 +138,16 @@ func (c *controller) CreateFact(
 		return
 	}
 
+	resource, err := NewFactResource(
+		ctx, *fact, []model.Assertion{*assertion}, nil)
+	if err != nil {
+		respond.Error(ctx, w, errors.Trace(err)) // 500
+		return
+	}
+
+	respond.Success(ctx, w, svc.Resp{
+		"fact": format.JSONPtr(*resource),
+	})
 }
 
 func (c *controller) CreateSignature(
