@@ -46,7 +46,7 @@ func NewFact(
 ) *Fact {
 	return &Fact{
 		ID:      token.New("fact"),
-		Created: time.Now().UnixNano(),
+		Created: time.Now().UnixNano() / (1000 * 1000), // milliseconds
 		Account: account,
 		Type:    t,
 		Value:   v,

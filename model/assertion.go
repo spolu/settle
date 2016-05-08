@@ -46,7 +46,7 @@ func NewAssertion(
 ) *Assertion {
 	return &Assertion{
 		ID:        token.New("assertion"),
-		Created:   time.Now().UnixNano(),
+		Created:   time.Now().UnixNano() / (1000 * 1000), // milliseconds
 		Fact:      fact,
 		Account:   account,
 		Signature: signature,

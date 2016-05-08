@@ -44,7 +44,7 @@ func NewRevocation(
 ) *Revocation {
 	return &Revocation{
 		ID:        token.New("revocation"),
-		Created:   time.Now().UnixNano(),
+		Created:   time.Now().UnixNano() / (1000 * 1000), // milliseconds
 		Fact:      fact,
 		Account:   account,
 		Signature: signature,
