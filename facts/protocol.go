@@ -23,7 +23,7 @@ type AssertionResource struct {
 	ID        string                   `json:"id"`
 	Created   int64                    `json:"created"`
 	Fact      string                   `json:"fact"`
-	Account   model.PublicKey          `json:"entity"`
+	Account   model.PublicKey          `json:"account"`
 	Signature model.PublicKeySignature `json:"signature"`
 }
 
@@ -47,7 +47,7 @@ type RevocationResource struct {
 	ID        string                   `json:"id"`
 	Created   int64                    `json:"created"`
 	Fact      string                   `json:"fact"`
-	Account   model.PublicKey          `json:"entity"`
+	Account   model.PublicKey          `json:"account"`
 	Signature model.PublicKeySignature `json:"signature"`
 	Assertion *AssertionResource       `json:"assertion"`
 }
@@ -73,7 +73,7 @@ func NewRevocationResource(
 type FactResource struct {
 	ID          string               `json:"id"`
 	Created     int64                `json:"created"`
-	Account     model.PublicKey      `json:"entity"`
+	Account     model.PublicKey      `json:"account"`
 	Type        model.FctType        `json:"type"`
 	Value       string               `json:"value"`
 	Assertions  []AssertionResource  `json:"assertions"`
