@@ -2,6 +2,7 @@ package facts
 
 import (
 	"github.com/spolu/settl/model"
+	"github.com/spolu/settl/util/errors"
 	"golang.org/x/net/context"
 )
 
@@ -76,16 +77,48 @@ type FactResource struct {
 	Type        model.FctType        `json:"type"`
 	Value       string               `json:"value"`
 	Assertions  []AssertionResource  `json:"assertions"`
-	Revocations []RevocationResource `json:"revocation"`
+	Revocations []RevocationResource `json:"revocations,omitempty"`
 }
 
 // NewFactResource renders a new FactResource from a fact object and its
-// associated assertions and revocations ordered by created time.
+// associated assertions and revocations assumed to be ordered (descending) by
+// created time. If they are not ordered, the result is undefined.
 func NewFactResource(
 	ctx context.Context,
 	fact model.Fact,
 	assertions []model.Assertion,
 	revocations []model.Revocation,
 ) (*FactResource, error) {
-	return nil, nil
+	var revRes []RevocationResource
+	var assRes []AssertionResource
+	for _, r := range revocations {
+		var v *model.Assertion
+		var idx = -1
+		for i, a := range assertions {
+			if a.Account == r.Account && a.Created < r.Created {
+				v = &a
+				idx = i
+				break
+			}
+			if v != nil {
+				assertions = append(assertions[:idx], assertions[idx+1:]...)
+				revRes = append(revRes, *NewRevocationResource(ctx, r, *v))
+			} else {
+				return nil, errors.Newf("No assertion for revocation: %s", r.ID)
+			}
+		}
+	}
+	for _, a := range assertions {
+		assRes = append(assRes, *NewAssertionResource(ctx, a))
+	}
+
+	return &FactResource{
+		ID:          fact.ID,
+		Created:     fact.Created,
+		Account:     fact.Account,
+		Type:        fact.Type,
+		Value:       fact.Value,
+		Assertions:  assRes,
+		Revocations: revRes,
+	}, nil
 }

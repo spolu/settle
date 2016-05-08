@@ -9,7 +9,7 @@ discretion of the service running the Fact Protocol. Once created, a fact
 they relate to, also called the fact owner:
 
 ```
-curl -XPOST https://facts.settl.net/$pk0/facts \
+curl -XPOST https://FACT_SERVER/accounts/$pk0/facts \
   -d type=$type \
   -d value=$value \
   -d account=$pk0 \
@@ -48,8 +48,11 @@ Fact API as value:
   "fact:facts.settl.net:email": "fact_1a1ed89jh10dj0123",
   ...
 }
-
 ```
+
+`FACT_SERVER`, the base URL to interact with the service maintaining the
+advertised fact, can be retrieved from the `$domain`'s `stellar.toml` file.
+
 It is invalid to publicize a fact that is not owned by the entiy publicizing
 it. For easy in-place validation (without querying the associated Fact API),
 fact IDs include the account (public key) of their owner.
@@ -58,7 +61,7 @@ Facts can be asserted by other Stellar accounts representing arbitrary entities
 using the following public endpoints:
 
 ```
-curl -XPOST https://facts.settl.net/$pk0/facts/$id/assertions \
+curl -XPOST https://FACT_SERVER/accounts/$pk0/facts/$id/assertions \
   -d account=$pk1 \
   -d signature=$sig(action=assert&account=$pk0&type=$type&value=$value)
 ```
@@ -78,7 +81,7 @@ Facts, assertions and revocations can be retrieved publicly using the following
 endpoints:
 
 ```
-curl -XGET https://facts.settl.net/facts/$id
+curl -XGET https://FACT_SERVER/accounts/$pk0/facts/$id
 ```
 
 Facts assertions (and indirectly facts) can be revoked using the following API.
@@ -87,7 +90,7 @@ for the fact. If the owner of a fact revokes its assertion, it permanently
 hides the fact from the API.
 
 ```
-curl -XPOST https://facts.settl.net/$pk0/facts/$id/revocations \
+curl -XPOST https://FACT_SERVER/accounts/$pk0/facts/$id/revocations \
   -d account=$pk1 \
   -d signature=$sig(action=revoke&account=$pk0&type=$type&value=$value)
 ```

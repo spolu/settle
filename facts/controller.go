@@ -145,7 +145,7 @@ func (c *controller) CreateFact(
 		return
 	}
 
-	respond.Success(ctx, w, svc.Resp{
+	respond.Created(ctx, w, svc.Resp{
 		"fact": format.JSONPtr(*resource),
 	})
 }

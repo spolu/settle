@@ -33,14 +33,22 @@ func errorResponse(
 	return resp
 }
 
-// Success is used to successfully respond with status 200. Error cases should
-// be hanlded by Recoverer (through panics)
+// Success is used to successfully respond with status 200.
 func Success(
 	ctx context.Context,
 	w http.ResponseWriter,
 	resp svc.Resp,
 ) {
 	Respond(ctx, w, http.StatusOK, nil, resp)
+}
+
+// Created is used to successfully respond with status 201.
+func Created(
+	ctx context.Context,
+	w http.ResponseWriter,
+	resp svc.Resp,
+) {
+	Respond(ctx, w, http.StatusCreated, nil, resp)
 }
 
 // Error triage the error and respond with its content if it's a UserError,
