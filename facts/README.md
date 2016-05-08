@@ -53,9 +53,16 @@ Fact API as value:
 `FACT_SERVER`, the base URL to interact with the service maintaining the
 advertised fact, can be retrieved from the `$domain`'s `stellar.toml` file.
 
+Facts, assertions and revocations can be retrieved publicly using the following
+endpoints:
+
+```
+curl -XGET https://FACT_SERVER/accounts/$pk0/facts/$id
+```
+
 It is invalid to publicize a fact that is not owned by the entiy publicizing
-it. For easy in-place validation (without querying the associated Fact API),
-fact IDs include the account (public key) of their owner.
+it. That's the reason why accounts have to be specified when constructing the
+URL to retrieve a fact.
 
 Facts can be asserted by other Stellar accounts representing arbitrary entities
 using the following public endpoints:
@@ -75,13 +82,6 @@ Returning a JSON body representing the newly created assertion:
     "signature": "sca239afsd0..."
   }
 }
-```
-
-Facts, assertions and revocations can be retrieved publicly using the following
-endpoints:
-
-```
-curl -XGET https://FACT_SERVER/accounts/$pk0/facts/$id
 ```
 
 Facts assertions (and indirectly facts) can be revoked using the following API.
