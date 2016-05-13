@@ -10,10 +10,10 @@ import (
 
 // FactParams are the parameters used to create a fact.
 type FactParams struct {
-	Account   model.PublicKey          `json:"public_key"`
-	Type      model.FctType            `json:"type"`
-	Value     string                   `json:"value"`
-	Signature model.PublicKeySignature `json:"signature"`
+	Account   model.PublicKey
+	Type      model.FctType
+	Value     string
+	Signature model.PublicKeySignature
 }
 
 // Resources

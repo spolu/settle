@@ -15,7 +15,7 @@ func main() {
 	var acc = flag.String("account", "", "The fact account")
 	var typ = flag.String("type", "", "The fact type")
 	var val = flag.String("value", "", "The fact velue")
-	var see = flag.String("seed", "", "The sede of the private key to sign with")
+	var see = flag.String("seed", "", "The seed of the private key to sign with")
 	flag.Parse()
 
 	fmt.Printf(
