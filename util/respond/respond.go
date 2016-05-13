@@ -61,7 +61,7 @@ func Error(
 	// Handle UserError
 	if e := errors.ExtractUserError(err); e != nil {
 		logging.Logf(ctx,
-			"Responding with UserError: status=%d code=%q message=%q",
+			"UserError: status=%d code=%q message=%q",
 			e.Status(), e.Code(), e.Message())
 		for _, line := range errors.ErrorStack(err) {
 			logging.Logf(ctx, "  %s", line)
@@ -71,7 +71,7 @@ func Error(
 		Respond(ctx, w, e.Status(), nil, resp)
 	} else {
 		logging.Logf(ctx,
-			"Responding with unexpected Error: error=%q", err.Error())
+			"Unexpected error: error=%q", err.Error())
 		for _, line := range errors.ErrorStack(err) {
 			logging.Logf(ctx, "  %s", line)
 		}

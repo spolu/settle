@@ -19,11 +19,11 @@ func Recoverer(h goji.Handler) goji.Handler {
 		defer func() {
 			if err := recover(); err != nil {
 				if e, ok := err.(error); ok {
-					logging.Logf(ctx, "caught unexpected error panic: %+v", e)
-					Error(ctx, w, e)
+					logging.Logf(ctx, "Panic: error=%q", e.Error())
+					Error(ctx, w, errors.Trace(e))
 				} else {
-					logging.Logf(ctx, "caught unexpected non-error panic: %+v", err)
-					Error(ctx, w, errors.Newf("non-error panic: %+v", err))
+					logging.Logf(ctx, "Non error panic: dump=%+v", err)
+					Error(ctx, w, errors.Newf("Non error panic: %+v", err))
 				}
 				debug.PrintStack()
 			}
