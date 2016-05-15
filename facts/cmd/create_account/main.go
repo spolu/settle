@@ -8,7 +8,6 @@ import (
 	"github.com/stellar/go-stellar-base/build"
 	"github.com/stellar/go-stellar-base/horizon"
 	"github.com/stellar/go-stellar-base/keypair"
-	"github.com/stellar/go-stellar-base/xdr"
 )
 
 func main() {
@@ -24,18 +23,18 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	fkp := kp.(*keypair.Full)
 
 	fmt.Printf("Generating new KeyPair...\n")
 	nk, err := keypair.Random()
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	fmt.Printf("Seed: %s\n", nk.Seed())
 	fmt.Printf("Address: %s\n", nk.Address())
 
 	fmt.Printf("Fetching next sequence for creator account...\n")
-	seq, err := horizon.DefaultPublicNetClient.SequenceForAccount(kp.Address())
+	seq, err := horizon.DefaultPublicNetClient.SequenceForAccount(fkp.Address())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -45,15 +44,15 @@ func main() {
 	txEnvBuilder.Init()
 	txEnvBuilder.Mutate(
 		build.Transaction(
-			build.SourceAccount{kp.Address()},
-			build.Sequence{uint64(seq)},
+			build.SourceAccount{fkp.Address()},
+			build.Sequence{uint64(seq) + 1},
 			build.CreateAccount(
 				build.NativeAmount{*amt},
-				build.SourceAccount{kp.Address()},
 				build.Destination{nk.Address()},
 			),
+			build.PublicNetwork,
 		),
-		build.Sign{*see},
+		build.Sign{fkp.Seed()},
 	)
 
 	if txEnvBuilder.Err != nil {
@@ -67,23 +66,15 @@ func main() {
 	}
 	fmt.Printf("Envelope: %s\n", env)
 
-	var rawEnv xdr.TransactionEnvelope
-	err = xdr.SafeUnmarshalBase64(env, &rawEnv)
-	if err != nil {
-		log.Fatal(err)
-	}
-	chk, err := xdr.MarshalBase64(rawEnv)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if chk != env {
-		log.Fatal(fmt.Errorf("Mismatch!"))
-	}
-
 	fmt.Printf("Submitting transaction...\n")
 	res, err := horizon.DefaultPublicNetClient.SubmitTransaction(env)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Printf("Error: %+v\n", err)
+		switch err := err.(type) {
+		case *horizon.Error:
+			fmt.Printf("Problem: %+v\n", err.Problem)
+		}
+	} else {
+		fmt.Printf("Response: %+v\n", res)
 	}
-	fmt.Printf("Response: %+v\n", res)
 }
