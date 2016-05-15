@@ -20,6 +20,7 @@ func (c *Configuration) Bind(
 	mux *goji.Mux,
 ) {
 	mux.HandleFuncC(pat.Post("/accounts/:account/facts"), c.controller.CreateFact)
-	mux.HandleFuncC(pat.Post("/accounts/:account/facts/:fact/signatures"), c.controller.CreateSignature)
+	mux.HandleFuncC(pat.Get("/accounts/:account/facts/:fact"), c.controller.RetrieveFact)
+	mux.HandleFuncC(pat.Post("/accounts/:account/facts/:fact/assertions"), c.controller.CreateAssertion)
 	mux.HandleFuncC(pat.Post("/accounts/:account/facts/:fact/revocations"), c.controller.CreateRevocation)
 }

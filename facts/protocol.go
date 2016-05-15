@@ -16,6 +16,22 @@ type FactParams struct {
 	Signature model.PublicKeySignature
 }
 
+// AssertionParams are the parameters used to assert a fact.
+type AssertionParams struct {
+	Fact        string
+	FactAccount model.PublicKey
+	Account     model.PublicKey
+	Signature   model.PublicKeySignature
+}
+
+// RevocationParams are the parameters used to revoke an assertion.
+type RevocationParams struct {
+	Fact        string
+	FactAccount model.PublicKey
+	Account     model.PublicKey
+	Signature   model.PublicKeySignature
+}
+
 // Resources
 
 // AssertionResource represents an assertion as returned by the API.
