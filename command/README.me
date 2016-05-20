@@ -1,35 +1,21 @@
 # Command line interface
 
 ```
-settl mint usd 100
-settl mint eur 100
-
-# when `mint $asset $amount`
-#  - increase trust line for $asset to $amount
-#  - issue $asset $mount
+settl issue usd 5 to alistair.stroop@gmail.com
+settl issue usd 5 to john
 
 settl pay usd 5 to alistair.stroop@gmail.com
-settl pay usd 5 to lyft
+settl pay lyft:usd 5 to lyft with usd 5.50
 settl pay stan:usd 5 to alistair*settl.net
-settl pay eur 5 to lyft with usd 7
+settl pay eur 5 to lyft with usd 6
 settl list payments
 
-# when `pay $asset $amount to $destination`
-#  - if $destination is not a settl acount
-#    create a payment
-#  - if $asset has no issuer, attempt to pay $destination:$asset
-#  - Otherwise attmpet
+settl offer usd 50 for eur at 1 --passive
+settl offer
+settl cancel offer offer_id
 
-settl offer usd 56.5 for eur 50
-settl list offers
-settl cancel offer_id
-
-# when `offer $asset_A $amount_A for $asset_B $amount_B`:
-#  - check that account has minted $self:asset_A
-#  - check that account has minted $self:asset_B
-#  - check that balance($self:asset_A > $amount_A)
-#  - check that balance($self:asset_B > $amount_B)
-#  - create an offer for these assets
+settl trust lyft:usd 100
+settl trust
 
 settl accept lyft:usd 100
 settl accept gabriel:usd 500
