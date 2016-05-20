@@ -1,6 +1,14 @@
 package api
 
+import "github.com/spolu/settl/model"
+
 // Params
+
+type UserParams struct {
+	Username      string
+	Address       model.Address
+	EncryptedSeed string
+}
 
 // Resources
 
