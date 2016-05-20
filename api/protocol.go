@@ -4,6 +4,7 @@ import "github.com/spolu/settl/model"
 
 // Params
 
+// UserParams are the parameters used to create a new user.
 type UserParams struct {
 	Username      string
 	Address       model.Address
@@ -12,9 +13,8 @@ type UserParams struct {
 
 // Resources
 
-// TokenResource represents a token as returned by the API.
-type TokenResource struct {
-	ID        string `json:"id"`
-	Created   int64  `json:"created"`
-	ExpiresAt int64  `json:"expires_at"`
+// ChallengeResource represents a challenge as returned by the API.
+type ChallengeResource struct {
+	Value   string `json:"value"`
+	Created int64  `json:"created"`
 }

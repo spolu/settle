@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"flag"
 	"fmt"
 	"log"
@@ -11,15 +12,51 @@ import (
 )
 
 func main() {
-	var amt = flag.String("amount", "0", "The initial amount for the account")
+	var fct = flag.String("function", "sign", "The function to use")
 	var see = flag.String("seed", "dummy", "The seed of the private key to sign with")
+	var amt = flag.String("amount", "0", "The initial amount for the account")
+	var chl = flag.String("challenge", "0", "The initial amount for the account")
 	flag.Parse()
 
+	switch *fct {
+	case "create_account":
+		createAccount(*see, *amt)
+	case "sign_challenge":
+		signChallenge(*see, *chl)
+	}
+}
+
+func signChallenge(
+	seed string,
+	challenge string,
+) {
+	fmt.Printf(
+		"Signing challenge: challenge=%q\n",
+		challenge)
+
+	kp, err := keypair.Parse(seed)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fkp := kp.(*keypair.Full)
+
+	sign, err := fkp.Sign([]byte(challenge))
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Signed challenge: %s\n",
+		base64.StdEncoding.EncodeToString([]byte(sign)))
+}
+
+func createAccount(
+	seed string,
+	amount string,
+) {
 	fmt.Printf(
 		"Creating Stellar Account: amount=%q\n",
-		*amt)
+		amount)
 
-	kp, err := keypair.Parse(*see)
+	kp, err := keypair.Parse(seed)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -47,7 +84,7 @@ func main() {
 			build.SourceAccount{fkp.Address()},
 			build.Sequence{uint64(seq) + 1},
 			build.CreateAccount(
-				build.NativeAmount{*amt},
+				build.NativeAmount{amount},
 				build.Destination{nk.Address()},
 			),
 			build.PublicNetwork,

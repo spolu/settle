@@ -15,22 +15,22 @@ import (
 )
 
 const (
-	// DefaultRetrieveTokensCount is the default number of tokens returned by
-	// the API if the count attribute is not specified.
-	DefaultRetrieveTokensCount = uint64(10)
-	// MaxRetrieveTokensCount is the maximium number of tokens that can be
-	// retrieved.
-	MaxRetrieveTokensCount = uint64(10)
+	// DefaultRetrieveChallengesCount is the default number of challenges
+	// returned by the API if the count attribute is not specified.
+	DefaultRetrieveChallengesCount = uint64(10)
+	// MaxRetrieveChallengesCount is the maximium number of challenges that can
+	// be retrieved.
+	MaxRetrieveChallengesCount = uint64(10)
 )
 
 type controller struct{}
 
-func (c *controller) RetrieveTokens(
+func (c *controller) RetrieveChallenges(
 	ctx context.Context,
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	count := DefaultRetrieveTokensCount
+	count := DefaultRetrieveChallengesCount
 	if attr := r.URL.Query().Get("count"); attr != "" {
 		err := error(nil)
 		count, err = strconv.ParseUint(attr, 10, 64)
@@ -47,24 +47,22 @@ func (c *controller) RetrieveTokens(
 		}
 	}
 
-	tokens := []TokenResource{}
+	challenges := []ChallengeResource{}
 	for i := uint64(0); i < count; i++ {
-		token, created, err := auth.MintToken(ctx, auth.RootLiveKeypair)
+		challenge, created, err := auth.MintChallenge(ctx, auth.RootLiveKeypair)
 		if err != nil {
 			respond.Error(ctx, w, errors.Trace(err)) // 500
 			return
 
 		}
-		tokens = append(tokens, TokenResource{
-			ID:      *token,
+		challenges = append(challenges, ChallengeResource{
+			Value:   *challenge,
 			Created: (*created).UnixNano() / (1000 * 1000),
-			ExpiresAt: (*created).
-				Add(auth.TokenExpiry).UnixNano() / (1000 * 1000),
 		})
 	}
 
-	respond.Created(ctx, w, svc.Resp{
-		"tokens": format.JSONPtr(tokens),
+	respond.Success(ctx, w, svc.Resp{
+		"challenges": format.JSONPtr(challenges),
 	})
 }
 

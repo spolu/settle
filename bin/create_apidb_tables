@@ -1,0 +1,12 @@
+#!/bin/bash
+
+set -eu
+
+# A bit of a hack, but it works
+schemas="$(dirname "$0")/../model/schemas"/api.*.go
+
+
+perl -ne 'print if /`/.../`/' "$(dirname "$0")/../model/schemas/schemas.go" | sed '1d;$d'
+for i in $schemas; do
+    perl -ne 'print if /`/.../`/' "$i" | sed '1d;$d'
+done

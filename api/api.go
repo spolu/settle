@@ -20,7 +20,7 @@ func (c *Configuration) Init() error {
 func (c *Configuration) Bind(
 	mux *goji.Mux,
 ) {
-	mux.HandleFuncC(pat.Get("/tokens"), c.controller.RetrieveTokens)
+	mux.HandleFuncC(pat.Get("/challenges"), c.controller.RetrieveChallenges)
 
 	mux.HandleFuncC(pat.Post("/users"), c.controller.CreateUser)
 	mux.HandleFuncC(pat.Post("/stellar/operations"), c.controller.CreateStellarOperation)

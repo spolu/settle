@@ -11,9 +11,9 @@ import (
 // Build initializes the app and its web stack.
 func Build() (*goji.Mux, error) {
 	mux := goji.NewMux()
+	mux.UseC(respond.Recoverer)
 	mux.UseC(logging.RequestLogger)
 	mux.UseC(auth.Authenticator)
-	mux.UseC(respond.Recoverer)
 
 	err := error(nil)
 

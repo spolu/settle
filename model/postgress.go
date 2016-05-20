@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 
@@ -14,7 +15,11 @@ import (
 
 var apidb *sqlx.DB
 
-func init() {
+func ensureAPIDB() {
+	if apidb != nil {
+		return
+	}
+
 	err := error(nil)
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		os.Getenv("API_DB_HOST"),
@@ -31,9 +36,20 @@ func init() {
 	}
 }
 
+func init() {
+	ensureAPIDB()
+}
+
 // Shutdown attempts to close all existing DB connections.
 func Shutdown() {
 	if apidb != nil {
 		apidb.Close()
+	}
+}
+
+// MustClose is used to ensure statement get closed.
+func MustClose(statement io.Closer) {
+	if err := statement.Close(); err != nil {
+		panic(err)
 	}
 }

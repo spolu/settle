@@ -72,7 +72,7 @@ curl -XPOST settl.net/stellar/operations
 ```
 curl -XPOST settl.net/users
   -H $address:$signature
-  -d token=1oeiwqlkdj_1231230123_k2jt329jpfldfas
+  -d token="1463699742482_x92krP3Nl0uaVOQL:VpguS4+k+uZP6DuxORFic+..."
   -d username=stan
   -d address=ABASD...
   -d encrypted_seed=ASDA...
