@@ -1,7 +1,7 @@
 package api
 
 import (
-	"github.com/spolu/settl/api/utils/auth"
+	"github.com/spolu/settl/api/util/auth"
 	"github.com/spolu/settl/util/errors"
 	"github.com/spolu/settl/util/logging"
 	"github.com/spolu/settl/util/respond"

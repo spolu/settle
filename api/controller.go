@@ -3,9 +3,10 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"regexp"
 	"strconv"
 
-	"github.com/spolu/settl/api/utils/auth"
+	"github.com/spolu/settl/api/util/auth"
 	"github.com/spolu/settl/util/errors"
 	"github.com/spolu/settl/util/format"
 	"github.com/spolu/settl/util/respond"
@@ -66,11 +67,27 @@ func (c *controller) RetrieveChallenges(
 	})
 }
 
+var usernameRegexp = regexp.MustCompile("^[a-z0-9]+$")
+
 func (c *controller) CreateUser(
 	ctx context.Context,
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
+
+	params := UserParams{
+		Username:      r.PostFormValue("username"),
+		EncryptedSeed: r.PostFormValue("encrypted_seed"),
+	}
+
+	if !usernameRegexp.MatchString(params.Username) {
+		respond.Error(ctx, w, errors.NewUserError(nil,
+			400, "username_invalid",
+			"The username provided is invalid. Usernames must be "+
+				"alphanumeric lowercased characters only.",
+		))
+		return
+	}
 }
 
 func (c *controller) CreateStellarOperation(

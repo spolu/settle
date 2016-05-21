@@ -28,7 +28,6 @@ type Authentication struct {
 }
 
 var insertAuthentication *sqlx.NamedStmt
-var findAuthenticationByToken *sqlx.NamedStmt
 var findAuthenticationByChallenge *sqlx.NamedStmt
 
 func init() {
