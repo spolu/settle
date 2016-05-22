@@ -1,10 +1,11 @@
-package logging
+package requestlogger
 
 import (
 	"log"
 	"net/http"
 	"time"
 
+	"github.com/spolu/settl/lib/logging"
 	"github.com/zenazn/goji/web/mutil"
 
 	"goji.io"
@@ -16,12 +17,12 @@ func init() {
 	log.SetFlags(0)
 }
 
-type requestLogger struct {
+type middleware struct {
 	goji.Handler
 }
 
 // ServeHTTPC handles incoming HTTP requests and attempt to log them.
-func (rl requestLogger) ServeHTTPC(
+func (m middleware) ServeHTTPC(
 	ctx context.Context,
 	w http.ResponseWriter,
 	r *http.Request,
@@ -30,19 +31,19 @@ func (rl requestLogger) ServeHTTPC(
 	url := *r.URL
 	wp := mutil.WrapWriter(w)
 
-	Logf(ctx, "Request: method=%q url=%q remote=%q",
-		r.Method, url.String(), r.RemoteAddr, wp.Status())
+	logging.Logf(ctx, "HTTP Request: method=%q url=%q remote=%q",
+		r.Method, url.String(), r.RemoteAddr)
 
 	defer func() {
 		wp.WriteHeader(http.StatusOK)
-		Logf(ctx, "Response: status=%d latency=%d",
+		logging.Logf(ctx, "HTTP Response: status=%d latency=%d",
 			wp.Status(), time.Now().Sub(start)/time.Millisecond)
 	}()
 
-	rl.Handler.ServeHTTPC(ctx, wp, r)
+	m.Handler.ServeHTTPC(ctx, wp, r)
 }
 
-// RequestLogger is a middleware that logs URLs, headers, status, lantency.
-func RequestLogger(h goji.Handler) goji.Handler {
-	return requestLogger{h}
+// Middleware that logs methods, URLs, remote addresses, status, lantency.
+func Middleware(h goji.Handler) goji.Handler {
+	return middleware{h}
 }

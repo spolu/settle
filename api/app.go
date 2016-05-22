@@ -1,19 +1,19 @@
 package api
 
 import (
-	"github.com/spolu/settl/api/util/auth"
-	"github.com/spolu/settl/util/errors"
-	"github.com/spolu/settl/util/logging"
-	"github.com/spolu/settl/util/respond"
+	"github.com/spolu/settl/api/lib/authentication"
+	"github.com/spolu/settl/lib/errors"
+	"github.com/spolu/settl/lib/recoverer"
+	"github.com/spolu/settl/lib/requestlogger"
 	"goji.io"
 )
 
 // Build initializes the app and its web stack.
 func Build() (*goji.Mux, error) {
 	mux := goji.NewMux()
-	mux.UseC(respond.Recoverer)
-	mux.UseC(logging.RequestLogger)
-	mux.UseC(auth.Authenticator)
+	mux.UseC(recoverer.Middleware)
+	mux.UseC(requestlogger.Middleware)
+	mux.UseC(authentication.Middleware)
 
 	err := error(nil)
 

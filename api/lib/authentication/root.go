@@ -1,10 +1,10 @@
-package auth
+package authentication
 
 import (
 	"log"
 	"os"
 
-	"github.com/spolu/settl/util/errors"
+	"github.com/spolu/settl/lib/errors"
 	"github.com/stellar/go-stellar-base/keypair"
 )
 

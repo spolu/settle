@@ -10,7 +10,7 @@ import (
 	"goji.io"
 
 	"github.com/spolu/settl/api"
-	"github.com/spolu/settl/util/errors"
+	"github.com/spolu/settl/lib/errors"
 	"github.com/zenazn/goji/bind"
 	"github.com/zenazn/goji/graceful"
 )

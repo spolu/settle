@@ -6,10 +6,10 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/spolu/settl/util/errors"
-	"github.com/spolu/settl/util/format"
-	"github.com/spolu/settl/util/logging"
-	"github.com/spolu/settl/util/svc"
+	"github.com/spolu/settl/lib/errors"
+	"github.com/spolu/settl/lib/format"
+	"github.com/spolu/settl/lib/logging"
+	"github.com/spolu/settl/lib/svc"
 	"golang.org/x/net/context"
 )
 

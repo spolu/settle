@@ -6,11 +6,11 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/spolu/settl/api/util/auth"
-	"github.com/spolu/settl/util/errors"
-	"github.com/spolu/settl/util/format"
-	"github.com/spolu/settl/util/respond"
-	"github.com/spolu/settl/util/svc"
+	"github.com/spolu/settl/api/lib/authentication"
+	"github.com/spolu/settl/lib/errors"
+	"github.com/spolu/settl/lib/format"
+	"github.com/spolu/settl/lib/respond"
+	"github.com/spolu/settl/lib/svc"
 
 	"golang.org/x/net/context"
 )
@@ -50,7 +50,8 @@ func (c *controller) RetrieveChallenges(
 
 	challenges := []ChallengeResource{}
 	for i := uint64(0); i < count; i++ {
-		challenge, created, err := auth.MintChallenge(ctx, auth.RootLiveKeypair)
+		challenge, created, err :=
+			authentication.MintChallenge(ctx, authentication.RootLiveKeypair)
 		if err != nil {
 			respond.Error(ctx, w, errors.Trace(err)) // 500
 			return
@@ -74,10 +75,10 @@ func (c *controller) CreateUser(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-
 	params := UserParams{
 		Username:      r.PostFormValue("username"),
 		EncryptedSeed: r.PostFormValue("encrypted_seed"),
+		Email:         r.PostFormValue("email"),
 	}
 
 	if !usernameRegexp.MatchString(params.Username) {

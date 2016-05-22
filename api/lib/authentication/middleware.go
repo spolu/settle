@@ -1,12 +1,12 @@
-package auth
+package authentication
 
 import (
 	"net/http"
 
+	"github.com/spolu/settl/lib/errors"
+	"github.com/spolu/settl/lib/logging"
+	"github.com/spolu/settl/lib/respond"
 	"github.com/spolu/settl/model"
-	"github.com/spolu/settl/util/errors"
-	"github.com/spolu/settl/util/logging"
-	"github.com/spolu/settl/util/respond"
 
 	"goji.io"
 
@@ -18,18 +18,18 @@ var SkipList = []string{
 	"/challenges",
 }
 
-type authenticator struct {
+type middleware struct {
 	goji.Handler
 }
 
 // ServeHTTPC handles incoming HTTP requests and attempt to authenticate them.
-func (a authenticator) ServeHTTPC(
+func (m middleware) ServeHTTPC(
 	ctx context.Context,
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
 	address, signature, _ := r.BasicAuth()
-	challenge := r.Header.Get("Challenge")
+	challenge := r.Header.Get("Authorization-Challenge")
 	skip := false
 	for _, p := range SkipList {
 		if r.URL.EscapedPath() == p {
@@ -38,7 +38,7 @@ func (a authenticator) ServeHTTPC(
 	}
 
 	if skip {
-		a.Handler.ServeHTTPC(ctx, w, r)
+		m.Handler.ServeHTTPC(ctx, w, r)
 		return
 	}
 
@@ -81,10 +81,10 @@ func (a authenticator) ServeHTTPC(
 		"Authentication Succeeded: skip=%t challenge=%q address=%q signature=%q",
 		skip, challenge, address, signature)
 
-	a.Handler.ServeHTTPC(ctx, w, r)
+	m.Handler.ServeHTTPC(ctx, w, r)
 }
 
-// Authenticator is a middleware that authenticates API requests.
-func Authenticator(h goji.Handler) goji.Handler {
-	return authenticator{h}
+// Middleware that authenticates API requests.
+func Middleware(h goji.Handler) goji.Handler {
+	return middleware{h}
 }

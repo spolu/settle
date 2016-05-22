@@ -3,7 +3,7 @@ package svc
 import (
 	"encoding/json"
 
-	"github.com/spolu/settl/util/errors"
+	"github.com/spolu/settl/lib/errors"
 )
 
 // Resp is the structure used to respond to a request

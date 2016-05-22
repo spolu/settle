@@ -3,7 +3,7 @@ package svc
 import (
 	"encoding/json"
 
-	"github.com/spolu/settl/util/errors"
+	"github.com/spolu/settl/lib/errors"
 )
 
 // Req is the structure used to make a request to a service

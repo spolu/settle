@@ -8,8 +8,8 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/spolu/settl/util/errors"
-	"github.com/spolu/settl/util/token"
+	"github.com/spolu/settl/lib/errors"
+	"github.com/spolu/settl/lib/token"
 )
 
 // Authentication represents a sucessful authentication. It is used to ensure

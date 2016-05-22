@@ -4,8 +4,10 @@ package api
 
 // UserParams are the parameters used to create a new user.
 type UserParams struct {
+	Livemode      bool
 	Username      string
 	EncryptedSeed string
+	Email         string
 }
 
 // Resources
@@ -23,4 +25,6 @@ type UserResource struct {
 
 	Username      string `json:"username"`
 	EncryptedSeed string `json:"encrypted_seed"`
+
+	Email string `json:"email"`
 }

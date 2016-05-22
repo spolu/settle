@@ -1,4 +1,4 @@
-package auth
+package authentication
 
 import (
 	"encoding/base64"
@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/spolu/settl/util/errors"
-	"github.com/spolu/settl/util/token"
+	"github.com/spolu/settl/lib/errors"
+	"github.com/spolu/settl/lib/token"
 	"github.com/stellar/go-stellar-base/keypair"
 	"golang.org/x/net/context"
 )

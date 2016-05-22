@@ -1,29 +1,29 @@
-package respond
+package recoverer
 
 import (
 	"net/http"
 	"runtime/debug"
 
-	"github.com/spolu/settl/util/errors"
-	"github.com/spolu/settl/util/logging"
+	"github.com/spolu/settl/lib/errors"
+	"github.com/spolu/settl/lib/logging"
+	"github.com/spolu/settl/lib/respond"
 
 	"goji.io"
 	"golang.org/x/net/context"
 )
 
-// Recoverer is a middleware that recovers from panics, logs the panic (and a
-// backtrace), and returns a HTTP 500 (Internal Server Error) status if
-// possible.
-func Recoverer(h goji.Handler) goji.Handler {
+// Middleware that recovers from panics, logs the panic (and a backtrace), and
+// returns a HTTP 500 (Internal Server Error) status if possible.
+func Middleware(h goji.Handler) goji.Handler {
 	fn := func(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
 				if e, ok := err.(error); ok {
 					logging.Logf(ctx, "Panic: error=%q", e.Error())
-					Error(ctx, w, errors.Trace(e))
+					respond.Error(ctx, w, errors.Trace(e))
 				} else {
 					logging.Logf(ctx, "Non error panic: dump=%+v", err)
-					Error(ctx, w, errors.Newf("Non error panic: %+v", err))
+					respond.Error(ctx, w, errors.Newf("Non error panic: %+v", err))
 				}
 				debug.PrintStack()
 			}
