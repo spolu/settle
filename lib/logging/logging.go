@@ -41,3 +41,17 @@ func Logf(c context.Context, format string, v ...interface{}) {
 		log.Printf(format, v...)
 	}
 }
+
+// PadRight right-pads a string.
+func PadRight(
+	str string,
+	pad string,
+	lenght int,
+) string {
+	for {
+		str += pad
+		if len(str) > lenght {
+			return str[0:lenght]
+		}
+	}
+}

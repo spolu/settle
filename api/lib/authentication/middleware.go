@@ -13,6 +13,44 @@ import (
 	"golang.org/x/net/context"
 )
 
+const (
+	// statusKey the context.Context key to store the authentication status.
+	statusKey int = iota
+)
+
+// AutStatus indicates the status of the authentication.
+type AutStatus string
+
+const (
+	// AutStSucceeded indicates a successful authentication.
+	AutStSucceeded AutStatus = "succeeded"
+	// AutStSkipped indicates a skipped authentication.
+	AutStSkipped AutStatus = "skipped"
+	// AutStFailed indicates a failed authentication.
+	AutStFailed AutStatus = "failed"
+)
+
+// Status stores the authentication information.
+type Status struct {
+	Status  AutStatus
+	Address string
+}
+
+// With stores the authentication information in a new context.
+func With(
+	ctx context.Context,
+	status Status,
+) context.Context {
+	return context.WithValue(ctx, statusKey, &status)
+}
+
+// Get retrieves the authenticaiton information form the context.
+func Get(
+	ctx context.Context,
+) Status {
+	return ctx.Value(statusKey).(Status)
+}
+
 // SkipList is the list of endpoints that do not require authentication.
 var SkipList = []string{
 	"/challenges",
@@ -28,6 +66,8 @@ func (m middleware) ServeHTTPC(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
+	withStatus := With(ctx, Status{AutStFailed, ""})
+
 	address, signature, _ := r.BasicAuth()
 	challenge := r.Header.Get("Authorization-Challenge")
 	skip := false
@@ -38,31 +78,34 @@ func (m middleware) ServeHTTPC(
 	}
 
 	if skip {
-		m.Handler.ServeHTTPC(ctx, w, r)
+		withStatus = With(ctx, Status{AutStSkipped, ""})
+		logging.Logf(ctx,
+			"Authentication Succeeded: skip=%t", skip)
+		m.Handler.ServeHTTPC(withStatus, w, r)
 		return
 	}
 
 	// Check that the challenge is valid.
 	err := CheckChallenge(ctx, challenge, RootLiveKeypair)
 	if err != nil {
-		respond.Error(ctx, w, errors.Trace(err))
+		respond.Error(withStatus, w, errors.Trace(err))
 		return
 	}
 
 	// Verify the challenge signature passed as basic auth.
 	err = VerifyChallenge(ctx, challenge, address, signature)
 	if err != nil {
-		respond.Error(ctx, w, errors.Trace(err))
+		respond.Error(withStatus, w, errors.Trace(err))
 		return
 	}
 
 	// Check that the challenge was never used.
 	auth, err := model.LoadAuthenticationByChallenge(ctx, challenge)
 	if err != nil {
-		respond.Error(ctx, w, errors.Trace(err))
+		respond.Error(withStatus, w, errors.Trace(err))
 		return
 	} else if auth != nil {
-		respond.Error(ctx, w, errors.NewUserError(err,
+		respond.Error(withStatus, w, errors.NewUserError(err,
 			400, "challenge_already_used",
 			"The challenge you provided was already used. You must "+
 				"resolve a new challenge for each API request.",
@@ -73,15 +116,16 @@ func (m middleware) ServeHTTPC(
 	auth, err = model.CreateAuthentication(ctx,
 		r.Method, r.URL.String(), challenge, address, signature)
 	if err != nil {
-		respond.Error(ctx, w, errors.Trace(err))
+		respond.Error(withStatus, w, errors.Trace(err))
 		return
 	}
+	withStatus = With(ctx, Status{AutStSucceeded, address})
 
 	logging.Logf(ctx,
 		"Authentication Succeeded: skip=%t challenge=%q address=%q signature=%q",
 		skip, challenge, address, signature)
 
-	m.Handler.ServeHTTPC(ctx, w, r)
+	m.Handler.ServeHTTPC(withStatus, w, r)
 }
 
 // Middleware that authenticates API requests.
