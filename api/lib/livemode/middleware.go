@@ -3,6 +3,8 @@ package livemode
 import (
 	"net/http"
 
+	"github.com/spolu/settl/lib/logging"
+
 	"goji.io"
 
 	"golang.org/x/net/context"
@@ -45,6 +47,8 @@ func (m middleware) ServeHTTPC(
 	if lvm := r.Header.Get(livemodeHeader); lvm == "true" {
 		withLivemode = With(ctx, true)
 	}
+
+	logging.Logf(ctx, "Livemode: livemode=%t", Get(withLivemode))
 
 	m.Handler.ServeHTTPC(withLivemode, w, r)
 }

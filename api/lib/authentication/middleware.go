@@ -41,7 +41,7 @@ func With(
 	ctx context.Context,
 	status Status,
 ) context.Context {
-	return context.WithValue(ctx, statusKey, &status)
+	return context.WithValue(ctx, statusKey, status)
 }
 
 // Get retrieves the authenticaiton information form the context.
@@ -79,33 +79,41 @@ func (m middleware) ServeHTTPC(
 
 	if skip {
 		withStatus = With(ctx, Status{AutStSkipped, ""})
-		logging.Logf(ctx,
-			"Authentication Succeeded: skip=%t", skip)
+		logging.Logf(ctx, "Authentication: status=%q", Get(withStatus).Status)
+
 		m.Handler.ServeHTTPC(withStatus, w, r)
 		return
+	}
+
+	// Helper closure to log and return an authentication error.
+	failedAuth := func(err error) {
+		withStatus = With(ctx, Status{AutStFailed, ""})
+		logging.Logf(ctx, "Authentication: status=%q", Get(withStatus).Status)
+
+		respond.Error(withStatus, w, errors.Trace(err))
 	}
 
 	// Check that the challenge is valid.
 	err := CheckChallenge(ctx, challenge, RootLiveKeypair)
 	if err != nil {
-		respond.Error(withStatus, w, errors.Trace(err))
+		failedAuth(errors.Trace(err))
 		return
 	}
 
 	// Verify the challenge signature passed as basic auth.
 	err = VerifyChallenge(ctx, challenge, address, signature)
 	if err != nil {
-		respond.Error(withStatus, w, errors.Trace(err))
+		failedAuth(errors.Trace(err))
 		return
 	}
 
 	// Check that the challenge was never used.
 	auth, err := model.LoadAuthenticationByChallenge(ctx, challenge)
 	if err != nil {
-		respond.Error(withStatus, w, errors.Trace(err))
+		failedAuth(errors.Trace(err))
 		return
 	} else if auth != nil {
-		respond.Error(withStatus, w, errors.NewUserError(err,
+		failedAuth(errors.NewUserError(err,
 			400, "challenge_already_used",
 			"The challenge you provided was already used. You must "+
 				"resolve a new challenge for each API request.",
@@ -116,14 +124,14 @@ func (m middleware) ServeHTTPC(
 	auth, err = model.CreateAuthentication(ctx,
 		r.Method, r.URL.String(), challenge, address, signature)
 	if err != nil {
-		respond.Error(withStatus, w, errors.Trace(err))
+		failedAuth(errors.Trace(err))
 		return
 	}
-	withStatus = With(ctx, Status{AutStSucceeded, address})
 
+	withStatus = With(ctx, Status{AutStSucceeded, address})
 	logging.Logf(ctx,
-		"Authentication Succeeded: skip=%t challenge=%q address=%q signature=%q",
-		skip, challenge, address, signature)
+		"Authentication: status=%q challenge=%q address=%q signature=%q",
+		Get(withStatus).Status, challenge, address, signature)
 
 	m.Handler.ServeHTTPC(withStatus, w, r)
 }
