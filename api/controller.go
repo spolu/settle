@@ -77,9 +77,11 @@ var emailRegexp = regexp.MustCompile(
 	"^[a-z0-9_\\.\\+\\-]+@[a-z0-9-]+\\.[a-z0-9-\\.]+$")
 var emailVerifiers = map[bool][]string{
 	true: []string{
-		"GBTIKKWP5FOCMRSTJS46SCTWC6IKCHWDJMJMP6QLFGNYPRTCY63E5T3N",
+		"GBTIKKWP5FOCMRSTJS46SCTWC6IKCHWDJMJMP6QLFGNYPRTCY63E5T3N", // onboarding
 	},
-	false: []string{},
+	false: []string{
+		"GDFZHVU2PNOFR5KXKDBW72ZF45TXTC6LOOLGJK7XD7V2JYQB4KIOEXKN", //onborading
+	},
 }
 
 func (c *controller) CreateUser(
