@@ -74,7 +74,7 @@ func VerifyChallenge(
 	kp, err := keypair.Parse(address)
 	if err != nil {
 		return errors.NewUserError(err,
-			400, "invalid_address",
+			400, "address_invalid",
 			fmt.Sprintf(
 				"The address you provided as authentication is invalid: %s.",
 				address,
@@ -85,7 +85,7 @@ func VerifyChallenge(
 	bytes, err := base64.StdEncoding.DecodeString(signature)
 	if err != nil {
 		return errors.NewUserError(err,
-			400, "invalid_signature",
+			400, "signature_invalid",
 			"The signature passed could not be decoded.",
 		)
 	}
@@ -93,7 +93,7 @@ func VerifyChallenge(
 	err = kp.Verify([]byte(challenge), bytes)
 	if err != nil {
 		return errors.NewUserError(err,
-			400, "invalid_signature",
+			400, "signature_invalid",
 			"The verification of the challenge signature failed using the "+
 				"address you provided.",
 		)

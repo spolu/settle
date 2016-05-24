@@ -1,12 +1,15 @@
 package api
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/spolu/settl/api/lib/authentication"
+	"github.com/spolu/settl/api/lib/livemode"
 	"github.com/spolu/settl/lib/errors"
 	"github.com/spolu/settl/lib/format"
 	"github.com/spolu/settl/lib/respond"
@@ -39,7 +42,7 @@ func (c *controller) RetrieveChallenges(
 			respond.Error(ctx, w, errors.Trace(
 				errors.NewUserError(err,
 					400,
-					"invalid_count_attribute",
+					"count_invalid",
 					fmt.Sprintf("The count attribute you passed is not valid "+
 						"(should be a positive integer smaller than 100): %s",
 						attr),
@@ -68,7 +71,13 @@ func (c *controller) RetrieveChallenges(
 	})
 }
 
-var usernameRegexp = regexp.MustCompile("^[a-z0-9]+$")
+var usernameRegexp = regexp.MustCompile(
+	"^[a-z0-9]+$")
+var emailRegexp = regexp.MustCompile(
+	"^[a-z0-9_\\.\\+\\-]+@[a-z0-9-]+\\.[a-z0-9-\\.]+$")
+var emailVerifiers = []string{
+	"GBTIKKWP5FOCMRSTJS46SCTWC6IKCHWDJMJMP6QLFGNYPRTCY63E5T3N",
+}
 
 func (c *controller) CreateUser(
 	ctx context.Context,
@@ -76,19 +85,53 @@ func (c *controller) CreateUser(
 	r *http.Request,
 ) {
 	params := UserParams{
-		Username:      r.PostFormValue("username"),
-		EncryptedSeed: r.PostFormValue("encrypted_seed"),
-		Email:         r.PostFormValue("email"),
+		Livemode:           livemode.Get(ctx),
+		Address:            authentication.Get(ctx).Address,
+		Username:           r.PostFormValue("username"),
+		EncryptedSeed:      r.PostFormValue("encrypted_seed"),
+		Email:              strings.ToLower(r.PostFormValue("email")),
+		EmailVerifier:      r.PostFormValue("email_verifier"),
+		FundingTransaction: r.PostFormValue("funding_transaction"),
 	}
 
 	if !usernameRegexp.MatchString(params.Username) {
 		respond.Error(ctx, w, errors.NewUserError(nil,
 			400, "username_invalid",
-			"The username provided is invalid. Usernames must be "+
+			"The username provided is invalid. Usernames can use "+
 				"alphanumeric lowercased characters only.",
 		))
 		return
 	}
+	if !emailRegexp.MatchString(params.Email) {
+		respond.Error(ctx, w, errors.NewUserError(nil,
+			400, "email_invalid",
+			"The email provided appears to be invalid. While email "+
+				"verification is a bit tricky, we really try to do our best.",
+		))
+		return
+	}
+	_, err := base64.StdEncoding.DecodeString(params.EncryptedSeed)
+	if err != nil {
+		respond.Error(ctx, w, errors.NewUserError(err,
+			400, "encrypted_seed_invalid",
+			"The encrypted seed appears to be invalid as it could not be "+
+				"decoded using base64. The encrypted seed should be the XOR "+
+				"of the raw seed and an scrypt output of the same length "+
+				"using base64 standard encoding.",
+		))
+	}
+
+	// If livemode:
+	//
+	// If !livemode create testnet address
+
+}
+
+func (c *controller) ConfirmUser(
+	ctx context.Context,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
 }
 
 func (c *controller) CreateStellarOperation(
