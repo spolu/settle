@@ -23,7 +23,7 @@ func (c *Configuration) Bind(
 	mux.HandleFuncC(pat.Get("/challenges"), c.controller.RetrieveChallenges)
 
 	mux.HandleFuncC(pat.Post("/users"), c.controller.CreateUser)
-	mux.HandleFuncC(pat.Post("/users/:user/confirm"), c.controller.ConfirmUser)
-	mux.HandleFuncC(pat.Post("/stellar/operations"), c.controller.CreateStellarOperation)
-	mux.HandleFuncC(pat.Post("/stellar/operations/:operation/submit"), c.controller.SubmitStellarOperation)
+
+	mux.HandleFuncC(pat.Post("/native/operations"), c.controller.CreateNativeOperation)
+	mux.HandleFuncC(pat.Post("/native/operations/:operation/submit"), c.controller.SubmitNativeOperation)
 }

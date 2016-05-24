@@ -4,11 +4,13 @@ package api
 
 // UserParams are the parameters used to create a new user.
 type UserParams struct {
-	Livemode      bool
-	Address       string
-	Username      string
-	EncryptedSeed string
-	Email         string
+	Livemode           bool
+	Address            string
+	Username           string
+	EncryptedSeed      string
+	Email              string
+	EmailVerifier      string
+	FundingTransaction string
 }
 
 // Resources

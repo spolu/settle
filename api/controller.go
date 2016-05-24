@@ -75,8 +75,11 @@ var usernameRegexp = regexp.MustCompile(
 	"^[a-z0-9]+$")
 var emailRegexp = regexp.MustCompile(
 	"^[a-z0-9_\\.\\+\\-]+@[a-z0-9-]+\\.[a-z0-9-\\.]+$")
-var emailVerifiers = []string{
-	"GBTIKKWP5FOCMRSTJS46SCTWC6IKCHWDJMJMP6QLFGNYPRTCY63E5T3N",
+var emailVerifiers = map[bool][]string{
+	true: []string{
+		"GBTIKKWP5FOCMRSTJS46SCTWC6IKCHWDJMJMP6QLFGNYPRTCY63E5T3N",
+	},
+	false: []string{},
 }
 
 func (c *controller) CreateUser(
@@ -121,10 +124,12 @@ func (c *controller) CreateUser(
 		))
 	}
 
-	// If livemode:
-	//
-	// If !livemode create testnet address
-
+	// - check that account with same address does not exist
+	// - check that account with same username does not exist
+	// - check email fact on specified emailVerifier
+	// - check that the funding transaction hasn't been used yet
+	// - check that the funding transaction has exactly 1 operation and funds
+	//   the root key with > 100 XLM
 }
 
 func (c *controller) ConfirmUser(
@@ -134,14 +139,14 @@ func (c *controller) ConfirmUser(
 ) {
 }
 
-func (c *controller) CreateStellarOperation(
+func (c *controller) CreateNativeOperation(
 	ctx context.Context,
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
 }
 
-func (c *controller) SubmitStellarOperation(
+func (c *controller) SubmitNativeOperation(
 	ctx context.Context,
 	w http.ResponseWriter,
 	r *http.Request,
