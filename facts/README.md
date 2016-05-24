@@ -1,27 +1,47 @@
 # Facts Protocol
 
-Accounts can assert of facts using the Data operation and the Facts Protocol.
-A fact is stored on the account asserting it and uses the following format:
+Accounts can assert of facts related to other accounts using the Stellar
+ManageData operation and the Facts Protocol. A fact is stored on the account
+asserting it, also called the "verifier" account and uses the following format
+to assert something about the account the facts relates to:
 
 ```
-  "$address.$type": "$value"
+  "fct.$address.$type_code": "scrypt($value, $address, 1<<14, 8, 1, 64)"
 ```
 
-`$address` is the Stellar address of the account the facts relates to. `$type`
-is the fact type and should be one of the following:
+`$address` is the Stellar address of the account the facts relates to.
+`$type_code` is the fact type and should be one of the following:
 
-- `name`: Full name of a individual, company or organization.
-- `entity_type`: Entity type (individual, for-profit, non-profit, state).
-- `date_of_birth`: Date of birth.
-- `date_of_creation`: Date of creation of an organization.
-- `email`: Fully qualified email address.
-- `url`: Fully qualified URL.
-- `phone`: Fully qualified phone number, without space or separator and
-  starting with `+` and country code (example: `+14152165701`).
-- `twitter`: Twitter handle without preceeding `@`.
-- `github`: Github handle.
-- `bank_account_scrypt`: the scrypt of the bank account using the address as
-  salt: `scrypt(bank_account, address, 1<<14, 8, 1, len(address))`
-- `tax_id_scrypt`: the scrypt of the tax ID (SSN, EIN, ...) using the
-  address as salt: `scrypt(tax_id, address, 1<<14, 8, 1, len(address))`
+- `00x` is reserved for legal information:
+  - `000` (`name`): Full name of a individual, company or organization.
+  - `001` (`entity_type`): Entity type (individual, for-profit, non-profit, state).
+  - `002` (`date_of_birth`, `date_of_creation`, `date_of_incorporation`): Date
+    of birth or creation or incorporation of an organization.
+- `01x` is reserved for contact information:
+  - `010` (`email`): Fully qualified email address.
+  - `011` (`phone`): Fully qualified phone number, without space or separator and
+    starting with `+` and country code (example: `+14152165701`).
+  - `012` (`url`): Fully qualified URL.
+- `02x` is reserved for address information:
+  - `020` (`address_line1`): Address line1.
+  - `021` (`address_line2`): Address line2.
+  - `022` (`address_city`): Address city.
+  - `023` (`address_postal_code`): Address postal code.
+  - `024` (`address_state`): Address state.
+  - `025` (`address_country`): Address country.
+- `03x` is reserved for supporting documents:
+  - `030` (`passport`): A PNG of the passport.
+  - `031` (`driver_license`): A PNG of the driver license.
+- `04x` is reserved for financial information:
+  - `040` (`bank_account`): Fully qualified bank account (the IBAN if EU, the
+    routing and account number concatenated by `-` if in the US)
+  - `041` (`tax_id`): The tax ID (SSN, EIN, ...)
+- `05x` is reserved for social profiles:
+  - `050` (`facebook`): Facebook account ID.
+  - `051` (`twitter`): Twitter handle without preceeding `@`.
+  - `053` (`reddit`): Reddit handle.
+  - `054` (`github`): Github handle.
+- `9xx` is reserved for custom application use.
 
+The value stored is an scrypt of the actual value that should be communicated
+by another mean at the time of verification.
