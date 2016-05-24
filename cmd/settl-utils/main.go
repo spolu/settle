@@ -6,12 +6,17 @@ import (
 	"fmt"
 	"log"
 
-	"golang.org/x/crypto/scrypt"
-
+	"github.com/spolu/settl/facts"
 	"github.com/stellar/go-stellar-base/build"
 	"github.com/stellar/go-stellar-base/horizon"
 	"github.com/stellar/go-stellar-base/keypair"
 )
+
+// clients maps livemodes to Horizon clients.
+var clients = map[bool]*horizon.Client{
+	false: horizon.DefaultTestNetClient,
+	true:  horizon.DefaultPublicNetClient,
+}
 
 func main() {
 	var fct = flag.String("function", "sign", "The function to use")
@@ -21,17 +26,23 @@ func main() {
 	var adr = flag.String("address", "dummy", "The address of the fact to assert")
 	var typ = flag.String("type", "dummy", "The type of the fact to assert")
 	var val = flag.String("value", "", "The value of the fact to assert")
+	var lvm = flag.String("livemode", "false", "The livemode to use")
 	flag.Parse()
 
+	livemode := false
+	if *lvm == "true" {
+		livemode = true
+	}
+
 	switch *fct {
-	case "create_account":
-		createAccount(*see, *amt)
 	case "sign_challenge":
 		signChallenge(*see, *chl)
+	case "create_account":
+		createAccount(livemode, *see, *amt)
 	case "assert_fact":
-		assertFact(*see, *adr, *typ, *val)
-	case "deny_fact":
-		denyFact(*see, *adr, *typ)
+		assertFact(livemode, *see, *adr, *typ, *val)
+	case "revoke_fact":
+		revokeFact(livemode, *see, *adr, *typ)
 	}
 }
 
@@ -58,12 +69,13 @@ func signChallenge(
 }
 
 func createAccount(
+	livemode bool,
 	seed string,
 	amount string,
 ) {
 	fmt.Printf(
-		"Creating Stellar Account: amount=%q\n",
-		amount)
+		"Creating Stellar Account: livemode=%t, amount=%q\n",
+		livemode, amount)
 
 	kp, err := keypair.Parse(seed)
 	if err != nil {
@@ -80,11 +92,16 @@ func createAccount(
 	fmt.Printf("Address: %s\n", nk.Address())
 
 	fmt.Printf("Fetching next sequence for creator account...\n")
-	seq, err := horizon.DefaultPublicNetClient.SequenceForAccount(fkp.Address())
+	seq, err := clients[livemode].SequenceForAccount(fkp.Address())
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Printf("Sequence: %d\n", seq)
+
+	buildNetwork := build.TestNetwork
+	if livemode {
+		buildNetwork = build.PublicNetwork
+	}
 
 	txEnvBuilder := build.TransactionEnvelopeBuilder{}
 	txEnvBuilder.Init()
@@ -96,7 +113,7 @@ func createAccount(
 				build.NativeAmount{amount},
 				build.Destination{nk.Address()},
 			),
-			build.PublicNetwork,
+			buildNetwork,
 		),
 		build.Sign{fkp.Seed()},
 	)
@@ -113,7 +130,7 @@ func createAccount(
 	fmt.Printf("Envelope: %s\n", env)
 
 	fmt.Printf("Submitting transaction...\n")
-	res, err := horizon.DefaultPublicNetClient.SubmitTransaction(env)
+	res, err := clients[livemode].SubmitTransaction(env)
 	if err != nil {
 		fmt.Printf("Error: %+v\n", err)
 		switch err := err.(type) {
@@ -126,63 +143,18 @@ func createAccount(
 }
 
 func assertFact(
+	livemode bool,
 	seed string,
 	address string,
 	typ string,
 	value string,
 ) {
 	fmt.Printf(
-		"Creating fact: address=%q type=%q value=%q\n",
-		address, typ, value)
+		"Creating fact: livemode=%t address=%q type=%q value=%q\n",
+		livemode, address, typ, value)
 
-	kp, err := keypair.Parse(seed)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fkp := kp.(*keypair.Full)
-
-	fmt.Printf("Fetching next sequence for fact verified account...\n")
-	seq, err := horizon.DefaultPublicNetClient.SequenceForAccount(fkp.Address())
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("Sequence: %d\n", seq)
-
-	fmt.Printf("Generating scrypt of value...\n")
-	scrypt, err := scrypt.Key([]byte(value), []byte(address), 16384, 8, 1, 64)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("Scrypt (base64): %s\n", base64.StdEncoding.EncodeToString(scrypt))
-
-	txEnvBuilder := build.TransactionEnvelopeBuilder{}
-	txEnvBuilder.Init()
-	txEnvBuilder.Mutate(
-		build.Transaction(
-			build.SourceAccount{fkp.Address()},
-			build.Sequence{uint64(seq) + 1},
-			build.SetData(
-				fmt.Sprintf("fct.%s.%s", address, typ),
-				scrypt,
-			),
-			build.PublicNetwork,
-		),
-		build.Sign{fkp.Seed()},
-	)
-
-	if txEnvBuilder.Err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Printf("Generating envelope...\n")
-	env, err := txEnvBuilder.Base64()
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("Envelope: %s\n", env)
-
-	fmt.Printf("Submitting transaction...\n")
-	res, err := horizon.DefaultPublicNetClient.SubmitTransaction(env)
+	assertion, err := facts.AssertFact(
+		livemode, seed, address, facts.FctType(typ), value)
 	if err != nil {
 		fmt.Printf("Error: %+v\n", err)
 		switch err := err.(type) {
@@ -190,59 +162,22 @@ func assertFact(
 			fmt.Printf("Problem: %+v\n", err.Problem)
 		}
 	} else {
-		fmt.Printf("Response: %+v\n", res)
+		fmt.Printf("Transaction Hash: %s\n", assertion.TransactionHash)
 	}
 }
 
-func denyFact(
+func revokeFact(
+	livemode bool,
 	seed string,
 	address string,
 	typ string,
 ) {
 	fmt.Printf(
-		"Denying fact: address=%q type=%q\n",
-		address, typ)
+		"Revoking fact: livemode=%t address=%q type=%q\n",
+		livemode, address, typ)
 
-	kp, err := keypair.Parse(seed)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fkp := kp.(*keypair.Full)
-
-	fmt.Printf("Fetching next sequence for fact verified account...\n")
-	seq, err := horizon.DefaultPublicNetClient.SequenceForAccount(fkp.Address())
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("Sequence: %d\n", seq)
-
-	txEnvBuilder := build.TransactionEnvelopeBuilder{}
-	txEnvBuilder.Init()
-	txEnvBuilder.Mutate(
-		build.Transaction(
-			build.SourceAccount{fkp.Address()},
-			build.Sequence{uint64(seq) + 1},
-			build.ClearData(
-				fmt.Sprintf("fct.%s.%s", address, typ),
-			),
-			build.PublicNetwork,
-		),
-		build.Sign{fkp.Seed()},
-	)
-
-	if txEnvBuilder.Err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Printf("Generating envelope...\n")
-	env, err := txEnvBuilder.Base64()
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("Envelope: %s\n", env)
-
-	fmt.Printf("Submitting transaction...\n")
-	res, err := horizon.DefaultPublicNetClient.SubmitTransaction(env)
+	revocation, err := facts.RevokeFact(
+		livemode, seed, address, facts.FctType(typ))
 	if err != nil {
 		fmt.Printf("Error: %+v\n", err)
 		switch err := err.(type) {
@@ -250,6 +185,6 @@ func denyFact(
 			fmt.Printf("Problem: %+v\n", err.Problem)
 		}
 	} else {
-		fmt.Printf("Response: %+v\n", res)
+		fmt.Printf("Transaction Hash: %s\n", revocation.TransactionHash)
 	}
 }

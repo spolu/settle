@@ -124,7 +124,7 @@ func (c *controller) CreateUser(
 		))
 	}
 
-	// - check that account with same address does not exist
+	// - check that account with same email address does not exist
 	// - check that account with same username does not exist
 	// - check email fact on specified emailVerifier
 	// - check that the funding transaction hasn't been used yet

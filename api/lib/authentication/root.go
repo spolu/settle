@@ -18,8 +18,8 @@ var RootTestKeypair *keypair.Full
 var RootLiveKeypair *keypair.Full
 
 func init() {
-	rootTestSeed = os.Getenv("ROOT_TEST_SEED")
-	rootLiveSeed = os.Getenv("ROOT_LIVE_SEED")
+	rootTestSeed = os.Getenv("TEST_ROOT_SEED")
+	rootLiveSeed = os.Getenv("LIVE_ROOT_SEED")
 
 	tkp, err := keypair.Parse(rootTestSeed)
 	if err != nil {

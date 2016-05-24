@@ -16,9 +16,9 @@ to assert something about the account the facts relates to:
   - `000` (`name`): Full name of a individual, company or organization.
   - `001` (`entity_type`): Entity type (individual, for-profit, non-profit, state).
   - `002` (`date_of_birth`, `date_of_creation`, `date_of_incorporation`): Date
-    of birth or creation or incorporation of an organization.
+    of birth or creation or incorporation of an organization in the format YYYY-MM-DD.
 - `01x` is reserved for contact information:
-  - `010` (`email`): Fully qualified email address.
+  - `010` (`email`): Fully qualified lowercased email address.
   - `011` (`phone`): Fully qualified phone number, without space or separator and
     starting with `+` and country code (example: `+14152165701`).
   - `012` (`url`): Fully qualified URL.
