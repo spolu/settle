@@ -1,9 +1,11 @@
 package model
 
 import (
+	"log"
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/spolu/settl/lib/errors"
 )
 
 // UserUpdate represents an update to a user object. The most recent UserUpdate
@@ -29,18 +31,18 @@ var findLatestUserUpdateByUsername *sqlx.NamedStmt
 
 func init() {
 	ensureAPIDB()
-	/*
-			err := error(nil)
+	err := error(nil)
 
-			insertUserUpdate, err = apidb.PrepareNamed(`
-		INSERT INTO user_updates
-		  (token, creation, username, encrypted_seed)
-		VALUES
-		  (:token, :creation, :username, :encrypted_seed)
-		RETURNING id, created
-		`)
-			if err != nil {
-				log.Fatal(errors.Details(err))
-			}
-	*/
+	insertUserUpdate, err = apidb.PrepareNamed(`
+INSERT INTO user_updates
+  (token, livemode, creation, username, address, encrypted_seed, email,
+  verifier)
+VALUES
+  (:token, :livemode, :creation, :username, :address, :encrypted_seed, :email,
+  :verifier)
+RETURNING id, created
+`)
+	if err != nil {
+		log.Fatal(errors.Details(err))
+	}
 }

@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS user_updates(
   UNIQUE(token),
   UNIQUE(username),
   UNIQUE(address),
-  UNIQUE(email),
+  UNIQUE(email)
 );
 `
 )

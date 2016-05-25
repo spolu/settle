@@ -9,15 +9,17 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/spolu/settl/lib/errors"
+	"github.com/spolu/settl/lib/livemode"
 	"github.com/spolu/settl/lib/token"
 )
 
 // Authentication represents a sucessful authentication. It is used to ensure
 // challenges are not used.
 type Authentication struct {
-	ID      int64
-	Token   string
-	Created time.Time
+	ID       int64
+	Token    string
+	Created  time.Time
+	Livemode bool
 
 	Method string
 	URL    string
@@ -36,9 +38,9 @@ func init() {
 
 	insertAuthentication, err = apidb.PrepareNamed(`
 INSERT INTO authentications
-  (token, method, url, challenge, address, signature)
+  (token, livemode, method, url, challenge, address, signature)
 VALUES
-  (:token, :method, :url, :challenge, :address, :signature)
+  (:token, :livemode, :method, :url, :challenge, :address, :signature)
 RETURNING id, created
 `)
 	findAuthenticationByChallenge, err = apidb.PrepareNamed(`
@@ -61,7 +63,8 @@ func CreateAuthentication(
 	signature string,
 ) (*Authentication, error) {
 	auth := Authentication{
-		Token: token.New("authentication"),
+		Token:    token.New("authentication"),
+		Livemode: livemode.Get(ctx),
 
 		Method: method,
 		URL:    url,

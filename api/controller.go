@@ -9,10 +9,10 @@ import (
 	"strings"
 
 	"github.com/spolu/settl/api/lib/authentication"
-	"github.com/spolu/settl/api/lib/livemode"
 	"github.com/spolu/settl/facts"
 	"github.com/spolu/settl/lib/errors"
 	"github.com/spolu/settl/lib/format"
+	"github.com/spolu/settl/lib/livemode"
 	"github.com/spolu/settl/lib/respond"
 	"github.com/spolu/settl/lib/svc"
 	"github.com/stellar/go-stellar-base/horizon"
@@ -33,6 +33,26 @@ const (
 var clients = map[bool]*horizon.Client{
 	false: horizon.DefaultTestNetClient,
 	true:  horizon.DefaultPublicNetClient,
+}
+
+// usernameRegexp is used to validate usernames at user creation.
+var usernameRegexp = regexp.MustCompile(
+	"^[a-z0-9]{1,256}$")
+
+// emailRegexp is used to validate emails at user creation.
+var emailRegexp = regexp.MustCompile(
+	"^[a-z0-9_\\.\\+\\-]+@[a-z0-9-]+\\.[a-z0-9-\\.]+$")
+
+// emailVerifiers is the list of trusted verifiers for emails by livemode.
+var emailVerifiers = map[bool][]string{
+	true: []string{
+		// onboarding
+		"GBTIKKWP5FOCMRSTJS46SCTWC6IKCHWDJMJMP6QLFGNYPRTCY63E5T3N",
+	},
+	false: []string{
+		// onboarding
+		"GDFZHVU2PNOFR5KXKDBW72ZF45TXTC6LOOLGJK7XD7V2JYQB4KIOEXKN",
+	},
 }
 
 type controller struct{}
@@ -77,21 +97,6 @@ func (c *controller) RetrieveChallenges(
 	respond.Success(ctx, w, svc.Resp{
 		"challenges": format.JSONPtr(challenges),
 	})
-}
-
-var usernameRegexp = regexp.MustCompile(
-	"^[a-z0-9]{1,256}$")
-var emailRegexp = regexp.MustCompile(
-	"^[a-z0-9_\\.\\+\\-]+@[a-z0-9-]+\\.[a-z0-9-\\.]+$")
-var emailVerifiers = map[bool][]string{
-	true: []string{
-		// onboarding
-		"GBTIKKWP5FOCMRSTJS46SCTWC6IKCHWDJMJMP6QLFGNYPRTCY63E5T3N",
-	},
-	false: []string{
-		// onboarding
-		"GDFZHVU2PNOFR5KXKDBW72ZF45TXTC6LOOLGJK7XD7V2JYQB4KIOEXKN",
-	},
 }
 
 func (c *controller) CreateUser(

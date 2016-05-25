@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/spolu/settl/lib/errors"
+	"github.com/spolu/settl/lib/livemode"
 	"github.com/spolu/settl/lib/logging"
 	"github.com/spolu/settl/lib/respond"
 	"github.com/spolu/settl/model"
@@ -79,7 +80,8 @@ func (m middleware) ServeHTTPC(
 
 	if skip {
 		withStatus = With(ctx, Status{AutStSkipped, ""})
-		logging.Logf(ctx, "Authentication: status=%q", Get(withStatus).Status)
+		logging.Logf(ctx, "Authentication: status=%q livemode=%t",
+			Get(withStatus).Status, livemode.Get(ctx))
 
 		m.Handler.ServeHTTPC(withStatus, w, r)
 		return
@@ -88,7 +90,11 @@ func (m middleware) ServeHTTPC(
 	// Helper closure to log and return an authentication error.
 	failedAuth := func(err error) {
 		withStatus = With(ctx, Status{AutStFailed, ""})
-		logging.Logf(ctx, "Authentication: status=%q", Get(withStatus).Status)
+		logging.Logf(ctx,
+			"Authentication: status=%q livemode=%t address=%q "+
+				"challenge=%q signature=%q",
+			Get(withStatus).Status, livemode.Get(ctx),
+			address, challenge, signature)
 
 		respond.Error(withStatus, w, errors.Trace(err))
 	}
@@ -130,8 +136,10 @@ func (m middleware) ServeHTTPC(
 
 	withStatus = With(ctx, Status{AutStSucceeded, address})
 	logging.Logf(ctx,
-		"Authentication: status=%q challenge=%q address=%q signature=%q",
-		Get(withStatus).Status, challenge, address, signature)
+		"Authentication: status=%q livemode=%t address=%q "+
+			"challenge=%q signature=%q",
+		Get(withStatus).Status, livemode.Get(ctx),
+		address, challenge, signature)
 
 	m.Handler.ServeHTTPC(withStatus, w, r)
 }
