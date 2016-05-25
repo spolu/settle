@@ -5,8 +5,10 @@ import (
 	"fmt"
 
 	"golang.org/x/crypto/scrypt"
+	"golang.org/x/net/context"
 
 	"github.com/spolu/settl/lib/errors"
+	"github.com/spolu/settl/lib/livemode"
 	"github.com/stellar/go-stellar-base/build"
 	"github.com/stellar/go-stellar-base/horizon"
 	"github.com/stellar/go-stellar-base/keypair"
@@ -79,7 +81,7 @@ var clients = map[bool]*horizon.Client{
 // verifier on the test network if livemode is false, and the live network
 // otherwise.
 func CheckFact(
-	livemode bool,
+	ctx context.Context,
 	address string,
 	typ FctType,
 	value string,
@@ -96,7 +98,7 @@ func CheckFact(
 		return errors.Trace(err)
 	}
 
-	account, err := clients[livemode].LoadAccount(verifier)
+	account, err := clients[livemode.Get(ctx)].LoadAccount(verifier)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -112,7 +114,7 @@ func CheckFact(
 // AssertFact attempts to assert a fact using the seed provided as argument as
 // verifier.
 func AssertFact(
-	livemode bool,
+	ctx context.Context,
 	seed string,
 	address string,
 	typ FctType,
@@ -130,7 +132,7 @@ func AssertFact(
 	}
 	fkp := kp.(*keypair.Full)
 
-	seq, err := clients[livemode].SequenceForAccount(fkp.Address())
+	seq, err := clients[livemode.Get(ctx)].SequenceForAccount(fkp.Address())
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -141,7 +143,7 @@ func AssertFact(
 	}
 
 	buildNetwork := build.TestNetwork
-	if livemode {
+	if livemode.Get(ctx) {
 		buildNetwork = build.PublicNetwork
 	}
 
@@ -164,13 +166,13 @@ func AssertFact(
 		return nil, errors.Trace(err)
 	}
 
-	res, err := clients[livemode].SubmitTransaction(env)
+	res, err := clients[livemode.Get(ctx)].SubmitTransaction(env)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
 
 	return &Assertion{
-		Livemode:        livemode,
+		Livemode:        livemode.Get(ctx),
 		Address:         address,
 		Type:            typ,
 		Value:           value,
@@ -182,7 +184,7 @@ func AssertFact(
 // RevokeFact attempts to revoke a fact using the seed provided as argument as
 // verifier.
 func RevokeFact(
-	livemode bool,
+	ctx context.Context,
 	seed string,
 	address string,
 	typ FctType,
@@ -199,13 +201,13 @@ func RevokeFact(
 	}
 	fkp := kp.(*keypair.Full)
 
-	seq, err := clients[livemode].SequenceForAccount(fkp.Address())
+	seq, err := clients[livemode.Get(ctx)].SequenceForAccount(fkp.Address())
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
 
 	buildNetwork := build.TestNetwork
-	if livemode {
+	if livemode.Get(ctx) {
 		buildNetwork = build.PublicNetwork
 	}
 
@@ -228,13 +230,13 @@ func RevokeFact(
 		return nil, errors.Trace(err)
 	}
 
-	res, err := clients[livemode].SubmitTransaction(env)
+	res, err := clients[livemode.Get(ctx)].SubmitTransaction(env)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
 
 	return &Revocation{
-		Livemode:        livemode,
+		Livemode:        livemode.Get(ctx),
 		Address:         address,
 		Type:            typ,
 		Verifier:        fkp.Address(),

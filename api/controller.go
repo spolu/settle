@@ -108,11 +108,12 @@ func (c *controller) CreateUser(
 	r *http.Request,
 ) {
 	params := UserParams{
-		Username:      r.PostFormValue("username"),
-		Address:       authentication.Get(ctx).Address,
-		EncryptedSeed: r.PostFormValue("encrypted_seed"),
-		Email:         strings.ToLower(r.PostFormValue("email")),
-		Verifier:      r.PostFormValue("verifier"),
+		Username: r.PostFormValue("username"),
+		Address:  authentication.Get(ctx).Address,
+		EncryptedSeed: strings.Replace( // base64 encoded sadness
+			r.PostFormValue("encrypted_seed"), " ", "+", -1),
+		Email:    strings.ToLower(r.PostFormValue("email")),
+		Verifier: r.PostFormValue("verifier"),
 	}
 
 	if !usernameRegexp.MatchString(params.Username) {
@@ -131,15 +132,15 @@ func (c *controller) CreateUser(
 		))
 		return
 	}
-	_, err := base64.StdEncoding.DecodeString(params.EncryptedSeed)
-	if err != nil || len(params.EncryptedSeed) > 256 {
+	bytes, err := base64.StdEncoding.DecodeString(params.EncryptedSeed)
+	if err != nil || len(bytes) != 56 {
 		respond.Error(ctx, w, errors.NewUserError(err,
 			400, "encrypted_seed_invalid",
 			"The encrypted seed appears to be invalid as it could not be "+
-				"decoded using base64 or is longer than 256 characters. The "+
-				"encrypted seed should be the XOR of the raw seed and an "+
-				"scrypt output of the same length using base64 standard "+
-				"encoding.",
+				"decoded using base64 or is has an unexpected length (56 "+
+				"bytes expected). The encrypted seed should be the XOR of "+
+				"the raw seed and an scrypt output of the same length using "+
+				"base64 standard encoding.",
 		))
 		return
 	}
@@ -180,7 +181,7 @@ func (c *controller) CreateUser(
 
 	// Check the email fact.
 	if err := facts.CheckFact(
-		livemode.Get(ctx),
+		ctx,
 		params.Address,
 		facts.FctEmail,
 		params.Email,
