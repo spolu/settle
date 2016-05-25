@@ -5,7 +5,8 @@ The Settl API provides the following core functionalities:
   user-friendly access from multiple devices.
 - Name resolution: the API takes care of translating Settl usernames or
   federated addresses into native addresses transparently.
-- 
+- Augmented functionalities: easing the issuance and exchange of currencies
+  between Settl users.
 
 # Account creation and key management
 
@@ -30,7 +31,7 @@ with the user address as username and the signature of the challenge as
 password. Challenges can only be used once. Challenges values can be retrieved
 using the following endpoint without authentication:
 ```
-curl -XGET settl.net/challenges?count=2
+curl -XGET https://api.settl.net/challenges?count=2
 {
   "challenges": [
     {
@@ -46,51 +47,46 @@ curl -XGET settl.net/challenges?count=2
 ```
 
 ```
-curl -XPOST settl.net/stellar/operations
-  -H "Challenge: P7m4Iy13sludc0Hu:JcRPRdbKtmSxF0MsKZVgZ/pdrRPxikf59C+q9DG6RQDbXq4zHSOUQriBF187d1VPSPCLIYqJVtqgRM1xXhukAw=="
-  -u $address:$signature
-  -d type={payment, path_payment, manager_offer}
-  -d destination=alistair*settl.net
-  -d asset=usd
+curl -XPOST https://api.settl.net/stellar/operations
+  -H "Livemode: true" \
+  -H "Authentication-Challenge: P7m4Iy13sludc0Hu:JcRPRdbKtmSxF0MsKZVgZ/pdrRPxikf59C+q9DG6RQDbXq4zHSOUQriBF187d1VPSPCLIYqJVtqgRM1xXhukAw==" \
+  -u $address:$signature \
+  -d type={payment, path_payment, manager_offer} \
+  -d destination=alistair*settl.net \
+  -d asset=usd \
   -d amount=5
-
-{
-  operation: {
-    id: "operation_k23hj2o2mlkno",
-    type: "payment",
-    status: "pending",
-    token: "1463699742482_x92krP3Nl0uaVOQL:VpguS4+k+uZP6DuxORFic+...",
-    destination: "alistair*settl.net",
-    amount: 5,
-    asset: "usd",
-    transaction: "ASDVASD/ASdsa..."
-  }
-}
 ```
 
 # API reference
 
 ## Account creation
 
-```
-curl -XPOST settl.net/users
-  -H "Challenge: P7m4Iy13sludc0Hu:JcRPRdbKtmSxF0MsKZVgZ/pdrRPxikf59C+q9DG6RQDbXq4zHSOUQriBF187d1VPSPCLIYqJVtqgRM1xXhukAw=="
-  -H $address:$signature
-  -d username=stan
-  -d address=ABASD...
-  -d encrypted_seed=ASDA...
-```
-
-## Stellar Operations
+Account creation is the final step of a user onboarding on Settl. It creates a user for a given username, email and existing Stellar account. The email must be asserted by a trusted verifier (see Facts Protocol). Actual email verification and Stellar account creation happens outside of the API.
 
 ```
-curl -XPOST settl.net/stellar/operations
-  -H "Challenge: P7m4Iy13sludc0Hu:JcRPRdbKtmSxF0MsKZVgZ/pdrRPxikf59C+q9DG6RQDbXq4zHSOUQriBF187d1VPSPCLIYqJVtqgRM1xXhukAw=="
-  -H $address:$signature
-  -d type={payment, path_payment, manager_offer}
-  -d destination=alistair*settl.net
-  -d asset=usd
-  -d amount=5
+curl -XPOST https://api.settl.net/users
+  -H "Livemode: true" \
+  -H "Authentication-Challenge: P7m4Iy13sludc0Hu:JcRPRdbKtmSxF0MsKZVgZ/pdrRPxikf59C+q9DG6RQDbXq4zHSOUQriBF187d1VPSPCLIYqJVtqgRM1xXhukAw==" \
+  -u $address:$signature \
+  -d username=stan \
+  -d email=polu.stanislas@gmail.com \
+  -d verifier=GABL2... \
+  -d encrypted_seed=WgH...
+```
+
+## Native Operations
+
+Native operations lets Settl users perform native Stellar operations from any device using their username and password.
+
+```
+curl -XPOST settl.net/native/operations
+  -H "Livemode: true" \
+  -H "Authentication-Challenge: P7m4Iy13sludc0Hu:JcRPRdbKtmSxF0MsKZVgZ/pdrRPxikf59C+q9DG6RQDbXq4zHSOUQriBF187d1VPSPCLIYqJVtqgRM1xXhukAw==" \
+  -u $address:$signature \
+  -d type={payment|path_payment|manager_offer} \
+  -d destination=alistair \
+  -d asset=usd \
+  -d amount=5 \
 
 {
   operation: {
@@ -107,12 +103,9 @@ curl -XPOST settl.net/stellar/operations
 ```
 
 ```
-curl -XPOST settl.net/stellar/operations/operation_k23hj2o2mlkno/submit
-  -H $address:$signature
-  -d token=1oeiwqlkdj_1231230123_k2jt329jpfldfas
+curl -XPOST https://settl.net/native/operations/operation_k23hj2o2mlkno/submit
+  -H "Livemode: true" \
+  -H "Authentication-Challenge: P7m4Iy13sludc0Hu:JcRPRdbKtmSxF0MsKZVgZ/pdrRPxikf59C+q9DG6RQDbXq4zHSOUQriBF187d1VPSPCLIYqJVtqgRM1xXhukAw==" \
+  -u $address:$signature \
   -d envelope="ADWQ/khj21e..."
-```
-
-```
-curl -XGET settl.net/stellar/operations
 ```
