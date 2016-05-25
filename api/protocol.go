@@ -4,13 +4,11 @@ package api
 
 // UserParams are the parameters used to create a new user.
 type UserParams struct {
-	Livemode           bool
-	Address            string
-	Username           string
-	EncryptedSeed      string
-	Email              string
-	Verifier           string
-	FundingTransaction string
+	Username      string
+	Address       string
+	EncryptedSeed string
+	Email         string
+	Verifier      string
 }
 
 // Resources
@@ -23,11 +21,13 @@ type ChallengeResource struct {
 
 // UserResource represents a challenge as returned by the API.
 type UserResource struct {
-	ID      string `json:"id"`
-	Created int64  `json:"created"`
+	ID       string `json:"id"`
+	Created  int64  `json:"created"`
+	Livemode bool   `json:"livemode"`
 
 	Username      string `json:"username"`
+	Address       string `json:"address"`
 	EncryptedSeed string `json:"encrypted_seed"`
-
-	Email string `json:"email"`
+	Email         string `json:"email"`
+	Verifier      string `json:"verifier"`
 }

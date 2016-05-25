@@ -1,16 +1,25 @@
 # API
 
+The Settl API provides the following core functionalities:
+- Key management: storing encrypted seeds based on scrypt for secure and
+  user-friendly access from multiple devices.
+- Name resolution: the API takes care of translating Settl usernames or
+  federated addresses into native addresses transparently.
+- 
+
 # Account creation and key management
 
-Settl only stores encrypted version of the keys associated with a user account.
-User creation involves the following steps:
+Settl only stores encrypted version of the seed associated with a user
+account. User creation involves the following steps:
 
 ```
-- (client-side) generate a keypair (p_A, k_A)
+- (client-side) generate a keypair (p_A, k_A).
 - (client-side) encrypt the private key using scrypt with password pw_A:
-  e_A = k_A XOR scrypt(pw_A, p_A)
-- (client-side) submit username u_A, p_A, e_A to server and sign the request
-  using the private key
+  e_A = k_A XOR scrypt(pw_A, p_A).
+- (client-side) use onboarding mechanism to create underlying Stellar account
+  and verify email.
+- (client-side) submit username u_A, p_A, e_A to server and authenticate the
+  request by resolving an authentication challenge (see below).
 - (server) create user and store e_A, p_A and u_A
 ```
 

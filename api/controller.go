@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/spolu/settl/api/lib/authentication"
 	"github.com/spolu/settl/facts"
@@ -15,6 +16,8 @@ import (
 	"github.com/spolu/settl/lib/livemode"
 	"github.com/spolu/settl/lib/respond"
 	"github.com/spolu/settl/lib/svc"
+	"github.com/spolu/settl/lib/token"
+	"github.com/spolu/settl/model"
 	"github.com/stellar/go-stellar-base/horizon"
 
 	"golang.org/x/net/context"
@@ -105,9 +108,8 @@ func (c *controller) CreateUser(
 	r *http.Request,
 ) {
 	params := UserParams{
-		Livemode:      livemode.Get(ctx),
-		Address:       authentication.Get(ctx).Address,
 		Username:      r.PostFormValue("username"),
+		Address:       authentication.Get(ctx).Address,
 		EncryptedSeed: r.PostFormValue("encrypted_seed"),
 		Email:         strings.ToLower(r.PostFormValue("email")),
 		Verifier:      r.PostFormValue("verifier"),
@@ -144,7 +146,7 @@ func (c *controller) CreateUser(
 
 	// Check that the account exists, it should have been created by the
 	// onboarding process.
-	_, err = clients[params.Livemode].LoadAccount(params.Address)
+	_, err = clients[livemode.Get(ctx)].LoadAccount(params.Address)
 	if err != nil {
 		respond.Error(ctx, w, errors.NewUserError(err,
 			400, "address_invalid",
@@ -160,7 +162,7 @@ func (c *controller) CreateUser(
 
 	// Check that we trust the verifier specified.
 	found := false
-	for _, v := range emailVerifiers[params.Livemode] {
+	for _, v := range emailVerifiers[livemode.Get(ctx)] {
 		if v == params.Verifier {
 			found = true
 		}
@@ -171,14 +173,14 @@ func (c *controller) CreateUser(
 			fmt.Sprintf(
 				"The facts verifier %s is not trusted by this API. The "+
 					"trusted verifiers are: %s",
-				strings.Join(emailVerifiers[params.Livemode], ", ")),
+				strings.Join(emailVerifiers[livemode.Get(ctx)], ", ")),
 		))
 		return
 	}
 
 	// Check the email fact.
 	if err := facts.CheckFact(
-		params.Livemode,
+		livemode.Get(ctx),
 		params.Address,
 		facts.FctEmail,
 		params.Email,
@@ -194,20 +196,71 @@ func (c *controller) CreateUser(
 		return
 	}
 
-	// - create account
+	// Check uniqueness of the address and username.
+	errChan := make(chan error)
+	go func() {
+		if update, err := model.LoadActiveUserUpdateByAddress(
+			ctx, params.Address); err != nil {
+			errChan <- err // 500
+		} else if update != nil {
+			errChan <- errors.NewUserError(nil,
+				400, "address_already_used",
+				fmt.Sprintf(
+					"The address %s is already associated with username %s.",
+					update.Address, update.Username,
+				))
+		}
+		errChan <- nil
+	}()
+	go func() {
+		if update, err := model.LoadActiveUserUpdateByUsername(
+			ctx, params.Username); err != nil {
+			errChan <- err // 500
+		} else if update != nil {
+			errChan <- errors.NewUserError(nil,
+				400, "username_already_taken",
+				fmt.Sprintf(
+					"The username %s is already associated with address %s.",
+					update.Username, update.Address,
+				))
+		}
+		errChan <- nil
+	}()
+	for i := 0; i < 2; i++ {
+		if err := <-errChan; err != nil {
+			respond.Error(ctx, w, errors.Trace(err))
+			return
+		}
+	}
 
-	// - check that account with same username does not exist
-	// - check that account with same address does not exist
-	// - check that account with same email address does not exist
-	// - check that account with same funding_transaction does not exist
+	// Finaly create the user.
+	userUpdate, err := model.CreateUserUpdate(
+		ctx,
+		token.New("user"),
+		time.Now(),
+		params.Username,
+		params.Address,
+		params.EncryptedSeed,
+		params.Email,
+		params.Verifier,
+	)
+	if err != nil {
+		respond.Error(ctx, w, errors.Trace(err)) // 500
+		return
+	}
 
-}
-
-func (c *controller) ConfirmUser(
-	ctx context.Context,
-	w http.ResponseWriter,
-	r *http.Request,
-) {
+	respond.Success(ctx, w, svc.Resp{
+		"user": format.JSONPtr(UserResource{
+			ID:            userUpdate.UserToken,
+			Created:       userUpdate.Creation.UnixNano() / (1000 * 1000),
+			Livemode:      userUpdate.Livemode,
+			Username:      userUpdate.Username,
+			Address:       userUpdate.Address,
+			EncryptedSeed: userUpdate.EncryptedSeed,
+			Email:         userUpdate.Email,
+			Verifier:      userUpdate.Verifier,
+		}),
+	})
 }
 
 func (c *controller) CreateNativeOperation(

@@ -8,20 +8,22 @@ CREATE TABLE IF NOT EXISTS user_updates(
   created TIMESTAMP NOT NULL DEFAULT UTC_NOW(),
   livemode BOOL NOT NULL,
 
-  creation TIMESTAMP NOT NULL DEFAULT UTC_NOW(),
-  username VARCHAR(256),
-  address VARCHAR(256),
-  encrypted_seed VARCHAR(256),
+  is_active BOOL NOT NULL,
+  user_token VARCHAR(256) NOT NULL,
+  creation TIMESTAMP NOT NULL,
+  username VARCHAR(256) NOT NULL,
+  address VARCHAR(256) NOT NULL,
+  encrypted_seed VARCHAR(256) NOT NULL,
 
-  email VARCHAR(256),
-  verifier VARCHAR(256),
+  email VARCHAR(256) NOT NULL,
+  verifier VARCHAR(256) NOT NULL,
 
   PRIMARY KEY(id),
-  UNIQUE(token),
-  UNIQUE(username),
-  UNIQUE(address),
-  UNIQUE(email)
+  UNIQUE(token)
 );
+CREATE INDEX user_updates_user_token_is_active_idx ON user_updates (user_token, is_active);
+CREATE INDEX user_updates_username_is_active_idx ON user_updates (username, is_active);
+CREATE INDEX user_updates_address_is_active_idx ON user_updates (address, is_active);
 `
 )
 

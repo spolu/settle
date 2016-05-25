@@ -1,13 +1,10 @@
 package model
 
 import (
-	"database/sql"
-	"log"
 	"time"
 
 	"golang.org/x/net/context"
 
-	"github.com/jmoiron/sqlx"
 	"github.com/spolu/settl/lib/errors"
 	"github.com/spolu/settl/lib/livemode"
 	"github.com/spolu/settl/lib/token"
@@ -29,28 +26,8 @@ type Authentication struct {
 	Signature string
 }
 
-var insertAuthentication *sqlx.NamedStmt
-var findAuthenticationByChallenge *sqlx.NamedStmt
-
 func init() {
 	ensureAPIDB()
-	err := error(nil)
-
-	insertAuthentication, err = apidb.PrepareNamed(`
-INSERT INTO authentications
-  (token, livemode, method, url, challenge, address, signature)
-VALUES
-  (:token, :livemode, :method, :url, :challenge, :address, :signature)
-RETURNING id, created
-`)
-	findAuthenticationByChallenge, err = apidb.PrepareNamed(`
-SELECT *
-FROM authentications
-WHERE challenge = :challenge
-`)
-	if err != nil {
-		log.Fatal(errors.Details(err))
-	}
 }
 
 // CreateAuthentication creates and stores a new Authentication object.
@@ -74,12 +51,24 @@ func CreateAuthentication(
 		Signature: signature,
 	}
 
-	row := insertAuthentication.QueryRowx(auth)
-	if err := row.Err(); err != nil {
+	tx := apidb.MustBegin()
+	defer tx.Rollback()
+
+	if rows, err := apidb.NamedQuery(`
+INSERT INTO authentications
+  (token, livemode, method, url, challenge, address, signature)
+VALUES
+  (:token, :livemode, :method, :url, :challenge, :address, :signature)
+RETURNING id, created
+`, auth); err != nil {
+		return nil, errors.Trace(err)
+	} else if !rows.Next() {
+		return nil, errors.Newf("Nothing returned from INSERT.")
+	} else if err := rows.StructScan(&auth); err != nil {
 		return nil, errors.Trace(err)
 	}
-	err := row.StructScan(&auth)
-	if err != nil {
+
+	if err := tx.Commit(); err != nil {
 		return nil, errors.Trace(err)
 	}
 
@@ -96,15 +85,15 @@ func LoadAuthenticationByChallenge(
 		Challenge: challenge,
 	}
 
-	row := findAuthenticationByChallenge.QueryRowx(auth)
-	if err := row.Err(); err != nil {
+	if rows, err := apidb.NamedQuery(`
+SELECT *
+FROM authentications
+WHERE challenge = :challenge
+`, auth); err != nil {
 		return nil, errors.Trace(err)
-	}
-	err := row.StructScan(&auth)
-	if err == sql.ErrNoRows {
+	} else if !rows.Next() {
 		return nil, nil
-	}
-	if err != nil {
+	} else if err := rows.StructScan(&auth); err != nil {
 		return nil, errors.Trace(err)
 	}
 
