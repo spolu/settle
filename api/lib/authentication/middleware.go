@@ -15,7 +15,7 @@ import (
 
 const (
 	// statusKey the context.Context key to store the authentication status.
-	statusKey int = iota
+	statusKey string = "authentication.status"
 )
 
 // AutStatus indicates the status of the authentication.

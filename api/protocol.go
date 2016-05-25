@@ -9,7 +9,7 @@ type UserParams struct {
 	Username           string
 	EncryptedSeed      string
 	Email              string
-	EmailVerifier      string
+	Verifier           string
 	FundingTransaction string
 }
 

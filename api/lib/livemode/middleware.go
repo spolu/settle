@@ -12,7 +12,7 @@ import (
 
 const (
 	// livemodeKey the context.Context key to store the livemode.
-	livemodeKey int = iota
+	livemodeKey string = "livemode.livemode"
 	// livemodeHeader is the livemode header.
 	livemodeHeader = "Livemode"
 )

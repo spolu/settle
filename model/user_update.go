@@ -9,13 +9,18 @@ import (
 // UserUpdate represents an update to a user object. The most recent UserUpdate
 // represents the current user.
 type UserUpdate struct {
-	ID      int64
-	Token   string
-	Created time.Time
+	ID       int64
+	Token    string
+	Created  time.Time
+	Livemode bool
 
 	Creation      time.Time
 	Username      string
+	Address       string
 	EncryptedSeed string
+
+	Email    string
+	Verifier string
 }
 
 var insertUserUpdate *sqlx.NamedStmt
