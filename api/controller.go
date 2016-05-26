@@ -129,6 +129,23 @@ func (c *controller) RetrieveUser(
 		return
 	}
 
+	if authentication.Get(ctx).Status == authentication.AutStSucceeded &&
+		authentication.Get(ctx).Address == update.Address {
+		respond.Success(ctx, w, svc.Resp{
+			"user": format.JSONPtr(UserResource{
+				ID:            update.UserToken,
+				Created:       update.Creation.UnixNano() / (1000 * 1000),
+				Livemode:      update.Livemode,
+				Username:      update.Username,
+				Address:       update.Address,
+				EncryptedSeed: update.EncryptedSeed,
+				Email:         update.Email,
+				Verifier:      update.Verifier,
+			}),
+		})
+		return
+	}
+
 	respond.Success(ctx, w, svc.Resp{
 		"user": format.JSONPtr(UserResource{
 			ID:            update.UserToken,
@@ -137,8 +154,6 @@ func (c *controller) RetrieveUser(
 			Username:      update.Username,
 			Address:       update.Address,
 			EncryptedSeed: update.EncryptedSeed,
-			Email:         update.Email,
-			Verifier:      update.Verifier,
 		}),
 	})
 }

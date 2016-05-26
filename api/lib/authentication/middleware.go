@@ -86,25 +86,25 @@ func (m middleware) ServeHTTPC(
 		}
 	}
 
-	if skip {
-		withStatus = With(ctx, Status{AutStSkipped, ""})
-		logging.Logf(ctx, "Authentication: status=%q livemode=%t",
-			Get(withStatus).Status, livemode.Get(ctx))
-
-		m.Handler.ServeHTTPC(withStatus, w, r)
-		return
-	}
-
-	// Helper closure to log and return an authentication error.
+	// Helper closure to fallback to the skiplist or log and return an
+	// authentication error.
 	failedAuth := func(err error) {
-		withStatus = With(ctx, Status{AutStFailed, ""})
-		logging.Logf(ctx,
-			"Authentication: status=%q livemode=%t address=%q "+
-				"challenge=%q signature=%q",
-			Get(withStatus).Status, livemode.Get(ctx),
-			address, challenge, signature)
+		if skip {
+			withStatus = With(ctx, Status{AutStSkipped, ""})
+			logging.Logf(ctx, "Authentication: status=%q livemode=%t",
+				Get(withStatus).Status, livemode.Get(ctx))
 
-		respond.Error(withStatus, w, errors.Trace(err))
+			m.Handler.ServeHTTPC(withStatus, w, r)
+		} else {
+			withStatus = With(ctx, Status{AutStFailed, ""})
+			logging.Logf(ctx,
+				"Authentication: status=%q livemode=%t address=%q "+
+					"challenge=%q signature=%q",
+				Get(withStatus).Status, livemode.Get(ctx),
+				address, challenge, signature)
+
+			respond.Error(withStatus, w, errors.Trace(err))
+		}
 	}
 
 	// Check that the challenge is valid.

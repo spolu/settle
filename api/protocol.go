@@ -28,6 +28,6 @@ type UserResource struct {
 	Username      string `json:"username"`
 	Address       string `json:"address"`
 	EncryptedSeed string `json:"encrypted_seed"`
-	Email         string `json:"email"`
-	Verifier      string `json:"verifier"`
+	Email         string `json:"email,omitempty"`
+	Verifier      string `json:"verifier,omitempty"`
 }
