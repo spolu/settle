@@ -20,10 +20,12 @@ func (c *Configuration) Init() error {
 func (c *Configuration) Bind(
 	mux *goji.Mux,
 ) {
+	// Authentication Skipped
 	mux.HandleFuncC(pat.Get("/challenges"), c.controller.RetrieveChallenges)
+	mux.HandleFuncC(pat.Get("/users/:user"), c.controller.RetrieveUser)
 
+	// Authenticated
 	mux.HandleFuncC(pat.Post("/users"), c.controller.CreateUser)
-
 	mux.HandleFuncC(pat.Post("/native/operations"), c.controller.CreateNativeOperation)
 	mux.HandleFuncC(pat.Post("/native/operations/:operation/submit"), c.controller.SubmitNativeOperation)
 }

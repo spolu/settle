@@ -110,7 +110,8 @@ func LoadActiveUserUpdateByUserToken(
 	if rows, err := apidb.NamedQuery(`
 SELECT *
 FROM user_updates
-WHERE user_token = :user_token
+WHERE livemode = :livemode
+  AND user_token = :user_token
   AND is_active = true
 `, update); err != nil {
 		return nil, errors.Trace(err)
@@ -130,13 +131,15 @@ func LoadActiveUserUpdateByUsername(
 	username string,
 ) (*UserUpdate, error) {
 	update := UserUpdate{
+		Livemode: livemode.Get(ctx),
 		Username: username,
 	}
 
 	if rows, err := apidb.NamedQuery(`
 SELECT *
 FROM user_updates
-WHERE username = :username
+WHERE livemode = :livemode
+  AND username = :username
   AND is_active = true
 `, update); err != nil {
 		return nil, errors.Trace(err)
@@ -162,9 +165,41 @@ func LoadActiveUserUpdateByAddress(
 	if rows, err := apidb.NamedQuery(`
 SELECT *
 FROM user_updates
-WHERE address = :address
+WHERE livemode = :livemode
+  AND address = :address
   AND is_active = true
 `, update); err != nil {
+		return nil, errors.Trace(err)
+	} else if !rows.Next() {
+		return nil, nil
+	} else if err := rows.StructScan(&update); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &update, nil
+}
+
+// LoadActiveUserUpdateByAmbiguousID attempts to load an active user update
+// with the given username, or user token, or address
+func LoadActiveUserUpdateByAmbiguousID(
+	ctx context.Context,
+	ambiguousID string,
+) (*UserUpdate, error) {
+	update := UserUpdate{}
+
+	if rows, err := apidb.NamedQuery(`
+SELECT *
+FROM user_updates
+WHERE livemode = :livemode
+  AND is_active = true
+  AND (username = :id OR address = :id OR user_token = :id)
+`, struct {
+		Livemode bool
+		ID       string
+	}{
+		livemode.Get(ctx),
+		ambiguousID,
+	}); err != nil {
 		return nil, errors.Trace(err)
 	} else if !rows.Next() {
 		return nil, nil

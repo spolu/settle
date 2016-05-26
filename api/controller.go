@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"goji.io/pat"
+
 	"github.com/spolu/settl/api/lib/authentication"
 	"github.com/spolu/settl/facts"
 	"github.com/spolu/settl/lib/errors"
@@ -102,6 +104,45 @@ func (c *controller) RetrieveChallenges(
 	})
 }
 
+func (c *controller) RetrieveUser(
+	ctx context.Context,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	ambiguousID := pat.Param(ctx, "user")
+
+	update, err := model.LoadActiveUserUpdateByAmbiguousID(
+		ctx, ambiguousID)
+	if err != nil {
+		respond.Error(ctx, w, errors.Trace(err)) // 500
+		return
+	}
+
+	if update == nil {
+		respond.Error(ctx, w, errors.NewUserError(nil,
+			404, "user_not_found",
+			fmt.Sprintf(
+				"%s is not associated with any registered user.",
+				ambiguousID,
+			),
+		))
+		return
+	}
+
+	respond.Success(ctx, w, svc.Resp{
+		"user": format.JSONPtr(UserResource{
+			ID:            update.UserToken,
+			Created:       update.Creation.UnixNano() / (1000 * 1000),
+			Livemode:      update.Livemode,
+			Username:      update.Username,
+			Address:       update.Address,
+			EncryptedSeed: update.EncryptedSeed,
+			Email:         update.Email,
+			Verifier:      update.Verifier,
+		}),
+	})
+}
+
 func (c *controller) CreateUser(
 	ctx context.Context,
 	w http.ResponseWriter,
@@ -143,6 +184,43 @@ func (c *controller) CreateUser(
 				"base64 standard encoding.",
 		))
 		return
+	}
+
+	// Check uniqueness of the address and username.
+	errChan := make(chan error)
+	go func() {
+		if update, err := model.LoadActiveUserUpdateByAddress(
+			ctx, params.Address); err != nil {
+			errChan <- err // 500
+		} else if update != nil {
+			errChan <- errors.NewUserError(nil,
+				400, "address_already_used",
+				fmt.Sprintf(
+					"The address %s is already associated with username %s.",
+					update.Address, update.Username,
+				))
+		}
+		errChan <- nil
+	}()
+	go func() {
+		if update, err := model.LoadActiveUserUpdateByUsername(
+			ctx, params.Username); err != nil {
+			errChan <- err // 500
+		} else if update != nil {
+			errChan <- errors.NewUserError(nil,
+				400, "username_already_taken",
+				fmt.Sprintf(
+					"The username %s is already associated with address %s.",
+					update.Username, update.Address,
+				))
+		}
+		errChan <- nil
+	}()
+	for i := 0; i < 2; i++ {
+		if err := <-errChan; err != nil {
+			respond.Error(ctx, w, errors.Trace(err))
+			return
+		}
 	}
 
 	// Check that the account exists, it should have been created by the
@@ -197,45 +275,8 @@ func (c *controller) CreateUser(
 		return
 	}
 
-	// Check uniqueness of the address and username.
-	errChan := make(chan error)
-	go func() {
-		if update, err := model.LoadActiveUserUpdateByAddress(
-			ctx, params.Address); err != nil {
-			errChan <- err // 500
-		} else if update != nil {
-			errChan <- errors.NewUserError(nil,
-				400, "address_already_used",
-				fmt.Sprintf(
-					"The address %s is already associated with username %s.",
-					update.Address, update.Username,
-				))
-		}
-		errChan <- nil
-	}()
-	go func() {
-		if update, err := model.LoadActiveUserUpdateByUsername(
-			ctx, params.Username); err != nil {
-			errChan <- err // 500
-		} else if update != nil {
-			errChan <- errors.NewUserError(nil,
-				400, "username_already_taken",
-				fmt.Sprintf(
-					"The username %s is already associated with address %s.",
-					update.Username, update.Address,
-				))
-		}
-		errChan <- nil
-	}()
-	for i := 0; i < 2; i++ {
-		if err := <-errChan; err != nil {
-			respond.Error(ctx, w, errors.Trace(err))
-			return
-		}
-	}
-
 	// Finaly create the user.
-	userUpdate, err := model.CreateUserUpdate(
+	update, err := model.CreateUserUpdate(
 		ctx,
 		token.New("user"),
 		time.Now(),
@@ -252,14 +293,14 @@ func (c *controller) CreateUser(
 
 	respond.Success(ctx, w, svc.Resp{
 		"user": format.JSONPtr(UserResource{
-			ID:            userUpdate.UserToken,
-			Created:       userUpdate.Creation.UnixNano() / (1000 * 1000),
-			Livemode:      userUpdate.Livemode,
-			Username:      userUpdate.Username,
-			Address:       userUpdate.Address,
-			EncryptedSeed: userUpdate.EncryptedSeed,
-			Email:         userUpdate.Email,
-			Verifier:      userUpdate.Verifier,
+			ID:            update.UserToken,
+			Created:       update.Creation.UnixNano() / (1000 * 1000),
+			Livemode:      update.Livemode,
+			Username:      update.Username,
+			Address:       update.Address,
+			EncryptedSeed: update.EncryptedSeed,
+			Email:         update.Email,
+			Verifier:      update.Verifier,
 		}),
 	})
 }

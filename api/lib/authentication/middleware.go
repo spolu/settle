@@ -2,6 +2,7 @@ package authentication
 
 import (
 	"net/http"
+	"regexp"
 
 	"github.com/spolu/settl/lib/errors"
 	"github.com/spolu/settl/lib/livemode"
@@ -52,9 +53,16 @@ func Get(
 	return ctx.Value(statusKey).(Status)
 }
 
+// SkipRule defines a skip rule for authentication
+type SkipRule struct {
+	Method  string
+	Pattern *regexp.Regexp
+}
+
 // SkipList is the list of endpoints that do not require authentication.
-var SkipList = []string{
-	"/challenges",
+var SkipList = []*SkipRule{
+	&SkipRule{"GET", regexp.MustCompile("^/challenges$")},
+	&SkipRule{"GET", regexp.MustCompile("^/users/[a-zA-Z0-9_]+$")},
 }
 
 type middleware struct {
@@ -72,8 +80,8 @@ func (m middleware) ServeHTTPC(
 	address, signature, _ := r.BasicAuth()
 	challenge := r.Header.Get("Authorization-Challenge")
 	skip := false
-	for _, p := range SkipList {
-		if r.URL.EscapedPath() == p {
+	for _, s := range SkipList {
+		if s.Method == r.Method && s.Pattern.MatchString(r.URL.EscapedPath()) {
 			skip = true
 		}
 	}
