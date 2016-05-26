@@ -93,7 +93,7 @@ func CheckFact(
 	}
 	key := fmt.Sprintf("fct.%s.%s", address, code)
 
-	scrypt, err := scrypt.Key([]byte(value), []byte(address), 16384, 8, 1, 64)
+	scrypt, err := scrypt.Key([]byte(value), []byte(verifier), 16384, 8, 1, 64)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -137,7 +137,7 @@ func AssertFact(
 		return nil, errors.Trace(err)
 	}
 
-	scrypt, err := scrypt.Key([]byte(value), []byte(address), 16384, 8, 1, 64)
+	scrypt, err := scrypt.Key([]byte(value), []byte(fkp.Address()), 16384, 8, 1, 64)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
