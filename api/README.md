@@ -5,8 +5,9 @@ The Settl API provides the following core functionalities:
   user-friendly access from multiple devices.
 - Name resolution: the API takes care of translating Settl usernames or
   federated addresses into native addresses transparently.
-- Augmented functionalities: easing the issuance and exchange of currencies
-  between Settl users.
+- Augmented functionalities: such as easing the issuance and exchange of
+  currencies between Settl users, providing tools to accept payments through
+  automatic exchange of these currencies.
 
 # Account creation and key management
 
@@ -61,7 +62,10 @@ curl -XPOST https://api.settl.net/stellar/operations
 
 ## Account creation
 
-Account creation is the final step of a user onboarding on Settl. It creates a user for a given username, email and existing Stellar account. The email must be asserted by a trusted verifier (see Facts Protocol). Actual email verification and Stellar account creation happens outside of the API.
+Account creation is the final step of a user onboarding on Settl. It creates a
+user for a given username, email and existing Stellar account. The email must
+be asserted by a trusted verifier (see Facts Protocol). Actual email
+verification and Stellar account creation happens outside of the API.
 
 ```
 curl -XPOST https://api.settl.net/users
@@ -76,7 +80,8 @@ curl -XPOST https://api.settl.net/users
 
 ## Native Operations
 
-Native operations lets Settl users perform native Stellar operations from any device using their username and password.
+Native operations lets Settl users perform native Stellar operations from any
+device using their username and password.
 
 ```
 curl -XPOST settl.net/native/operations
