@@ -320,11 +320,17 @@ func (c *controller) CreateUser(
 	})
 }
 
+
+
 func (c *controller) CreateNativeOperation(
 	ctx context.Context,
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
+  parameters := map[string]string
+  // Extract possible values
+  // Trans
+
 }
 
 func (c *controller) SubmitNativeOperation(
