@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"encoding/base64"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -10,6 +12,7 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -18,26 +21,28 @@ import (
 )
 
 // ethBackends map livemode to Ethereum backends.
-var ethBackends = map[bool]backends.ContractBackend{}
+var ethBackends = map[bool]bind.ContractBackend{}
 
 func init() {
+	fmt.Printf("Initializing...")
 	liveClient, err := rpc.NewWSClient(os.Getenv("ETH_LIVE_WS_ENDPOINT"))
 	if err != nil {
 		log.Fatal(err)
 	}
+	fmt.Printf("LV")
 	ethBackends[true] = backends.NewRPCBackend(liveClient)
 
 	testClient, err := rpc.NewWSClient(os.Getenv("ETH_TEST_WS_ENDPOINT"))
 	if err != nil {
 		log.Fatal(err)
 	}
-	ethBackends[false] = backends.NewRPCBackend(liveClient)
+	ethBackends[false] = backends.NewRPCBackend(testClient)
 }
 
 func main() {
+	var fct = flag.String("function", "sign_challenge", "the function to execute")
 	var lvm = flag.String("livemode", "false", "The livemode to use")
-	var fct = flag.String("keyfile", "/dev/null", "The password protected key file")
-	var pas = flag.String("password", "", "The password for the protected key")
+	var key = flag.String("keyfile", "/dev/null", "The passphrase protected key file")
 	var chl = flag.String("challenge", "0", "The initial amount for the account")
 	flag.Parse()
 
@@ -50,30 +55,34 @@ func main() {
 
 	switch *fct {
 	case "sign_challenge":
-		signChallenge(ctx, *see, *chl)
+		signChallenge(ctx, *key, *chl)
 	}
 }
 
 func signChallenge(
 	ctx context.Context,
 	keyfile string,
-	passowrd string,
 	challenge string,
 ) {
 	logging.Logf(ctx,
 		"Signing challenge: challenge=%q keyfile=%q",
 		challenge, keyfile)
 
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print("Passphrase: ")
+	passphrase, _ := reader.ReadString('\n')
+	passphrase = passphrase[:len(passphrase)-1]
+
 	keyjson, err := ioutil.ReadFile(keyfile)
 	if err != nil {
 		log.Fatal(err)
 	}
-	key, err := accounts.DecryptKey(keyjson, auth)
+	key, err := accounts.DecryptKey(keyjson, passphrase)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	sig, err := crypto.Sign([]byte(challenge), key.PrivateKey)
+	sig, err := crypto.Sign(crypto.Sha3([]byte(challenge)), key.PrivateKey)
 	if err != nil {
 		log.Fatal(err)
 	}

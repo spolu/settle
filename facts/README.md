@@ -1,55 +1,60 @@
-# Facts Protocol
+# Fact smart contracts
 
-Accounts can assert of facts related to other accounts using the Stellar
-ManageData operation and the Facts Protocol. A fact is stored on the account
-asserting it, also called the "verifier" account and uses the following format
-to assert something about the "destination" account the facts relates to:
+A Fact smart contract can be created to assert of a fact and let other accounts
+verify the fact. The Fact smart contract source code is available
+[here](https://github.com/spolu/settle/tree/master/facts/contracts/facts-V0001.sol).
+
+When an account creates a Fact, it must specify the type of the Fact (`bytes8`)
+by complying to the convention proposed in the contract source code (as of
+`V0001`):
 
 ```
-  "fct.$destination_address.$type_code": "scrypt($value, $verifier_address, 1<<14, 8, 1, 64)"
+    // 0x010* is reserved for legal information.
+    bytes8 constant T_FULL_NAME             = 0x0101
+    bytes8 constant T_ENTITY_TYPE           = 0x0102
+    bytes8 constant T_DATE_OF_BIRTH         = 0x0103
+    bytes8 constant T_DATE_OF_CREATION      = 0x0104
+    bytes8 constant T_DATE_OF_INCORPORATION = 0x0105
+    // 0x020* is reserved for contact information.
+    bytes8 constant T_EMAIL                 = 0x0201
+    bytes8 constant T_PHONE                 = 0x0202
+    bytes8 constant T_URL                   = 0x0203
+    // 0x030* is reserved for address information.
+    bytes8 constant T_ADDRESS_LINE1         = 0x0301
+    bytes8 constant T_ADDRESS_LINE2         = 0x0302
+    bytes8 constant T_ADDRESS_CITY          = 0x0303
+    bytes8 constant T_ADDRESS_POSTAL_CODE   = 0x0304
+    bytes8 constant T_STATE                 = 0x0305
+    bytes8 constant T_COUNTRY               = 0x0306
+    // 0x040* is reserved for official document IDs.
+    bytes8 constant T_TAX_ID                = 0x0401
+    bytes8 constant T_PASSPORT_NUMBER       = 0x0402
+    bytes8 constant T_DRIVER_LICENSE_ID     = 0x0403
+    // 0x050* is reserved for financial information.
+    bytes8 constant T_BANK_ACCOUNT_NUMBER   = 0x0501
+    bytes8 constant T_CARD_NUMBER           = 0x0502
+    bytes8 constant T_BITCOIN_ADDRESS       = 0x0502
+    // 0x060* is reserved for social profiles.
+    bytes8 constant T_FACEBOOK_ID           = 0x0601
+    bytes8 constant T_TWITTER_HANDLE        = 0x0602
+    bytes8 constant T_REDDIT_HANDLE         = 0x0603
+    bytes8 constant T_GITHUB_HANDLE         = 0x0604
+
+    // 0x0*** is reserved for future uses.
+    // 0x9*** can be used for custom application specific fact types.
 ```
 
-- `$destination_address` is the Stellar address of the destination account the
-facts relates to.
-- `$verifier_address` is the Stellar address of the verifier account.
-- `$type_code` is the fact type and should be one of the following (see list
-  below).
+The value behind a Fact is not made available to the contract, as it would make
+it public. Instead the fact owner must also specify `hash = sha3(owner, value)`
+when creating the Fact, where `value` is the value underlying th Fact.
 
-- `00x` is reserved for legal information:
-  - `000` (`name`): Full name of a individual, company or organization.
-  - `001` (`entity_type`): Entity type (individual, for-profit, non-profit,
-    state).
-  - `002` (`date_of_birth`, `date_of_creation`, `date_of_incorporation`): Date
-    of birth or creation or incorporation of an organization in the format
-    YYYY-MM-DD.
-- `01x` is reserved for contact information:
-  - `010` (`email`): Fully qualified lowercased email address.
-  - `011` (`phone`): Fully qualified phone number, without space or separator
-    and starting with `+` and country code (example: `+14152165701`).
-  - `012` (`url`): Fully qualified URL.
-- `02x` is reserved for address information:
-  - `020` (`address_line1`): Address line1.
-  - `021` (`address_line2`): Address line2.
-  - `022` (`address_city`): Address city.
-  - `023` (`address_postal_code`): Address postal code.
-  - `024` (`address_state`): Address state.
-  - `025` (`address_country`): Address country.
-- `03x` is reserved for supporting documents:
-  - `030` (`passport`): A PNG of the passport.
-  - `031` (`driver_license`): A PNG of the driver license.
-- `04x` is reserved for financial information:
-  - `040` (`bank_account`): Fully qualified bank account (the IBAN if EU, the
-    routing and account number concatenated by `-` if in the US)
-  - `041` (`tax_id`): The tax ID (SSN, EIN, ...)
-- `05x` is reserved for social profiles:
-  - `050` (`facebook`): Facebook account ID.
-  - `051` (`twitter`): Twitter handle without preceeding `@`.
-  - `053` (`reddit`): Reddit handle.
-  - `054` (`github`): Github handle.
-- `9xx` is reserved for custom application use.
+When another accounts verifies a Fact (meaning that they have access to the
+underlying value), they do so by calling `verify` with `hash = sha3(authority, value)`
+where `authority` is their own address.
 
-As specified above, the value stored is an scrypt of the actual value using the
-verifier address as salt (proving that the verifier did see the actual value).
-When verifying a fact, the actual value and the verifier address should be
-communicated through whatever communication channel available. Verifying a fact
-does not require any form of authentication.
+The validity of the `hash` at Fact creation or verification is not (and cannot)
+be enforced by the Contract. Instead anyone having access to the value and
+willing to validate a Fact assertion for an authority, should compute `hash =
+sha3(authority, value)` and call `check(authority, hash)`. The hash will be
+checked against the hash provided by the authority at assertion time, ensuring
+the same underlying value was asserted.
