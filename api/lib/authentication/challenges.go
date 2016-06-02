@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/spolu/settl/lib/errors"
-	"github.com/spolu/settl/lib/token"
+	"github.com/spolu/settle/lib/errors"
+	"github.com/spolu/settle/lib/token"
 	"github.com/stellar/go-stellar-base/keypair"
 	"golang.org/x/net/context"
 )

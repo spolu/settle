@@ -6,11 +6,11 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/jmoiron/sqlx/types"
-	"github.com/spolu/settl/api"
-	"github.com/spolu/settl/lib/errors"
-	"github.com/spolu/settl/lib/format"
-	"github.com/spolu/settl/lib/livemode"
-	"github.com/spolu/settl/lib/token"
+	"github.com/spolu/settle/api"
+	"github.com/spolu/settle/lib/errors"
+	"github.com/spolu/settle/lib/format"
+	"github.com/spolu/settle/lib/livemode"
+	"github.com/spolu/settle/lib/token"
 )
 
 // NativeOperation represents a transaction for a single native operation

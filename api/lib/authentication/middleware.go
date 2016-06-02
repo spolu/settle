@@ -4,11 +4,11 @@ import (
 	"net/http"
 	"regexp"
 
-	"github.com/spolu/settl/lib/errors"
-	"github.com/spolu/settl/lib/livemode"
-	"github.com/spolu/settl/lib/logging"
-	"github.com/spolu/settl/lib/respond"
-	"github.com/spolu/settl/model"
+	"github.com/spolu/settle/lib/errors"
+	"github.com/spolu/settle/lib/livemode"
+	"github.com/spolu/settle/lib/logging"
+	"github.com/spolu/settle/lib/respond"
+	"github.com/spolu/settle/model"
 
 	"goji.io"
 

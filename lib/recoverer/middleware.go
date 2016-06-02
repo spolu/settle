@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"runtime/debug"
 
-	"github.com/spolu/settl/lib/errors"
-	"github.com/spolu/settl/lib/logging"
-	"github.com/spolu/settl/lib/respond"
+	"github.com/spolu/settle/lib/errors"
+	"github.com/spolu/settle/lib/logging"
+	"github.com/spolu/settle/lib/respond"
 
 	"goji.io"
 	"golang.org/x/net/context"

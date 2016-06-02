@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/spolu/settl/lib/logging"
+	"github.com/spolu/settle/lib/logging"
 	"github.com/zenazn/goji/web/mutil"
 
 	"goji.io"

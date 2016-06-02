@@ -1,11 +1,11 @@
 package api
 
 import (
-	"github.com/spolu/settl/api/lib/authentication"
-	"github.com/spolu/settl/lib/errors"
-	"github.com/spolu/settl/lib/livemode"
-	"github.com/spolu/settl/lib/recoverer"
-	"github.com/spolu/settl/lib/requestlogger"
+	"github.com/spolu/settle/api/lib/authentication"
+	"github.com/spolu/settle/lib/errors"
+	"github.com/spolu/settle/lib/livemode"
+	"github.com/spolu/settle/lib/recoverer"
+	"github.com/spolu/settle/lib/requestlogger"
 	"goji.io"
 )
 

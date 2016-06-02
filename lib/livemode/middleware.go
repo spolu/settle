@@ -3,7 +3,7 @@ package livemode
 import (
 	"net/http"
 
-	"github.com/spolu/settl/lib/logging"
+	"github.com/spolu/settle/lib/logging"
 
 	"goji.io"
 

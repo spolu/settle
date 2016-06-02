@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/spolu/settl/lib/errors"
+	"github.com/spolu/settle/lib/errors"
 
 	// pq is used as underlying sql driver.
 	_ "github.com/lib/pq"

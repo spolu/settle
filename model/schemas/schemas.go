@@ -1,6 +1,6 @@
 package model
 
-import "github.com/spolu/settl/lib/errors"
+import "github.com/spolu/settle/lib/errors"
 
 var schemas = map[string]map[string]string{
 	"api": map[string]string{},

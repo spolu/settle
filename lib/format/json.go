@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 
-	"github.com/spolu/settl/lib/errors"
+	"github.com/spolu/settle/lib/errors"
 )
 
 // JSON formats an object into a JSON bytes.Buffer panicking if an error

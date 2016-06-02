@@ -7,8 +7,8 @@ import (
 	"golang.org/x/crypto/scrypt"
 	"golang.org/x/net/context"
 
-	"github.com/spolu/settl/lib/errors"
-	"github.com/spolu/settl/lib/livemode"
+	"github.com/spolu/settle/lib/errors"
+	"github.com/spolu/settle/lib/livemode"
 	"github.com/stellar/go-stellar-base/build"
 	"github.com/stellar/go-stellar-base/horizon"
 	"github.com/stellar/go-stellar-base/keypair"

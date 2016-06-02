@@ -5,9 +5,9 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/spolu/settl/lib/errors"
-	"github.com/spolu/settl/lib/livemode"
-	"github.com/spolu/settl/lib/token"
+	"github.com/spolu/settle/lib/errors"
+	"github.com/spolu/settle/lib/livemode"
+	"github.com/spolu/settle/lib/token"
 )
 
 // Authentication represents a sucessful authentication. It is used to ensure
