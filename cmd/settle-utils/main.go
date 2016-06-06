@@ -14,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/spolu/settle/lib/livemode"
@@ -44,6 +45,8 @@ func main() {
 	var lvm = flag.String("livemode", "false", "The livemode to use")
 	var key = flag.String("keyfile", "/dev/null", "The passphrase protected key file")
 	var chl = flag.String("challenge", "0", "The initial amount for the account")
+	var adr = flag.String("address", "", "The address to use")
+	var val = flag.String("value", "", "The value to use")
 	flag.Parse()
 
 	ctx := context.Background()
@@ -54,9 +57,22 @@ func main() {
 	}
 
 	switch *fct {
+	case "fact_hash":
+		factHash(ctx, *adr, *val)
 	case "sign_challenge":
 		signChallenge(ctx, *key, *chl)
 	}
+}
+
+func factHash(
+	ctx context.Context,
+	address string,
+	value string,
+) {
+	logging.Logf(ctx, "Fact hash: %s",
+		common.ToHex(
+			crypto.Sha3(common.HexToAddress(address).Bytes(), []byte(value)),
+		))
 }
 
 func signChallenge(

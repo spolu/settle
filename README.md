@@ -1,6 +1,6 @@
 # Settle
 
-An experimental project aiming to make currency issuance easy and accessible on
-top of Ethereum.
+An experimental project aiming at making currency issuance easy and accessible.
 
-- [Facts smart contracts](facts/README.md)
+- [Mint](mint/README.md)
+- [Facts](facts/README.md)
