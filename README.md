@@ -1,6 +1,6 @@
 # Settle
 
-An experimental project aiming at making currency issuance easy and accessible.
+An experimental project aiming at making currency issuance and exchange easy
+and accessible.
 
-- [Mint](mint/README.md)
-- [Facts](facts/README.md)
+- [Mints](mint/README.md)
