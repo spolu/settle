@@ -10,7 +10,7 @@ running at `foo.bar` on port `2406`.
 
 ## Assets
 
-Assets are issued by users. They are represented by the following patter:
+Assets are issued by users. They are represented by the following pattern:
 `{ISSUER}:{NAME}.{DECIMAL_LENGTH}`. `{ISSUER}` should be a valid Settle
 address, `{NAME}` is an alphanumeric string matching the following regular
 expression `[A-Z0-9\-]{1,64}`. If the asset represents a IOU for an existing
@@ -48,9 +48,9 @@ An offer represents a user's willingness to *sell* a certain amount of an asset
 for another asset she owns at a given ask price.
 
 Offers to *sell* an asset lives on the mint for the issuer of that asset. As an
-example an offer to sell **stan@foo.bar:USD.2** for **bob@corewards.org:USD.2**
+example an offer to sell **stan@foo.bar:USD.2** for **bob@corewars.org:USD.2**
 lives on **foo.bar**'s mint. Conversely, an oppositve offer to sell
-**bob@corewards.org:USD.2** for **stan@foo.bar:USD.2** lives on
+**bob@corewars.org:USD.2** for **stan@foo.bar:USD.2** lives on
 **corewars.org**'s mint.
 
 An offer to sell an asset can be created by specifying a `buy` asset, an `ask`
@@ -69,6 +69,7 @@ curl -XPOST https://foo.bar:2406/assets/stan@foo.bar:USD.2/offers \
 
 {
   id: "stan@foo.bar:USD.2/offer_7t3sk24sdvz0a",
+  livemode: true,
   sell: "stan@foo.bar:USD.2",
   buy: "info@sightglasscoffee.com:AU-LAIT.0",
   ask: 320,
@@ -96,6 +97,7 @@ curl -XPOST https://foo.bar:2406/assets/stan@foo.bar:USD.2/transactions \
 
 {
   id: "stan@foo.bar:USD.2/transaction_9iop2182cm73s",
+  livemode: true,
   operations: [{
     offer: null,
     asset: "stan@foo.bar:USD.2",
@@ -118,13 +120,14 @@ Assuming we have one active offer on the network:
 curl -XPOST https://foo.bar:2406/assets/stan@foo.bar:USD.2/transactions \
   -H livemode: true \
   -u username:password \
-  -d buy=bob@corewards.org:USD.2 \
+  -d buy=bob@corewars.org:USD.2 \
   -d ask=100 \
   -d amount=500 \
   -d path[]=bob@corewars.org:USD.2/offer_s8ka7812djnmk
 
 {
   id: "stan@foo.bar:USD.2/transaction_9iop2182cm73s",
+  livemode: true,
   lock: "ae7b2a3ffd9c43a...",
   operations: [{
     offer: null,
@@ -173,6 +176,7 @@ curl -XPOST https://foo.bar:2406/assets/stan@foo.bar:USD.2/transactions \
 
 {
   id: "stan@foo.bar:USD.2/transaction_9iop2182cm73s",
+  livemode: true,
   lock: "ae7b2a3ffd9c43a...",
   operations: [{
     offer: null,
@@ -213,6 +217,7 @@ curl -XGET https://foo.bar:2406/assets/stan@foo.bar:USD.2/offers?
 
 [{
   id: "stan@foo.bar:USD.2/offer_7t3sk24sdvz0a",
+  livemode: true,
   sell: "stan@foo.bar:USD.2",
   buy: "bob@corewars.org:USD.2",
   ask: 100,
@@ -240,8 +245,8 @@ Taking the example above, as transaction **transaction_9iop2182cm73s** is being
 created on **foo.bar**, the mint checks the validity of the path and creates
 the list of operations required to fulfill the transaction, marking the first
 operation (not attached to any offer) as reserved. Funds associated with a
-reserved operations are reserved for that operation until it is either settled
-or canceled.
+reserved operations are reserved for that operation until it is either
+**settled** or **canceled**.
 
 The created transaction object is made available on **foo.bar** with the
 following state:
@@ -252,6 +257,7 @@ curl -XGET https://foo.bar:2406/assets/stan@foo.bar:USD.2/transactions/transacti
 
 {
   id: "stan@foo.bar:USD.2/transaction_9iop2182cm73s",
+  livemode: true,
   lock: "ae7b2a3ffd9c43a...",
   operations: [{
     offer: null,
@@ -301,7 +307,7 @@ curl -XGET https://corewars.org:2406/assets/bob@corewars.org:USD.2/transactions/
 
 {
   id: "stan@foo.bar:USD.2/transaction_9iop2182cm73s",
-  initiator: "stan@foo.bar:USD.2",
+  livemode: true,
   lock: "ae7b2a3ffd9c43a...",
   operations: [{
     offer: null,
@@ -332,8 +338,8 @@ Similarly to **foo.bar**, it does not reply to the original requests but
 instead fowards it to **rocket.science**.
 
 By receiving that request, **rocket.science** undergoes the same process,
-checking both **foo.bar** and then **corewards.org** transaction objects. It
-reserves the funds for the tranaction and replies with the final state of the
+checking both **foo.bar** and **corewars.org** transaction objects. It reserves
+the funds for the tranaction and replies with the final state of the
 transaction:
 
 ```
@@ -343,7 +349,7 @@ curl -XPOST https://rocket.science:2406/assets/alice@rocket.science:USD.2/transa
 
 {
   id: "stan@foo.bar:USD.2/transaction_9iop2182cm73s",
-  initiator: "stan@foo.bar:USD.2",
+  livemode: true,
   lock: "ae7b2a3ffd9c43a...",
   operations: [{
     offer: null,
@@ -371,10 +377,10 @@ curl -XPOST https://rocket.science:2406/assets/alice@rocket.science:USD.2/transa
 ```
 
 In turn **corewars.org** updates its state with the latest state of the
-transaction and replies to **foo.bar**, and finally **foo.bar** updates the
-state of the transaction (eventually checking with **corewars.org**) and
-replies to the initial creation request. At this stage, the transaction is
-fully reserved and considered valid.
+transaction and replies to **foo.bar**. Finally **foo.bar** updates the state
+of the transaction (eventually checking with both **corewars.org** and
+**rocket.science**) and replies to the initial creation request. At this stage,
+the transaction is fully reserved and considered valid.
 
 #### Settle an operation
 
