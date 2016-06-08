@@ -25,7 +25,22 @@ A few examples of valid assets are:
 
 ## API
 
+### Livemode
+
+All requests should specify a `Livemode` header. If `true` the request is
+considered live, otherwise it is a test request. The test environment behaves
+similarly to the live one with the only added convention that assets are not
+due in testmode, and consequently have no value whatsoever.
+
 ### User API
+
+#### Onboarding and authentication
+
+User onboarding for the User API is left to the discretion of the mint
+implementor or administrator.
+
+Authentication should rely on HTTP Basic authentication whether this is through
+the use of API keys or actual `user:password` credentials.
 
 #### Create an offer
 
@@ -46,6 +61,8 @@ An offer to buy **5 au laits** for **$3.20** each would be created as follows:
 
 ```
 curl -XPOST https://foo.bar:2406/assets/stan@foo.bar:USD.2/offers \
+  -H livemode: true \
+  -u username:password \
   -d buy=info@sightglasscoffee.com:AU-LAIT.0 \
   -d ask=320& \
   -d amount=1600
@@ -72,6 +89,8 @@ Creating a simple transaction let you credit a user account with a given asset.
 
 ```
 curl -XPOST https://foo.bar:2406/assets/stan@foo.bar:USD.2/transactions \
+  -H livemode: true \
+  -u username:password \
   -d amount=500 \
   -d to="bob@corewars.com"
 
@@ -97,6 +116,8 @@ Assuming we have one active offer on the network:
 
 ```
 curl -XPOST https://foo.bar:2406/assets/stan@foo.bar:USD.2/transactions \
+  -H livemode: true \
+  -u username:password \
   -d buy=bob@corewards.org:USD.2 \
   -d ask=100 \
   -d amount=500 \
@@ -141,6 +162,8 @@ effectively sending **500 alice@rocket.science:USD.2** to Alice by spending
 
 ```
 curl -XPOST https://foo.bar:2406/assets/stan@foo.bar:USD.2/transactions \
+  -H livemode: true \
+  -u username:password \
   -d buy=alice@rocket.science:USD.2 \
   -d to=alice@rocket.science \
   -d ask=100 \
@@ -185,7 +208,8 @@ legs lets your reconstruct the full order book for an asset pair:
 
 ```
 curl -XGET https://foo.bar:2406/assets/stan@foo.bar:USD.2/offers?
-  buy=bob@corewars.org
+  buy=bob@corewars.org \
+  -H livemode: true
 
 [{
   id: "stan@foo.bar:USD.2/offer_7t3sk24sdvz0a",
@@ -197,7 +221,8 @@ curl -XGET https://foo.bar:2406/assets/stan@foo.bar:USD.2/offers?
 }]
 
 curl -XGET https://corewars.org:2406/assets/bob@corewars.org:USD.2/offers?
-  buy=stan@foo.bar
+  buy=stan@foo.bar \
+  -H livemode: true
 
 [{
   ...
@@ -205,9 +230,6 @@ curl -XGET https://corewars.org:2406/assets/bob@corewars.org:USD.2/offers?
   ...
 }]
 ```
-
-
-### Mint API
 
 #### Propagate transactions
 
@@ -225,7 +247,8 @@ The created transaction object is made available on **foo.bar** with the
 following state:
 
 ```
-curl -XGET https://foo.bar:2406/assets/stan@foo.bar:USD.2/transactions/transaction_9iop2182cm73s
+curl -XGET https://foo.bar:2406/assets/stan@foo.bar:USD.2/transactions/transaction_9iop2182cm73s \
+  -H livemode: true
 
 {
   id: "stan@foo.bar:USD.2/transaction_9iop2182cm73s",
@@ -262,6 +285,7 @@ the newly generated transaction:
 
 ```
 curl -XPOST https://corewars.org:2406/assets/bob@corewars.org:USD.2/transactions \
+  -H livemode: true \
   -d id=stan@foo.bar:USD.2/transaction_9iop2182cm73s
 ```
 
@@ -272,7 +296,8 @@ remaining amounts). It then reserves the funds for the second operation and
 copy the transaction object and makes it available at the following URL:
 
 ```
-curl -XGET https://corewars.org:2406/assets/bob@corewars.org:USD.2/transactions/transaction_9iop2182cm73s
+curl -XGET https://corewars.org:2406/assets/bob@corewars.org:USD.2/transactions/transaction_9iop2182cm73s \
+  -H livemode: true
 
 {
   id: "stan@foo.bar:USD.2/transaction_9iop2182cm73s",
@@ -313,6 +338,7 @@ transaction:
 
 ```
 curl -XPOST https://rocket.science:2406/assets/alice@rocket.science:USD.2/transactions \
+  -H livemode: true \
   -d id=stan@foo.bar:USD.2/transaction_9iop2182cm73s
 
 {
@@ -372,6 +398,7 @@ transaction path.
 
 ```
 curl -XPOST https://rocket.science2406/assets/alice@rocket.science:USD.2/transactions/transaction_9iop2182cm73s/settle \
+  -H livemode: true \
   -d secret=a2bd3ef2249add...
 
 {
