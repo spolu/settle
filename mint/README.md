@@ -49,7 +49,7 @@ An offer on a given asset pair, can be either a bid or an ask:
   represents an offer to buy **bob@corewars.org:USD.2** for a certain amount of
   **alice@rocket.science:USD.2** at a given price.
 - an ask on pair **bob@corewars.org:USD.2/stan@foo.bar:USD.2** represents an
-  offer to sell **bob@corewards.org:USD.2** for a certain amount of
+  offer to sell **bob@corewars.org:USD.2** for a certain amount of
   **stan@foo.bar:USD.2** at a given price.
 
 The asset on the left of the pair is called the base asset while the asset of
@@ -453,11 +453,11 @@ to **foo.bar** to cancel the transaction if an error happenned along its
 creation.
 
 To settle the transction above, **foo.bar** comunicates the secret to
-**rocket.science** and recursively, **rocket.science** calls **corewards.org**
+**rocket.science** and recursively, **rocket.science** calls **corewars.org**
 and finally **foo.bar** itself.
 
 ```
-curl -XPOST https://rocket.science2406/transactions/transaction_9iop2182cm73s/settle \
+curl -XPOST https://rocket.science:2406/transactions/transaction_9iop2182cm73s/settle \
   -H livemode: true \
   -d secret=a2bd3ef2249add...
 
