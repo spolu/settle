@@ -3,7 +3,7 @@ package model
 import "github.com/spolu/settle/lib/errors"
 
 var schemas = map[string]map[string]string{
-	"api": map[string]string{},
+	"mint": map[string]string{},
 }
 
 func registerSchema(
@@ -24,16 +24,16 @@ $$ language sql;
 
 func init() {
 	registerSchema(
-		"api",
+		"mint",
 		"_tools",
 		toolsSQL,
 	)
 }
 
-// CreateAPIDBTables creates the API DB tables if they don't exist.
-func CreateAPIDBTables() error {
-	for t, sch := range schemas["api"] {
-		_, err := apidb.Exec(sch)
+// CreateMintDBTables creates the Mint DB tables if they don't exist.
+func CreateMintDBTables() error {
+	for t, sch := range schemas["mint"] {
+		_, err := mintDB.Exec(sch)
 		if err != nil {
 			return errors.Trace(err)
 		}

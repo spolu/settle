@@ -20,10 +20,8 @@ func (c *Configuration) Init() error {
 func (c *Configuration) Bind(
 	mux *goji.Mux,
 ) {
-	mux.HandleFuncC(pat.Post("/users"), c.controller.CreateUser)
-
 	mux.HandleFuncC(pat.Post("/assets/:asset/offers"), c.controller.CreateOffer)
-	mux.HandleFuncC(pat.Post("/assets/:asset/offers/:offer"), c.controller.UpdateOffer)
+	mux.HandleFuncC(pat.Post("/assets/:asset/offers/:offer/close"), c.controller.CloseOffer)
 	mux.HandleFuncC(pat.Post("/assets/:asset/transactions"), c.controller.CreateTransaction)
 	mux.HandleFuncC(pat.Post("/assets/:asset/transactions/:transaction/settle"), c.controller.SettleOperation)
 }

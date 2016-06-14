@@ -13,37 +13,37 @@ import (
 	_ "github.com/lib/pq"
 )
 
-var apidb *sqlx.DB
+var mintDB *sqlx.DB
 
 func ensureAPIDB() {
-	if apidb != nil {
+	if mintDB != nil {
 		return
 	}
 
 	err := error(nil)
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		os.Getenv("API_DB_HOST"),
-		os.Getenv("API_DB_PORT"),
-		os.Getenv("API_DB_USER"),
-		os.Getenv("API_DB_PASSWORD"),
-		os.Getenv("API_DB_NAME"),
+		os.Getenv("MINT_DB_HOST"),
+		os.Getenv("MINT_DB_PORT"),
+		os.Getenv("MINT_DB_USER"),
+		os.Getenv("MINT_DB_PASSWORD"),
+		os.Getenv("MINT_DB_NAME"),
 	)
-	apidb, err = sqlx.Connect("postgres", dsn)
+	mintDB, err = sqlx.Connect("postgres", dsn)
 	if err != nil {
 		log.Fatal(errors.Details(err))
 	} else {
-		fmt.Printf("Initialized apidb with dsn: %s\n", dsn)
+		fmt.Printf("Initialized mintDB with dsn: %s\n", dsn)
 	}
 }
 
 func init() {
-	ensureAPIDB()
+	ensureMintDB()
 }
 
 // Shutdown attempts to close all existing DB connections.
 func Shutdown() {
-	if apidb != nil {
-		apidb.Close()
+	if mintDB != nil {
+		mintDB.Close()
 	}
 }
 

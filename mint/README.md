@@ -11,12 +11,13 @@ running at `foo.bar` on port `2406`.
 ## Assets
 
 Assets are issued by users. They are represented by the following pattern:
-`{ISSUER}:{NAME}.{DECIMAL_LENGTH}`. `{ISSUER}` should be a valid Settle
+`{ISSUER}:{CODE}.{SCALE}`. `{ISSUER}` should be a valid Settle
 address, `{NAME}` is an alphanumeric string matching the following regular
 expression `[A-Z0-9\-]{1,64}`. If the asset represents a IOU for an existing
-currency, the ISO-4217 3-letter code should be used. Decimal length is an
-integer between `0` and `24` representing the factor by wich the asset native
-amount is scaled down when represented as an 128-bit signed integer.
+currency, the ISO-4217 3-letter code should be used. The scale, or decimal
+length, is an integer between `0` and `24` representing the factor by wich the
+asset native amount is scaled down when represented as a 128-bit signed
+integer.
 
 A few examples of valid assets are:
 - **stan@foobar.com:USD.2 320** represents **$3.20** issued by Stan.
@@ -42,7 +43,7 @@ implementor or administrator.
 Authentication should rely on the HTTP Authorization header (whether it's using
 "Basic" or "Bearer" HTTP authentication).
 
-#### Create a offer
+#### Create an offer
 
 An offer on a given asset pair, can be either a bid or an ask:
 - a bid on pair **bob@corewars.org:USD.2/alice@rocket.science:USD.2**
