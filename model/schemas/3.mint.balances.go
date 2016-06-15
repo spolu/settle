@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS balances(
 
   PRIMARY KEY(token),
   CONSTRAINT balances_asset_fk FOREIGN KEY (asset) REFERENCES assets(token),
-  CONSTRAINT balances_owner_fk FOREIGN KEY (owner) REFERENCES owners(token)
+  CONSTRAINT balances_owner_fk FOREIGN KEY (owner) REFERENCES users(token)
 );
 `
 )

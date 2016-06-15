@@ -2,8 +2,8 @@
 
 set -eu
 
-# A bit of a hack, but it works
-schemas="$(dirname "$0")/../model/schemas"/api.*.go
+# A hack that works.
+schemas="$(dirname "$0")/../model/schemas"/*.mint.*.go
 
 
 perl -ne 'print if /`/.../`/' "$(dirname "$0")/../model/schemas/schemas.go" | sed '1d;$d'
