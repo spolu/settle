@@ -1,6 +1,7 @@
 package authentication
 
 import (
+	"encoding/base64"
 	"net/http"
 	"regexp"
 
@@ -9,9 +10,8 @@ import (
 	"github.com/spolu/settle/lib/logging"
 	"github.com/spolu/settle/lib/respond"
 	"github.com/spolu/settle/model"
-
 	"goji.io"
-
+	"golang.org/x/crypto/scrypt"
 	"golang.org/x/net/context"
 )
 
@@ -32,10 +32,11 @@ const (
 	AutStFailed AutStatus = "failed"
 )
 
-// Status stores the authentication information.
+// Status stores the authentication information, the status and authenticated
+// user if applicable.
 type Status struct {
-	Status  AutStatus
-	Address string
+	Status AutStatus
+	User   *model.User
 }
 
 // With stores the authentication information in a new context.
@@ -53,6 +54,10 @@ func Get(
 	return ctx.Value(statusKey).(Status)
 }
 
+type middleware struct {
+	goji.Handler
+}
+
 // SkipRule defines a skip rule for authentication
 type SkipRule struct {
 	Method  string
@@ -61,12 +66,7 @@ type SkipRule struct {
 
 // SkipList is the list of endpoints that do not require authentication.
 var SkipList = []*SkipRule{
-	&SkipRule{"GET", regexp.MustCompile("^/challenges$")},
 	&SkipRule{"GET", regexp.MustCompile("^/users/[a-zA-Z0-9_]+$")},
-}
-
-type middleware struct {
-	goji.Handler
 }
 
 // ServeHTTPC handles incoming HTTP requests and attempt to authenticate them.
@@ -75,10 +75,9 @@ func (m middleware) ServeHTTPC(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	withStatus := With(ctx, Status{AutStFailed, ""})
+	withStatus := With(ctx, Status{AutStFailed, nil})
 
-	address, signature, _ := r.BasicAuth()
-	challenge := r.Header.Get("Authorization-Challenge")
+	username, password, _ := r.BasicAuth()
 	skip := false
 	for _, s := range SkipList {
 		if s.Method == r.Method && s.Pattern.MatchString(r.URL.EscapedPath()) {
@@ -90,64 +89,51 @@ func (m middleware) ServeHTTPC(
 	// authentication error.
 	failedAuth := func(err error) {
 		if skip {
-			withStatus = With(ctx, Status{AutStSkipped, ""})
-			logging.Logf(ctx, "Authentication: status=%q livemode=%t",
-				Get(withStatus).Status, livemode.Get(ctx))
-
+			withStatus = With(ctx, Status{AutStSkipped, nil})
+			logging.Logf(ctx,
+				"Authentication: status=%q livemode=%t username=%q",
+				Get(withStatus).Status, livemode.Get(ctx), username)
 			m.Handler.ServeHTTPC(withStatus, w, r)
 		} else {
-			withStatus = With(ctx, Status{AutStFailed, ""})
+			withStatus = With(ctx, Status{AutStFailed, nil})
 			logging.Logf(ctx,
-				"Authentication: status=%q livemode=%t address=%q "+
-					"challenge=%q signature=%q",
-				Get(withStatus).Status, livemode.Get(ctx),
-				address, challenge, signature)
-
+				"Authentication: status=%q livemode=%t username=%q",
+				Get(withStatus).Status, livemode.Get(ctx), username)
 			respond.Error(withStatus, w, errors.Trace(err))
 		}
 	}
 
-	// Check that the challenge is valid.
-	err := CheckChallenge(ctx, challenge, RootLiveKeypair)
+	user, err := model.LoadUserByUsername(ctx, username)
 	if err != nil {
 		failedAuth(errors.Trace(err))
 		return
-	}
-
-	// Verify the challenge signature passed as basic auth.
-	err = VerifyChallenge(ctx, challenge, address, signature)
-	if err != nil {
-		failedAuth(errors.Trace(err))
-		return
-	}
-
-	// Check that the challenge was never used.
-	auth, err := model.LoadAuthenticationByChallenge(ctx, challenge)
-	if err != nil {
-		failedAuth(errors.Trace(err))
-		return
-	} else if auth != nil {
-		failedAuth(errors.NewUserError(err,
-			400, "challenge_already_used",
-			"The challenge you provided was already used. You must "+
-				"resolve a new challenge for each API request.",
+	} else if user == nil {
+		failedAuth(errors.NewUserErrorf(err,
+			400, "username_invalid",
+			"The username you are trying to authenticate with is not "+
+				"associated with any existing user: %s.", username,
 		))
 		return
 	}
 
-	auth, err = model.CreateAuthentication(ctx,
-		r.Method, r.URL.String(), challenge, address, signature)
+	scrypt, err := scrypt.Key(
+		[]byte(password), []byte(user.Token), 16384, 8, 1, 64)
 	if err != nil {
 		failedAuth(errors.Trace(err))
 		return
 	}
+	if base64.StdEncoding.EncodeToString(scrypt) != user.SCrypt {
+		failedAuth(errors.NewUserError(nil,
+			400, "password_invalid", "The password you provided is invalid.",
+		))
+		return
+	}
 
-	withStatus = With(ctx, Status{AutStSucceeded, address})
+	withStatus = With(ctx, Status{AutStSucceeded, user})
 	logging.Logf(ctx,
-		"Authentication: status=%q livemode=%t address=%q "+
-			"challenge=%q signature=%q",
-		Get(withStatus).Status, livemode.Get(ctx),
-		address, challenge, signature)
+		"Authentication: status=%q livemode=%t user=%q username=%q",
+		Get(withStatus).Status, livemode.Get(ctx), Get(withStatus).User.Token,
+		username)
 
 	m.Handler.ServeHTTPC(withStatus, w, r)
 }

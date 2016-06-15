@@ -1,4 +1,6 @@
-package model
+package schemas
+
+import "github.com/spolu/settle/model"
 
 const (
 	assetsSQL = `
@@ -19,7 +21,7 @@ CREATE TABLE IF NOT EXISTS assets(
 )
 
 func init() {
-	registerSchema(
+	model.RegisterSchema(
 		"mint",
 		"assets",
 		assetsSQL,

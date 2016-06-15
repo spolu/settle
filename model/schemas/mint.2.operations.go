@@ -1,4 +1,6 @@
-package model
+package schemas
+
+import "github.com/spolu/settle/model"
 
 const (
 	operationsSQL = `
@@ -21,7 +23,7 @@ CREATE TABLE IF NOT EXISTS operations(
 )
 
 func init() {
-	registerSchema(
+	model.RegisterSchema(
 		"mint",
 		"operations",
 		operationsSQL,

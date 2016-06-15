@@ -9,8 +9,8 @@ import (
 
 	"goji.io"
 
-	"github.com/spolu/settle/api"
 	"github.com/spolu/settle/lib/errors"
+	"github.com/spolu/settle/mint"
 	"github.com/zenazn/goji/bind"
 	"github.com/zenazn/goji/graceful"
 )
@@ -56,7 +56,7 @@ func ServeListener(mux *goji.Mux, listener net.Listener) {
 }
 
 func main() {
-	mux, err := api.Build()
+	mux, err := mint.Build()
 	if err != nil {
 		log.Fatal(errors.Details(err))
 	}

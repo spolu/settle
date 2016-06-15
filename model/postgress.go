@@ -15,7 +15,7 @@ import (
 
 var mintDB *sqlx.DB
 
-func ensureAPIDB() {
+func ensureMintDB() {
 	if mintDB != nil {
 		return
 	}

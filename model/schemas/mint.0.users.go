@@ -1,4 +1,6 @@
-package model
+package schemas
+
+import "github.com/spolu/settle/model"
 
 const (
 	usersSQL = `
@@ -18,7 +20,7 @@ CREATE TABLE IF NOT EXISTS users(
 )
 
 func init() {
-	registerSchema(
+	model.RegisterSchema(
 		"mint",
 		"users",
 		usersSQL,

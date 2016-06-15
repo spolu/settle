@@ -5,6 +5,7 @@ import (
 	"github.com/spolu/settle/lib/livemode"
 	"github.com/spolu/settle/lib/recoverer"
 	"github.com/spolu/settle/lib/requestlogger"
+	"github.com/spolu/settle/mint/lib/authentication"
 	"goji.io"
 )
 
@@ -14,6 +15,7 @@ func Build() (*goji.Mux, error) {
 	mux.UseC(recoverer.Middleware)
 	mux.UseC(requestlogger.Middleware)
 	mux.UseC(livemode.Middleware)
+	mux.UseC(authentication.Middleware)
 
 	err := error(nil)
 

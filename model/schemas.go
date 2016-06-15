@@ -6,7 +6,8 @@ var schemas = map[string]map[string]string{
 	"mint": map[string]string{},
 }
 
-func registerSchema(
+// RegisterSchema lets schemas register themselves.
+func RegisterSchema(
 	db string,
 	table string,
 	schema string,
@@ -23,7 +24,8 @@ $$ language sql;
 )
 
 func init() {
-	registerSchema(
+	ensureMintDB()
+	RegisterSchema(
 		"mint",
 		"_tools",
 		toolsSQL,
@@ -32,10 +34,11 @@ func init() {
 
 // CreateMintDBTables creates the Mint DB tables if they don't exist.
 func CreateMintDBTables() error {
-	for t, sch := range schemas["mint"] {
+	for _, sch := range schemas["mint"] {
 		_, err := mintDB.Exec(sch)
 		if err != nil {
 			return errors.Trace(err)
 		}
 	}
+	return nil
 }
