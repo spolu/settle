@@ -1,7 +1,6 @@
 package authentication
 
 import (
-	"encoding/base64"
 	"net/http"
 	"regexp"
 
@@ -11,7 +10,6 @@ import (
 	"github.com/spolu/settle/lib/respond"
 	"github.com/spolu/settle/model"
 	"goji.io"
-	"golang.org/x/crypto/scrypt"
 	"golang.org/x/net/context"
 )
 
@@ -116,14 +114,8 @@ func (m middleware) ServeHTTPC(
 		return
 	}
 
-	scrypt, err := scrypt.Key(
-		[]byte(password), []byte(user.Token), 16384, 8, 1, 64)
-	if err != nil {
-		failedAuth(errors.Trace(err))
-		return
-	}
-	if base64.StdEncoding.EncodeToString(scrypt) != user.SCrypt {
-		failedAuth(errors.NewUserError(nil,
+	if err := user.CheckPassword(ctx, password); err != nil {
+		failedAuth(errors.NewUserError(err,
 			400, "password_invalid", "The password you provided is invalid.",
 		))
 		return
