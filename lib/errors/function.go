@@ -41,6 +41,18 @@ func Tracef(other error, format string, args ...interface{}) error {
 	return err
 }
 
+// Cause returns the underlying cause error of the passed error if it exists.
+func Cause(e error) error {
+	switch e := e.(type) {
+	case *wrap:
+		return e.Cause()
+	case UserError:
+		return e.Cause()
+	default:
+		return e
+	}
+}
+
 // ExtractUserError returns the underlying UserError or nil otherwise
 func ExtractUserError(err error) UserError {
 	if err == nil {
@@ -66,14 +78,17 @@ func ErrorStack(err error) []string {
 	for {
 		var buff []byte
 		if e, ok := err.(*wrap); ok {
+			buff = append(buff, fmt.Sprintf("[trace] ")...)
 			file, line := e.location()
 			if file != "" {
 				buff = append(buff, fmt.Sprintf("%s:%d", file, line)...)
-				buff = append(buff, ": "...)
 			}
-			buff = append(buff, fmt.Sprintf("[trace] %s", e.traceMessage)...)
+			if len(e.traceMessage) > 0 {
+				buff = append(buff, fmt.Sprintf(": %s", e.traceMessage)...)
+			}
 			err = e.previous
 		} else {
+			buff = append(buff, fmt.Sprintf("[error] ")...)
 			buff = append(buff, err.Error()...)
 			err = nil
 		}

@@ -40,6 +40,11 @@ func init() {
 	ensureMintDB()
 }
 
+// MintDB returns the mintDB singeleton.
+func MintDB() *sqlx.DB {
+	return mintDB
+}
+
 // Shutdown attempts to close all existing DB connections.
 func Shutdown() {
 	if mintDB != nil {

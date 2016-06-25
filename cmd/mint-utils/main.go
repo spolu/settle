@@ -16,10 +16,10 @@ import (
 var ethBackends = map[bool]bind.ContractBackend{}
 
 func main() {
-	var fct = flag.String("function", "add_user", "the function to execute")
+	var fct = flag.String("function", "none", "the function to execute")
 	var lvm = flag.String("livemode", "false", "The livemode to use")
-	var usr = flag.String("username", "foo", "The user name of the user to add")
-	var pas = flag.String("password", "bar", "The password of the user to add")
+	var usr = flag.String("username", "foo", "The user name of the user to upsert")
+	var pas = flag.String("password", "bar", "The password of the user to upsert")
 	flag.Parse()
 
 	ctx := context.Background()
@@ -30,17 +30,16 @@ func main() {
 	}
 
 	switch *fct {
-	case "add_user":
-		addUser(ctx, *usr, *pas)
+	case "upsert_user":
+		upsertUser(ctx, *usr, *pas)
 	}
 }
 
-func addUser(
+func upsertUser(
 	ctx context.Context,
 	username string,
 	password string,
 ) {
-
 	user, err := model.LoadUserByUsername(ctx, username)
 	if err != nil {
 		log.Fatal(err)
@@ -49,6 +48,10 @@ func addUser(
 	if user != nil {
 		logging.Logf(ctx, "Updating user: %s", username)
 		err := user.UpdatePassword(ctx, password)
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = user.Save(ctx)
 		if err != nil {
 			log.Fatal(err)
 		}

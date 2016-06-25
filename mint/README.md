@@ -8,11 +8,15 @@ under which these servers are running.
 The Settle network address `stan@foo.bar` points to user `stan` on the mint
 running at `foo.bar` on port `2406`.
 
+Usernames must comply to the folollowing regular expression:
+`[A-Za-z0-9\-_.]{1,256}`. The `+` is admissible in Settle network addresses and
+will be ignored similarly to email addresses.
+
 ## Assets
 
 Assets are issued by users. They are represented by the following pattern:
 `{ISSUER}:{CODE}.{SCALE}`. `{ISSUER}` should be a valid Settle
-address, `{NAME}` is an alphanumeric string matching the following regular
+address, `{CODE}` is an alphanumeric string matching the following regular
 expression `[A-Z0-9\-]{1,64}`. If the asset represents a IOU for an existing
 currency, the ISO-4217 3-letter code should be used. The scale, or decimal
 length, is an integer between `0` and `24` representing the factor by wich the
@@ -40,8 +44,11 @@ due in testmode, and consequently have no value whatsoever.
 User onboarding for the User API is left to the discretion of the mint
 implementor or administrator.
 
-Authentication should rely on the HTTP Authorization header (whether it's using
-"Basic" or "Bearer" HTTP authentication).
+Authentication relies on the HTTP Authorization header, using "Basic"
+authentication. The proposed implementation in this repository rely on the SQL
+storage to lookup users and current password (onboarding happening outside of
+the mint and resulting in records getting created/updated in the SQL database
+used by the mint).
 
 #### Create an offer
 

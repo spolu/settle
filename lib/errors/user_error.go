@@ -81,6 +81,6 @@ func NewUserErrorf(
 	format string,
 	args ...interface{},
 ) UserError {
-	message := fmt.Sprintf(format, args)
+	message := fmt.Sprintf(format, args...)
 	return NewUserError(err, status, code, message)
 }

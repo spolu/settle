@@ -106,18 +106,18 @@ func (m middleware) ServeHTTPC(
 		failedAuth(errors.Trace(err))
 		return
 	} else if user == nil {
-		failedAuth(errors.NewUserErrorf(err,
+		failedAuth(errors.Trace(errors.NewUserErrorf(err,
 			400, "username_invalid",
 			"The username you are trying to authenticate with is not "+
 				"associated with any existing user: %s.", username,
-		))
+		)))
 		return
 	}
 
 	if err := user.CheckPassword(ctx, password); err != nil {
-		failedAuth(errors.NewUserError(err,
+		failedAuth(errors.Trace(errors.NewUserErrorf(err,
 			400, "password_invalid", "The password you provided is invalid.",
-		))
+		)))
 		return
 	}
 

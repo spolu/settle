@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"time"
 
+	"github.com/lib/pq"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/livemode"
 	"github.com/spolu/settle/lib/token"
@@ -15,7 +16,6 @@ import (
 // solely accesed in read-only mode, leaving user management to an external
 // system with access to the same underlying mintDB.
 type User struct {
-	ID       int64
 	Token    string
 	Created  time.Time
 	Livemode bool
@@ -26,6 +26,64 @@ type User struct {
 
 func init() {
 	ensureMintDB()
+}
+
+// CreateUser creates and stores a new User object.
+func CreateUser(
+	ctx context.Context,
+	username string,
+	password string,
+) (*User, error) {
+	user := User{
+		Token:    token.New("user"),
+		Livemode: livemode.Get(ctx),
+
+		Username: username,
+	}
+
+	h, err := scrypt.Key([]byte(password), []byte(user.Token), 16384, 8, 1, 64)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	user.PasswordHash = base64.StdEncoding.EncodeToString(h)
+
+	if rows, err := mintDB.NamedQuery(`
+INSERT INTO users
+  (token, livemode, username, password_hash)
+VALUES
+  (:token, :livemode, :username, :password_hash)
+RETURNING created
+`, user); err != nil {
+		switch err := err.(type) {
+		case *pq.Error:
+			if err.Code.Name() == "unique_violation" {
+				return nil, errors.Trace(ErrUniqueConstraintViolation{err})
+			}
+		default:
+			return nil, errors.Trace(err)
+		}
+	} else if !rows.Next() {
+		return nil, errors.Newf("Nothing returned from INSERT.")
+	} else if err := rows.StructScan(&user); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &user, nil
+}
+
+// Save updates the object database representation with the in-memory values.
+func (u *User) Save(
+	ctx context.Context,
+) error {
+	if _, err := mintDB.NamedQuery(`
+UPDATE users SET username = :username, password_hash = :password_hash
+WHERE token = :token
+`, u); err != nil {
+		return errors.Trace(err)
+	}
+
+	return nil
 }
 
 // LoadUserByToken attempts to load a user with the given user token.
@@ -80,43 +138,6 @@ WHERE livemode = :livemode
 	return &user, nil
 }
 
-// CreateUser creates and stores a new User object.
-func CreateUser(
-	ctx context.Context,
-	username string,
-	password string,
-) (*User, error) {
-	user := User{
-		Token:    token.New("user"),
-		Livemode: livemode.Get(ctx),
-
-		Username: username,
-	}
-
-	h, err := scrypt.Key([]byte(password), []byte(user.Token), 16384, 8, 1, 64)
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-
-	user.PasswordHash = base64.StdEncoding.EncodeToString(h)
-
-	if rows, err := mintDB.NamedQuery(`
-INSERT INTO users
-  (token, livemode, username, password_hash)
-VALUES
-  (:token, :livemode, :username, :password_hash)
-RETURNING created
-`, user); err != nil {
-		return nil, errors.Trace(err)
-	} else if !rows.Next() {
-		return nil, errors.Newf("Nothing returned from INSERT.")
-	} else if err := rows.StructScan(&user); err != nil {
-		return nil, errors.Trace(err)
-	}
-
-	return &user, nil
-}
-
 // CheckPassword checks if the provided password matches the password hash
 // associated with that user.
 func (u *User) CheckPassword(
@@ -134,8 +155,8 @@ func (u *User) CheckPassword(
 	return nil
 }
 
-// UpdatePassword updates the password for this user by recomputing the
-// password hash with the new password provided.
+// UpdatePassword updates the password hash in memory using the provided
+// password value.
 func (u *User) UpdatePassword(
 	ctx context.Context,
 	password string,
@@ -146,13 +167,6 @@ func (u *User) UpdatePassword(
 	}
 
 	u.PasswordHash = base64.StdEncoding.EncodeToString(h)
-
-	if _, err := mintDB.NamedQuery(`
-UPDATE users SET password_hash = :password_hash
-WHERE token = :token
-`, u); err != nil {
-		return errors.Trace(err)
-	}
 
 	return nil
 }
