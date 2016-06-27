@@ -1,13 +1,17 @@
+// OWNER: stan
+
 package model
 
 import (
 	"regexp"
 	"time"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/livemode"
 	"github.com/spolu/settle/lib/token"
+	"github.com/spolu/settle/lib/tx"
 	"golang.org/x/net/context"
 )
 
@@ -52,7 +56,8 @@ func CreateAsset(
 		Scale:  scale,
 	}
 
-	if rows, err := mintDB.NamedQuery(`
+	ext := tx.Ext(ctx, MintDB())
+	if rows, err := sqlx.NamedQuery(ext, `
 INSERT INTO assets
   (token, livemode, issuer, code, scale)
 VALUES
@@ -71,6 +76,8 @@ RETURNING created
 		return nil, errors.Newf("Nothing returned from INSERT.")
 	} else if err := rows.StructScan(&asset); err != nil {
 		return nil, errors.Trace(err)
+	} else if err := rows.Close(); err != nil {
+		return nil, errors.Trace(err)
 	}
 
 	return &asset, nil
@@ -80,7 +87,8 @@ RETURNING created
 func (u *Asset) Save(
 	ctx context.Context,
 ) error {
-	if _, err := mintDB.NamedQuery(`
+	ext := tx.Ext(ctx, MintDB())
+	if _, err := sqlx.NamedQuery(ext, `
 UPDATE users SET issuer = :issuer, code = :code, scale = :scale
 WHERE token = :token
 `, u); err != nil {
@@ -105,7 +113,8 @@ func LoadAssetByIssuerCodeScale(
 		Scale:    scale,
 	}
 
-	if rows, err := mintDB.NamedQuery(`
+	ext := tx.Ext(ctx, MintDB())
+	if rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM assets
 WHERE livemode = :livemode
@@ -117,6 +126,8 @@ WHERE livemode = :livemode
 	} else if !rows.Next() {
 		return nil, nil
 	} else if err := rows.StructScan(&asset); err != nil {
+		return nil, errors.Trace(err)
+	} else if err := rows.Close(); err != nil {
 		return nil, errors.Trace(err)
 	}
 

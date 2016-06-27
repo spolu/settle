@@ -1,3 +1,5 @@
+// OWNER: stan
+
 package model
 
 import "github.com/spolu/settle/lib/errors"

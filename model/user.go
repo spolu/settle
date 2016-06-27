@@ -1,13 +1,17 @@
+// OWNER: stan
+
 package model
 
 import (
 	"encoding/base64"
 	"time"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/livemode"
 	"github.com/spolu/settle/lib/token"
+	"github.com/spolu/settle/lib/tx"
 	"golang.org/x/crypto/scrypt"
 	"golang.org/x/net/context"
 )
@@ -48,7 +52,8 @@ func CreateUser(
 
 	user.PasswordHash = base64.StdEncoding.EncodeToString(h)
 
-	if rows, err := mintDB.NamedQuery(`
+	ext := tx.Ext(ctx, MintDB())
+	if rows, err := sqlx.NamedQuery(ext, `
 INSERT INTO users
   (token, livemode, username, password_hash)
 VALUES
@@ -67,6 +72,8 @@ RETURNING created
 		return nil, errors.Newf("Nothing returned from INSERT.")
 	} else if err := rows.StructScan(&user); err != nil {
 		return nil, errors.Trace(err)
+	} else if err := rows.Close(); err != nil {
+		return nil, errors.Trace(err)
 	}
 
 	return &user, nil
@@ -76,7 +83,8 @@ RETURNING created
 func (u *User) Save(
 	ctx context.Context,
 ) error {
-	if _, err := mintDB.NamedQuery(`
+	ext := tx.Ext(ctx, MintDB())
+	if _, err := sqlx.NamedQuery(ext, `
 UPDATE users SET username = :username, password_hash = :password_hash
 WHERE token = :token
 `, u); err != nil {
@@ -96,7 +104,8 @@ func LoadUserByToken(
 		Livemode: livemode.Get(ctx),
 	}
 
-	if rows, err := mintDB.NamedQuery(`
+	ext := tx.Ext(ctx, MintDB())
+	if rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM users
 WHERE livemode = :livemode
@@ -106,6 +115,8 @@ WHERE livemode = :livemode
 	} else if !rows.Next() {
 		return nil, nil
 	} else if err := rows.StructScan(&user); err != nil {
+		return nil, errors.Trace(err)
+	} else if err := rows.Close(); err != nil {
 		return nil, errors.Trace(err)
 	}
 
@@ -122,7 +133,8 @@ func LoadUserByUsername(
 		Livemode: livemode.Get(ctx),
 	}
 
-	if rows, err := mintDB.NamedQuery(`
+	ext := tx.Ext(ctx, MintDB())
+	if rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM users
 WHERE livemode = :livemode
@@ -132,6 +144,8 @@ WHERE livemode = :livemode
 	} else if !rows.Next() {
 		return nil, nil
 	} else if err := rows.StructScan(&user); err != nil {
+		return nil, errors.Trace(err)
+	} else if err := rows.Close(); err != nil {
 		return nil, errors.Trace(err)
 	}
 

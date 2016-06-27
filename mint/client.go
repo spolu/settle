@@ -52,12 +52,12 @@ func (c *Client) AssetResourceFromName(
 // fully qualified address.
 func (c *Client) UsernameAndMintHostFromAddress(
 	ctx context.Context,
-	issuer string,
+	address string,
 ) (string, string, error) {
-	m := AddressRegexp.FindStringSubmatch(issuer)
+	m := AddressRegexp.FindStringSubmatch(address)
 	if len(m) == 0 {
 		return "", "", errors.Trace(errors.Newf(
-			"Invalid issuer address: %s", issuer))
+			"Invalid address: %s", address))
 	}
 
 	return m[1], m[3], nil

@@ -1,3 +1,5 @@
+// OWNER: stan
+
 package model
 
 import (
@@ -9,6 +11,7 @@ import (
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/livemode"
 	"github.com/spolu/settle/lib/token"
+	"github.com/spolu/settle/lib/tx"
 	"golang.org/x/net/context"
 )
 
@@ -20,9 +23,9 @@ type Operation struct {
 	Create   time.Time
 	Livemode bool
 
-	Asset       string
-	Source      *string
-	Destination string
+	Asset       string  // Asset token.
+	Source      *string // Source user address.
+	Destination string  // Destination user addres.
 	Amount      big.Int
 }
 
@@ -39,14 +42,8 @@ func CreateOperation(
 	destination string,
 	amount big.Int,
 ) (*Operation, error) {
-	tx, err := db.Begin()
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-	var ext sqlx.Ext = tx
-
 	operation := Operation{
-		Token:    token.New("asset"),
+		Token:    token.New("operation"),
 		Livemode: livemode.Get(ctx),
 
 		Asset:       asset,
@@ -55,13 +52,14 @@ func CreateOperation(
 		Amount:      amount,
 	}
 
-	if rows, err := ext.NamedQuery(`
+	ext := tx.Ext(ctx, MintDB())
+	if rows, err := sqlx.NamedQuery(ext, `
 INSERT INTO operations
-  (token, livemode, issuer, code, scale)
+  (token, livemode, asset, source, destination, amount)
 VALUES
-  (:token, :livemode, :issuer, :code, :scale)
+  (:token, :livemode, :asset, :source, :destination, :amount)
 RETURNING created
-`, asset); err != nil {
+`, operation); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:
 			if err.Code.Name() == "unique_violation" {
@@ -72,9 +70,11 @@ RETURNING created
 		}
 	} else if !rows.Next() {
 		return nil, errors.Newf("Nothing returned from INSERT.")
-	} else if err := rows.StructScan(&asset); err != nil {
+	} else if err := rows.StructScan(&operation); err != nil {
+		return nil, errors.Trace(err)
+	} else if err := rows.Close(); err != nil {
 		return nil, errors.Trace(err)
 	}
 
-	return &asset, nil
+	return &operation, nil
 }

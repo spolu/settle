@@ -11,6 +11,7 @@ import (
 	"github.com/spolu/settle/lib/format"
 	"github.com/spolu/settle/lib/respond"
 	"github.com/spolu/settle/lib/svc"
+	"github.com/spolu/settle/lib/tx"
 	"github.com/spolu/settle/mint/lib/authentication"
 	"github.com/spolu/settle/model"
 
@@ -54,6 +55,9 @@ func (c *controller) CreateAsset(
 		return
 	}
 
+	ctx = tx.Begin(ctx, model.MintDB())
+	defer tx.LoggedRollback(ctx)
+
 	asset, err := model.CreateAsset(ctx, userToken, code, int8(scale))
 	if err != nil {
 		switch err := errors.Cause(err).(type) {
@@ -68,6 +72,8 @@ func (c *controller) CreateAsset(
 		}
 		return
 	}
+
+	tx.Commit(ctx)
 
 	respond.Success(ctx, w, svc.Resp{
 		"asset": format.JSONPtr(AssetResource{
@@ -130,6 +136,9 @@ func (c *controller) IssueAsset(
 		return
 	}
 
+	ctx = tx.Begin(ctx, model.MintDB())
+	defer tx.LoggedRollback(ctx)
+
 	asset, err := model.LoadAssetByIssuerCodeScale(ctx,
 		authentication.Get(ctx).User.Token, a.Code, a.Scale)
 	if err != nil {
@@ -144,6 +153,8 @@ func (c *controller) IssueAsset(
 		)))
 		return
 	}
+
+	tx.Commit(ctx)
 
 	respond.Success(ctx, w, svc.Resp{
 		"asset": format.JSONPtr(a),
