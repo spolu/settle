@@ -65,9 +65,8 @@ RETURNING created
 			if err.Code.Name() == "unique_violation" {
 				return nil, errors.Trace(ErrUniqueConstraintViolation{err})
 			}
-		default:
-			return nil, errors.Trace(err)
 		}
+		return nil, errors.Trace(err)
 	} else if !rows.Next() {
 		return nil, errors.Newf("Nothing returned from INSERT.")
 	} else if err := rows.StructScan(&user); err != nil {
@@ -85,12 +84,14 @@ func (u *User) Save(
 	ctx context.Context,
 ) error {
 	ext := tx.Ext(ctx, MintDB())
-	if _, err := sqlx.NamedQuery(ext, `
+	rows, err := sqlx.NamedQuery(ext, `
 UPDATE users SET username = :username, password_hash = :password_hash
 WHERE token = :token
-`, u); err != nil {
+`, u)
+	if err != nil {
 		return errors.Trace(err)
 	}
+	defer rows.Close()
 
 	return nil
 }

@@ -3,6 +3,7 @@
 package model
 
 import (
+	"math/big"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -14,12 +15,16 @@ import (
 	"golang.org/x/net/context"
 )
 
+// MaxAssetAmount is the maximum amount for an asset (2^128).
+var MaxAssetAmount = new(big.Int).Exp(
+	new(big.Int).SetInt64(2), new(big.Int).SetInt64(128), nil)
+
 // Operation represents a movement of an asset, either from an account to
 // another, or to an account only in the case of issuance. Amount is
 // represented as a BigInt and store in database as a NUMERIC(39).
 type Operation struct {
 	Token    string
-	Create   time.Time
+	Created  time.Time
 	Livemode bool
 
 	Asset       string  // Asset token.
@@ -64,9 +69,8 @@ RETURNING created
 			if err.Code.Name() == "unique_violation" {
 				return nil, errors.Trace(ErrUniqueConstraintViolation{err})
 			}
-		default:
-			return nil, errors.Trace(err)
 		}
+		return nil, errors.Trace(err)
 	} else if !rows.Next() {
 		return nil, errors.Newf("Nothing returned from INSERT.")
 	} else if err := rows.StructScan(&operation); err != nil {

@@ -2,6 +2,7 @@ package mint
 
 import (
 	"fmt"
+	"math/big"
 	"net/http"
 	"strconv"
 
@@ -101,7 +102,7 @@ func (c *controller) IssueAsset(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	a, err := c.client.AssetResourceFromName(
+	a, err := AssetResourceFromName(
 		ctx,
 		pat.Param(ctx, "asset"),
 	)
@@ -114,7 +115,7 @@ func (c *controller) IssueAsset(
 		return
 	}
 
-	username, host, err := c.client.UsernameAndMintHostFromAddress(
+	username, host, err := UsernameAndMintHostFromAddress(
 		ctx, a.Issuer)
 	if err != nil {
 		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(err,
@@ -132,6 +133,18 @@ func (c *controller) IssueAsset(
 				"currently authenticated with: %s@%s. Try creating an "+
 				"asset and then issuing it.",
 			authentication.Get(ctx).User.Username, c.mintHost,
+		)))
+		return
+	}
+
+	var amount big.Int
+	_, success := amount.SetString(r.PostFormValue("amount"), 10)
+	if !success || amount.Cmp(new(big.Int)) <= 0 || amount.Cmp(model.MaxAssetAmount) >= 0 {
+		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(err,
+			400, "amount_invalid",
+			"The amount you provided is invalid: %s. Amount must be a "+
+				"positive integer smaller than 2^128.",
+			r.PostFormValue("amount"),
 		)))
 		return
 	}
@@ -154,14 +167,28 @@ func (c *controller) IssueAsset(
 		return
 	}
 
-	// TODO(stan): normalize issuer to remove `+...`
+	// a.Issuer was already normalized (removed `+..@`).
 	balance, err := model.LoadOrCreateBalanceByAssetOwner(ctx,
 		asset.Token, a.Issuer)
 	if err != nil {
 		respond.Error(ctx, w, errors.Trace(err)) // 500
 		return
 	}
-	_ = balance
+
+	operation, err := model.CreateOperation(ctx,
+		asset.Token, nil, a.Issuer, model.BigInt(amount))
+	if err != nil {
+		respond.Error(ctx, w, errors.Trace(err)) // 500
+		return
+	}
+
+	(*big.Int)(&balance.Value).Add(
+		(*big.Int)(&balance.Value), (*big.Int)(&operation.Amount))
+	err = balance.Save(ctx)
+	if err != nil {
+		respond.Error(ctx, w, errors.Trace(err)) // 500
+		return
+	}
 
 	tx.Commit(ctx)
 

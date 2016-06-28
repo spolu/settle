@@ -26,7 +26,7 @@ var AddressRegexp = regexp.MustCompile(
 // AssetResourceFromName parses an asset fully qualified name into an
 // AssetResource object (without id or created date). Livemode is infered by
 // the current context.
-func (c *Client) AssetResourceFromName(
+func AssetResourceFromName(
 	ctx context.Context,
 	name string,
 ) (*AssetResource, error) {
@@ -50,7 +50,7 @@ func (c *Client) AssetResourceFromName(
 
 // UsernameAndMintHostFromAddress extracts the username and mint host from a
 // fully qualified address.
-func (c *Client) UsernameAndMintHostFromAddress(
+func UsernameAndMintHostFromAddress(
 	ctx context.Context,
 	address string,
 ) (string, string, error) {
@@ -61,4 +61,18 @@ func (c *Client) UsernameAndMintHostFromAddress(
 	}
 
 	return m[1], m[3], nil
+}
+
+// NormalizedAddress returns the address trimmed from the `+...@` part.
+func NormalizedAddress(
+	ctx context.Context,
+	address string,
+) (string, error) {
+	m := AddressRegexp.FindStringSubmatch(address)
+	if len(m) == 0 {
+		return "", errors.Trace(errors.Newf(
+			"Invalid address: %s", address))
+	}
+
+	return fmt.Sprintf("%s@%s", m[1], m[3]), nil
 }
