@@ -154,6 +154,15 @@ func (c *controller) IssueAsset(
 		return
 	}
 
+	// TODO(stan): normalize issuer to remove `+...`
+	balance, err := model.LoadOrCreateBalanceByAssetOwner(ctx,
+		asset.Token, a.Issuer)
+	if err != nil {
+		respond.Error(ctx, w, errors.Trace(err)) // 500
+		return
+	}
+	_ = balance
+
 	tx.Commit(ctx)
 
 	respond.Success(ctx, w, svc.Resp{

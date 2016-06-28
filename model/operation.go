@@ -3,7 +3,6 @@
 package model
 
 import (
-	"math/big"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -17,7 +16,7 @@ import (
 
 // Operation represents a movement of an asset, either from an account to
 // another, or to an account only in the case of issuance. Amount is
-// represented as a big.Int and store in database as a NUMERIC(39).
+// represented as a BigInt and store in database as a NUMERIC(39).
 type Operation struct {
 	Token    string
 	Create   time.Time
@@ -26,7 +25,7 @@ type Operation struct {
 	Asset       string  // Asset token.
 	Source      *string // Source user address.
 	Destination string  // Destination user addres.
-	Amount      big.Int
+	Amount      BigInt
 }
 
 func init() {
@@ -40,7 +39,7 @@ func CreateOperation(
 	asset string,
 	source *string,
 	destination string,
-	amount big.Int,
+	amount BigInt,
 ) (*Operation, error) {
 	operation := Operation{
 		Token:    token.New("operation"),

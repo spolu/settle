@@ -3,7 +3,6 @@
 package model
 
 import (
-	"math/big"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -25,7 +24,7 @@ type Balance struct {
 
 	Asset string // Asset token.
 	Owner string // Owner user address.
-	Value big.Int
+	Value BigInt
 }
 
 func init() {
@@ -39,7 +38,7 @@ func CreateBalance(
 	ctx context.Context,
 	asset string,
 	owner string,
-	value big.Int,
+	value BigInt,
 ) (*Balance, error) {
 	balance := Balance{
 		Token:    token.New("balance"),
@@ -75,4 +74,71 @@ RETURNING created
 	}
 
 	return &balance, nil
+}
+
+// Save updates the object database representation with the in-memory values.
+func (b *Balance) Save(
+	ctx context.Context,
+) error {
+	ext := tx.Ext(ctx, MintDB())
+	if _, err := sqlx.NamedQuery(ext, `
+UPDATE balances SET value = :value
+WHERE token = :token
+`, b); err != nil {
+		return errors.Trace(err)
+	}
+
+	return nil
+}
+
+// LoadBalanceByAssetOwner attempts to load a balance for the given asset token
+// and owner address.
+func LoadBalanceByAssetOwner(
+	ctx context.Context,
+	asset string,
+	owner string,
+) (*Balance, error) {
+	balance := Balance{
+		Livemode: livemode.Get(ctx),
+		Asset:    asset,
+		Owner:    owner,
+	}
+
+	ext := tx.Ext(ctx, MintDB())
+	if rows, err := sqlx.NamedQuery(ext, `
+SELECT *
+FROM balances
+WHERE livemode = :livemode
+  AND asset = :asset
+  AND owner = :owner
+`, balance); err != nil {
+		return nil, errors.Trace(err)
+	} else if !rows.Next() {
+		return nil, nil
+	} else if err := rows.StructScan(&balance); err != nil {
+		return nil, errors.Trace(err)
+	} else if err := rows.Close(); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &balance, nil
+}
+
+// LoadOrCreateBalanceByAssetOwner loads an existing balance for the specified
+// asset and owner or creates one (with a 0 value) if it does not exist.
+func LoadOrCreateBalanceByAssetOwner(
+	ctx context.Context,
+	asset string,
+	owner string,
+) (*Balance, error) {
+	balance, err := LoadBalanceByAssetOwner(ctx, asset, owner)
+	if err != nil {
+		return nil, errors.Trace(err)
+	} else if balance == nil {
+		balance, err = CreateBalance(ctx, asset, owner, BigInt{})
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+	}
+	return balance, nil
 }
