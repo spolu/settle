@@ -70,6 +70,7 @@ RETURNING created
 	} else if !rows.Next() {
 		return nil, errors.Newf("Nothing returned from INSERT.")
 	} else if err := rows.StructScan(&operation); err != nil {
+		defer rows.Close()
 		return nil, errors.Trace(err)
 	} else if err := rows.Close(); err != nil {
 		return nil, errors.Trace(err)

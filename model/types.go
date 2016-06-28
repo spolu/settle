@@ -2,9 +2,7 @@ package model
 
 import (
 	"database/sql/driver"
-	"fmt"
 	"math/big"
-	"reflect"
 
 	"github.com/spolu/settle/lib/errors"
 )
@@ -13,21 +11,20 @@ import (
 type BigInt big.Int
 
 // Scan implements sql.Scanner.
-func (b *BigInt) Scan(value interface{}) error {
-	switch value := value.(type) {
+func (b *BigInt) Scan(src interface{}) error {
+	switch src := src.(type) {
 	case int64:
-		(*big.Int)(b).SetInt64(value)
+		(*big.Int)(b).SetInt64(src)
 	case []byte:
-		if _, err := fmt.Sscan(string(value), b); err != nil {
-			return errors.Trace(err)
+		if _, success := (*big.Int)(b).SetString(string(src), 10); !success {
+			return errors.Newf("Impossible to set BigInt with string: %q", src)
 		}
 	case string:
-		if _, err := fmt.Sscan(value, b); err != nil {
-			return errors.Trace(err)
+		if _, success := (*big.Int)(b).SetString(src, 10); !success {
+			return errors.Newf("Impossible to set BigInt with string: %q", src)
 		}
 	default:
-		return errors.Newf("Cannot scan %+v for: %q",
-			reflect.TypeOf(value), value)
+		return errors.Newf("Incompatible type for BigInt with value: %q", src)
 	}
 
 	return nil
