@@ -205,10 +205,17 @@ func (c *controller) CreateOperation(
 
 	var srcBalance *model.Balance
 	if srcAddress != nil {
-		srcBalance, err = model.LoadOrCreateBalanceByAssetOwner(ctx,
+		srcBalance, err = model.LoadBalanceByAssetOwner(ctx,
 			asset.Token, *srcAddress)
 		if err != nil {
 			respond.Error(ctx, w, errors.Trace(err)) // 500
+			return
+		} else if srcBalance == nil {
+			respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(nil,
+				400, "source_invalid",
+				"The source address you provided has no existing balance: %s.",
+				*srcAddress,
+			)))
 			return
 		}
 	}
