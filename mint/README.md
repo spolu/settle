@@ -97,7 +97,7 @@ curl -XPOST https://foo.bar:2406/offers \
   -d amount=3
 
 {
-  id: "stan@foo.bar/offer_7t3sk24sdvz0a",
+  id: "stan@foo.bar:offer_7t3sk24sdvz0a",
   livemode: true,
   pair: "stan@foo.bar:USD.2/info@sightglasscoffee.com:AU-LAIT.0",
   type: "bid",
@@ -162,7 +162,7 @@ Only asks can be crossed by transactions (but given a bid, it is easy to find
 the equivalent ask on the network).
 
 Assuming we have the following active offer on the network:
-- **bob@corewars.org/offer_s8ka7812djnmk**: ask
+- **bob@corewars.org:offer_s8ka7812djnmk**: ask
   **bob@corewars.org:USD.2/stan@foo.bar:USD.2** at **100/100** for **500** for
   **stan@foo.bar:USD.2**
 (this offer can be found as a an ask on **corewars.org** and as a bid on
@@ -175,7 +175,7 @@ curl -XPOST https://foo.bar:2406/transactions \
   -d pair=stan@foo.bar:USD.2/bob@corewars.org:USD.2 \
   -d price=100/100 \
   -d amount=500 \
-  -d path[]=bob@corewars.org/offer_s8ka7812djnmk
+  -d path[]=bob@corewars.org:offer_s8ka7812djnmk
 
 {
   id: "stan@foo.bar/transaction_8yhs2op9sckD2",
@@ -190,7 +190,7 @@ curl -XPOST https://foo.bar:2406/transactions \
     amount: 500,
     status: "reserved"
   }, {
-    offer: "bob@corewars.org/bid_s8ka7812djnmk",
+    offer: "bob@corewars.org:offer_s8ka7812djnmk",
     asset: "bob@corewars.org:USD.2",
     source: "bob@corewars.org",
     destination: "stan@foo.bar",
@@ -208,9 +208,9 @@ A transaction can specify a longer path to send money by crossing a path of
 offers.
 
 Let's assume we have the following two active offers on the network:
-- **bob@corewars.org:USD.2/offer_s8ka7812djnmk**: ask
+- **bob@corewars.org:USD.2:offer_s8ka7812djnmk**: ask
   **bob@corewars.org:USD.2/stan@foo.bar:USD.2** at **100/100** for **500**.
-- **alice@rocket.science:USD.2/offer_9iop2182cm73s**: ask
+- **alice@rocket.science:USD.2:offer_9iop2182cm73s**: ask
   **alice@rocket.science:USD.2/bob@corewars.org:USD.2** at **100/100** for
   **3500**.
 
@@ -225,8 +225,8 @@ curl -XPOST https://foo.bar:2406/transactions \
   -d pair=stan@foo.bar:USD.2/alice@rocket.science:USD.2
   -d price=100/100 \
   -d amount=500 \
-  -d path[]=bob@corewars.org/offer_s8ka7812djnmk \
-  -d path[]=alice@rocket.science/offer_9iop2182cm73s
+  -d path[]=bob@corewars.org:offer_s8ka7812djnmk \
+  -d path[]=alice@rocket.science:offer_9iop2182cm73s
 
 {
   id: "stan@foo.bar:transaction_9iop2182cm73s",
@@ -241,14 +241,14 @@ curl -XPOST https://foo.bar:2406/transactions \
     amount: 500,
     status: "reserved"
   }, {
-    offer: "bob@corewars.org/offer_s8ka7812djnmk",
+    offer: "bob@corewars.org:offer_s8ka7812djnmk",
     asset: "bob@corewars.org:USD.2",
     source: "bob@corewars.org",
     destination: "alice@rocket.science",
     amount: 500,
     status: "reserved"
   }, {
-    offer: "alice@rocket.science/offer_9iop2182cm73s",
+    offer: "alice@rocket.science:offer_9iop2182cm73s",
     asset: "alice@rocket.science:USD.2",
     source: "alice@rocket.science",
     destination: "stan@foo.bar",
@@ -272,7 +272,7 @@ curl -XGET https://foo.bar:2406/offers?
   -H livemode: true
 
 [{
-  id: "stan@foo.bar/offer_7t3sk24sdvz0a",
+  id: "stan@foo.bar:offer_7t3sk24sdvz0a",
   livemode: true,
   pair: "stan@foo.bar:USD.2/bob@corewars.org:USD.2",
   type: "ask",
@@ -327,14 +327,14 @@ curl -XGET https://foo.bar:2406/transactions/transaction_9iop2182cm73s \
     amount: 500,
     status: "reserved"
   }, {
-    offer: "bob@corewars.org/offer_s8ka7812djnmk",
+    offer: "bob@corewars.org:offer_s8ka7812djnmk",
     asset: "bob@corewars.org:USD.2",
     source: "bob@corewars.org",
     destination: "alice@rocket.science",
     amount: 500,
     status: "pending"
   }, {
-    offer: "alice@rocket.science/offer_9iop2182cm73s",
+    offer: "alice@rocket.science:offer_9iop2182cm73s",
     asset: "alice@rocket.science:USD.2",
     source: "alice@rocket.science",
     destination: "stan@foo.bar",
@@ -378,14 +378,14 @@ curl -XGET https://corewars.org:2406/transactions/transaction_9iop2182cm73s \
     amount: 500,
     status: "reserved"
   }, {
-    offer: "bob@corewars.org/offer_s8ka7812djnmk",
+    offer: "bob@corewars.org:offer_s8ka7812djnmk",
     asset: "bob@corewars.org:USD.2",
     source: "bob@corewars.org",
     destination: "alice@rocket.science",
     amount: 500,
     status: "reserved"
   }, {
-    offer: "alice@rocket.science/offer_9iop2182cm73s",
+    offer: "alice@rocket.science:offer_9iop2182cm73s",
     asset: "alice@rocket.science:USD.2",
     source: "alice@rocket.science",
     destination: "stan@foo.bar",
@@ -421,14 +421,14 @@ curl -XPOST https://rocket.science:2406/transactions \
     amount: 500,
     status: "reserved"
   }, {
-    offer: "bob@corewars.org/offer_s8ka7812djnmk",
+    offer: "bob@corewars.org:offer_s8ka7812djnmk",
     asset: "bob@corewars.org:USD.2",
     source: "bob@corewars.org",
     destination: "alice@rocket.science",
     amount: 500,
     status: "reserved"
   }, {
-    offer: "alice@rocket.science/offer_9iop2182cm73s",
+    offer: "alice@rocket.science:offer_9iop2182cm73s",
     asset: "alice@rocket.science:USD.2",
     source: "alice@rocket.science",
     destination: "stan@foo.bar",
@@ -482,14 +482,14 @@ curl -XPOST https://rocket.science:2406/transactions/transaction_9iop2182cm73s/s
     amount: 500,
     status: "settled"
   }, {
-    offer: "bob@corewars.org/offer_s8ka7812djnmk",
+    offer: "bob@corewars.org:offer_s8ka7812djnmk",
     asset: "bob@corewars.org:USD.2",
     source: "bob@corewars.org",
     destination: "alice@rocket.science",
     amount: 500,
     status: "settled"
   }, {
-    offer: "alice@rocket.science/offer_9iop2182cm73s",
+    offer: "alice@rocket.science:offer_9iop2182cm73s",
     asset: "alice@rocket.science:USD.2",
     source: "alice@rocket.science",
     destination: "stan@foo.bar",
