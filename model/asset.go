@@ -31,9 +31,9 @@ type Asset struct {
 	Created  time.Time
 	Livemode bool
 
-	Issuer string
-	Code   string
-	Scale  int8
+	Issuer string // Issuer user token.
+	Code   string // Asset code.
+	Scale  int8   // Asset scale.
 }
 
 func init() {

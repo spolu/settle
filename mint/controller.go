@@ -1,7 +1,6 @@
 package mint
 
 import (
-	"fmt"
 	"math/big"
 	"net/http"
 	"strconv"
@@ -77,22 +76,8 @@ func (c *controller) CreateAsset(
 	tx.Commit(ctx)
 
 	respond.Success(ctx, w, svc.Resp{
-		"asset": format.JSONPtr(AssetResource{
-			ID:       asset.Token,
-			Created:  asset.Created.UnixNano() / (1000 * 1000),
-			Livemode: asset.Livemode,
-			Name: fmt.Sprintf(
-				"%s@%s:%s.%d",
-				authentication.Get(ctx).User.Username, c.mintHost,
-				asset.Code, asset.Scale,
-			),
-			Issuer: fmt.Sprintf(
-				"%s@%s",
-				authentication.Get(ctx).User.Username, c.mintHost,
-			),
-			Code:  asset.Code,
-			Scale: asset.Scale,
-		}),
+		"asset": format.JSONPtr(NewAssetResource(ctx,
+			asset, authentication.Get(ctx).User, c.mintHost)),
 	})
 }
 
@@ -193,6 +178,9 @@ func (c *controller) IssueAsset(
 	tx.Commit(ctx)
 
 	respond.Success(ctx, w, svc.Resp{
-		"asset": format.JSONPtr(a),
+		"operation": format.JSONPtr(NewOperationResource(ctx,
+			operation,
+			NewAssetResource(ctx,
+				asset, authentication.Get(ctx).User, c.mintHost))),
 	})
 }

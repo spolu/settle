@@ -32,6 +32,8 @@ func (c *Configuration) Bind(
 	mux.HandleFuncC(pat.Post("/assets"), c.controller.CreateAsset)
 	mux.HandleFuncC(pat.Post("/assets/:asset/issue"), c.controller.IssueAsset)
 
+	//mux.HandleFuncC(pat.Post("/assets/:asset/operations"), c.controller.CreateOperation)
+
 	//mux.HandleFuncC(pat.Post("/assets/:asset/offers"), c.controller.CreateOffer)
 	//mux.HandleFuncC(pat.Post("/assets/:asset/offers/:offer/close"), c.controller.CloseOffer)
 
