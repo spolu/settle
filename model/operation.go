@@ -28,8 +28,8 @@ type Operation struct {
 	Livemode bool
 
 	Asset       string  // Asset token.
-	Source      *string // Source user address.
-	Destination string  // Destination user addres.
+	Source      *string // Source user address (if nil issuance).
+	Destination *string // Destination user addres (if nil annihilation).
 	Amount      BigInt
 }
 
@@ -43,7 +43,7 @@ func CreateOperation(
 	ctx context.Context,
 	asset string,
 	source *string,
-	destination string,
+	destination *string,
 	amount BigInt,
 ) (*Operation, error) {
 	operation := Operation{

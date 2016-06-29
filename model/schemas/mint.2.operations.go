@@ -9,10 +9,10 @@ CREATE TABLE IF NOT EXISTS operations(
   created TIMESTAMP NOT NULL DEFAULT UTC_NOW(),
   livemode BOOL NOT NULL,
 
-  asset VARCHAR(256) NOT NULL,       -- the opeation's asset token
-  source VARCHAR(512),               -- the operation's source user address
-  destination VARCHAR(512) NOT NULL, -- the operation's destination user address
-  amount NUMERIC(39) NOT NULL,       -- the operation's amount
+  asset VARCHAR(256) NOT NULL,                     -- asset token
+  source VARCHAR(512),                             -- source user address
+  destination VARCHAR(512),                        -- destination user address
+  amount NUMERIC(39) NOT NULL CHECK (amount > 0),  -- operation amount
 
   PRIMARY KEY(token),
   CONSTRAINT operations_asset_fk FOREIGN KEY (asset) REFERENCES assets(token)

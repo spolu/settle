@@ -53,7 +53,7 @@ type OperationResource struct {
 
 	Asset       AssetResource `json:"asset"`
 	Source      *string       `json:"source"`
-	Destination string        `json:"destination"`
+	Destination *string       `json:"destination"`
 	Amount      *big.Int      `json:"amount"`
 }
 

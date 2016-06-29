@@ -23,7 +23,7 @@ type controller struct {
 	client   *Client
 }
 
-// CreateAsset controls the creation of new Assets.
+// CreateAsset controls the creation of new assets.
 func (c *controller) CreateAsset(
 	ctx context.Context,
 	w http.ResponseWriter,
@@ -81,12 +81,18 @@ func (c *controller) CreateAsset(
 	})
 }
 
-// IssueAsset controls the issuance of an asset.
-func (c *controller) IssueAsset(
+// CreateOperation creates a new operation that moves asset from a source
+// balance to a destination balance:
+// - no `source` specified: issuance.
+// - no `destination` specified: annihilation.
+// - both specified: transfer from a balance to another.
+// Only the asset creator can create operation on an asset.
+func (c *controller) CreateOperation(
 	ctx context.Context,
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
+	// Validate asset.
 	a, err := AssetResourceFromName(
 		ctx,
 		pat.Param(ctx, "asset"),
@@ -99,37 +105,82 @@ func (c *controller) IssueAsset(
 		)))
 		return
 	}
-
 	username, host, err := UsernameAndMintHostFromAddress(
 		ctx, a.Issuer)
 	if err != nil {
 		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(err,
-			400, "address_invalid",
+			400, "asset_invalid",
 			"The asset name you provided has an invalid issuer address: %s.",
 			a.Issuer,
 		)))
 		return
 	}
 
+	// Validate that the issuer is attempting to create the operation.
 	if host != c.mintHost || username != authentication.Get(ctx).User.Username {
 		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(nil,
-			400, "issuance_not_authorized",
-			"You can only issue assets created by the account you are "+
-				"currently authenticated with: %s@%s. Try creating an "+
-				"asset and then issuing it.",
+			400, "operation_not_authorized",
+			"You can only create operations for assets created by the "+
+				"account you are currently authenticated with: %s@%s. This "+
+				"operation's asset was created by: %s@%s.",
 			authentication.Get(ctx).User.Username, c.mintHost,
+			username, host,
 		)))
 		return
 	}
 
+	// Validate amount.
 	var amount big.Int
 	_, success := amount.SetString(r.PostFormValue("amount"), 10)
-	if !success || amount.Cmp(new(big.Int)) <= 0 || amount.Cmp(model.MaxAssetAmount) >= 0 {
+	if !success ||
+		amount.Cmp(new(big.Int)) < 0 ||
+		amount.Cmp(model.MaxAssetAmount) >= 0 {
 		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(err,
 			400, "amount_invalid",
 			"The amount you provided is invalid: %s. Amount must be a "+
-				"positive integer smaller than 2^128.",
+				"an integer between 0 and 2^128.",
 			r.PostFormValue("amount"),
+		)))
+		return
+	}
+
+	// Validate source
+	var srcAddress *string
+	if r.PostFormValue("source") != "" {
+		addr, err := NormalizedAddress(ctx, r.PostFormValue("source"))
+		if err != nil {
+			respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(err,
+				400, "source_invalid",
+				"The source address you provided is invalid: %s.",
+				*srcAddress,
+			)))
+			return
+		}
+		srcAddress = &addr
+	}
+
+	// Validate destination
+	var dstAddress *string
+	if r.PostFormValue("destination") != "" {
+		addr, err := NormalizedAddress(ctx, r.PostFormValue("destination"))
+		if err != nil {
+			respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(err,
+				400, "destination_invalid",
+				"The destination address you provided is invalid: %s.",
+				*dstAddress,
+			)))
+			return
+		}
+		dstAddress = &addr
+	}
+
+	if srcAddress == nil && dstAddress == nil {
+		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(err,
+			400, "operation_invalid",
+			"The operation has no source and no destination. You must "+
+				"specify at least one of them (no source: issuance; no "+
+				"destination: annihilation; source and destination: "+
+				"transfer).",
 		)))
 		return
 	}
@@ -145,34 +196,86 @@ func (c *controller) IssueAsset(
 	} else if asset == nil {
 		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(nil,
 			400, "asset_not_found",
-			"The asset you are trying to issue does not exist: %s. Try "+
+			"The asset you are trying to operate does not exist: %s. Try "+
 				"creating it first.",
 			a.Name,
 		)))
 		return
 	}
 
-	// a.Issuer was already normalized (removed `+..@`).
-	balance, err := model.LoadOrCreateBalanceByAssetOwner(ctx,
-		asset.Token, a.Issuer)
-	if err != nil {
-		respond.Error(ctx, w, errors.Trace(err)) // 500
-		return
+	var srcBalance *model.Balance
+	if srcAddress != nil {
+		srcBalance, err = model.LoadOrCreateBalanceByAssetOwner(ctx,
+			asset.Token, *srcAddress)
+		if err != nil {
+			respond.Error(ctx, w, errors.Trace(err)) // 500
+			return
+		}
+	}
+
+	var dstBalance *model.Balance
+	if dstAddress != nil {
+		dstBalance, err = model.LoadOrCreateBalanceByAssetOwner(ctx,
+			asset.Token, *dstAddress)
+		if err != nil {
+			respond.Error(ctx, w, errors.Trace(err)) // 500
+			return
+		}
 	}
 
 	operation, err := model.CreateOperation(ctx,
-		asset.Token, nil, a.Issuer, model.BigInt(amount))
+		asset.Token, srcAddress, dstAddress, model.BigInt(amount))
 	if err != nil {
 		respond.Error(ctx, w, errors.Trace(err)) // 500
 		return
 	}
 
-	(*big.Int)(&balance.Value).Add(
-		(*big.Int)(&balance.Value), (*big.Int)(&operation.Amount))
-	err = balance.Save(ctx)
-	if err != nil {
-		respond.Error(ctx, w, errors.Trace(err)) // 500
-		return
+	if dstBalance != nil {
+		(*big.Int)(&dstBalance.Value).Add(
+			(*big.Int)(&dstBalance.Value), (*big.Int)(&operation.Amount))
+
+		// Checks if the dstBalance is positive and not overflown.
+		b := (*big.Int)(&dstBalance.Value)
+		if new(big.Int).Abs(b).Cmp(model.MaxAssetAmount) >= 0 ||
+			b.Cmp(new(big.Int)) < 0 {
+			respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(err,
+				400, "amount_invalid",
+				"The resulting destination balance is invalid: %s. The "+
+					"balance must be an integer between 0 and 2^128.",
+				b.String(),
+			)))
+			return
+		}
+
+		err = dstBalance.Save(ctx)
+		if err != nil {
+			respond.Error(ctx, w, errors.Trace(err)) // 500
+			return
+		}
+	}
+
+	if srcBalance != nil {
+		(*big.Int)(&srcBalance.Value).Sub(
+			(*big.Int)(&srcBalance.Value), (*big.Int)(&operation.Amount))
+
+		// Checks if the srcBalance is positive and not overflown.
+		b := (*big.Int)(&srcBalance.Value)
+		if new(big.Int).Abs(b).Cmp(model.MaxAssetAmount) >= 0 ||
+			b.Cmp(new(big.Int)) < 0 {
+			respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(err,
+				400, "amount_invalid",
+				"The resulting source balance is invalid: %s. The "+
+					"balance must be an integer between 0 and 2^128.",
+				b.String(),
+			)))
+			return
+		}
+
+		err = srcBalance.Save(ctx)
+		if err != nil {
+			respond.Error(ctx, w, errors.Trace(err)) // 500
+			return
+		}
 	}
 
 	tx.Commit(ctx)
@@ -183,4 +286,5 @@ func (c *controller) IssueAsset(
 			NewAssetResource(ctx,
 				asset, authentication.Get(ctx).User, c.mintHost))),
 	})
+
 }
