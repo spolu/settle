@@ -24,7 +24,7 @@ type Balance struct {
 
 	Asset string // Asset token.
 	Owner string // Owner user address.
-	Value BigInt
+	Value Amount
 }
 
 func init() {
@@ -38,7 +38,7 @@ func CreateBalance(
 	ctx context.Context,
 	asset string,
 	owner string,
-	value BigInt,
+	value Amount,
 ) (*Balance, error) {
 	balance := Balance{
 		Token:    token.New("balance"),
@@ -138,7 +138,7 @@ func LoadOrCreateBalanceByAssetOwner(
 	if err != nil {
 		return nil, errors.Trace(err)
 	} else if balance == nil {
-		balance, err = CreateBalance(ctx, asset, owner, BigInt{})
+		balance, err = CreateBalance(ctx, asset, owner, Amount{})
 		if err != nil {
 			return nil, errors.Trace(err)
 		}

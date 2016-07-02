@@ -21,7 +21,7 @@ var MaxAssetAmount = new(big.Int).Exp(
 
 // Operation represents a movement of an asset, either from an account to
 // another, or to an account only in the case of issuance. Amount is
-// represented as a BigInt and store in database as a NUMERIC(39).
+// represented as a Amount and store in database as a NUMERIC(39).
 type Operation struct {
 	Token    string
 	Created  time.Time
@@ -30,21 +30,20 @@ type Operation struct {
 	Asset       string  // Asset token.
 	Source      *string // Source user address (if nil issuance).
 	Destination *string // Destination user addres (if nil annihilation).
-	Amount      BigInt
+	Amount      Amount
 }
 
 func init() {
 	ensureMintDB()
 }
 
-// CreateOperation creates and stores a new Operation object. It also
-// atomically checks and adjusts the balances mutated by this operation.
+// CreateOperation creates and stores a new Operation object.
 func CreateOperation(
 	ctx context.Context,
 	asset string,
 	source *string,
 	destination *string,
-	amount BigInt,
+	amount Amount,
 ) (*Operation, error) {
 	operation := Operation{
 		Token:    token.New("operation"),

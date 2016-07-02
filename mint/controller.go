@@ -1,8 +1,10 @@
 package mint
 
 import (
+	"fmt"
 	"math/big"
 	"net/http"
+	"regexp"
 	"strconv"
 
 	"goji.io/pat"
@@ -137,8 +139,8 @@ func (c *controller) CreateOperation(
 		amount.Cmp(model.MaxAssetAmount) >= 0 {
 		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(err,
 			400, "amount_invalid",
-			"The amount you provided is invalid: %s. Amount must be a "+
-				"an integer between 0 and 2^128.",
+			"The amount you provided is invalid: %s. Amounts must be "+
+				"integers between 0 and 2^128.",
 			r.PostFormValue("amount"),
 		)))
 		return
@@ -231,7 +233,7 @@ func (c *controller) CreateOperation(
 	}
 
 	operation, err := model.CreateOperation(ctx,
-		asset.Token, srcAddress, dstAddress, model.BigInt(amount))
+		asset.Token, srcAddress, dstAddress, model.Amount(amount))
 	if err != nil {
 		respond.Error(ctx, w, errors.Trace(err)) // 500
 		return
@@ -293,5 +295,127 @@ func (c *controller) CreateOperation(
 			NewAssetResource(ctx,
 				asset, authentication.Get(ctx).User, c.mintHost))),
 	})
+}
 
+// OfferPriceRegexp is used to validate and parse an offer price.
+var OfferPriceRegexp = regexp.MustCompile(
+	"^([0-9]+)\\/([0-9]+)$")
+
+// CreateOffer creates a new offer. Offer creation involves contacting the
+// mints for the offer's assets and storing the canonical version of the offer
+// locally.
+func (c *controller) CreateOffer(
+	ctx context.Context,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	// Validate asset pair.
+	pair, err := AssetResourcesFromPair(
+		ctx,
+		r.PostFormValue("pair"),
+	)
+	if err != nil {
+		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(err,
+			400, "pair_invalid",
+			"The asset pair you provided is invalid: %s.",
+			r.PostFormValue("pair"),
+		)))
+		return
+	}
+
+	// Validate bid.
+	var oftype model.OfType
+	switch r.PostFormValue("type") {
+	case string(model.OfTpBid):
+		oftype = model.OfTpBid
+	case string(model.OfTpAsk):
+		oftype = model.OfTpBid
+	default:
+		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(err,
+			400, "type_invalid",
+			"The offer type you provided is invalid: %s. Accepted values are "+
+				"bid, ask.",
+			r.PostFormValue("type"),
+		)))
+	}
+
+	// Validate price.
+	m := OfferPriceRegexp.FindStringSubmatch(r.PostFormValue("price"))
+	if len(m) == 0 {
+		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(err,
+			400, "price_invalid",
+			"The offer price you provided is invalid: %s. Prices must have "+
+				"the form \"pB/pQ\" where pB is the base asset price and pQ "+
+				"is the quote asset price.",
+			r.PostFormValue("type"),
+		)))
+	}
+	var basePrice big.Int
+	_, success := basePrice.SetString(m[1], 10)
+	if !success ||
+		basePrice.Cmp(new(big.Int)) < 0 ||
+		basePrice.Cmp(model.MaxAssetAmount) >= 0 {
+		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(err,
+			400, "price_invalid",
+			"The base asset price you provided is invalid: %s. Asset prices "+
+				"must be integers between 0 and 2^128.",
+			m[1],
+		)))
+		return
+	}
+	var quotePrice big.Int
+	_, success = quotePrice.SetString(m[1], 10)
+	if !success ||
+		quotePrice.Cmp(new(big.Int)) < 0 ||
+		quotePrice.Cmp(model.MaxAssetAmount) >= 0 {
+		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(err,
+			400, "price_invalid",
+			"The quote asset price you provided is invalid: %s. Asset prices "+
+				"must be integers between 0 and 2^128.",
+			m[1],
+		)))
+		return
+	}
+
+	// Validate amount.
+	var amount big.Int
+	_, success = amount.SetString(r.PostFormValue("amount"), 10)
+	if !success ||
+		amount.Cmp(new(big.Int)) < 0 ||
+		amount.Cmp(model.MaxAssetAmount) >= 0 {
+		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(err,
+			400, "amount_invalid",
+			"The amount you provided is invalid: %s. Amounts must be "+
+				"integers between 0 and 2^128.",
+			r.PostFormValue("amount"),
+		)))
+		return
+	}
+
+	owner := fmt.Sprintf("%s@%s",
+		authentication.Get(ctx).User.Username, c.mintHost)
+
+	ctx = tx.Begin(ctx, model.MintDB())
+	defer tx.LoggedRollback(ctx)
+
+	// Create canonical offer locally.
+	offer, err := model.CreateOffer(ctx,
+		owner, pair[0].Name, pair[1].Name, oftype, model.Amount(basePrice),
+		model.Amount(quotePrice), model.Amount(amount), model.OfStActive)
+	if err != nil {
+		respond.Error(ctx, w, errors.Trace(err)) // 500
+		return
+	}
+
+	_ = offer
+
+	// We commit first so that the offer is visible to subsequent requests
+	// hitting the mint (from other mint to validate the offer after
+	// propagation).
+	tx.Commit(ctx)
+
+	// TODO: propagate offer to assets' mints, failing silently if
+	// unsuccessful.
+
+	respond.Success(ctx, w, svc.Resp{})
 }

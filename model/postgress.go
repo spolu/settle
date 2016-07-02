@@ -21,18 +21,18 @@ func ensureMintDB() {
 	}
 
 	err := error(nil)
-	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+	mintDSN := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		os.Getenv("MINT_DB_HOST"),
 		os.Getenv("MINT_DB_PORT"),
 		os.Getenv("MINT_DB_USER"),
 		os.Getenv("MINT_DB_PASSWORD"),
 		os.Getenv("MINT_DB_NAME"),
 	)
-	mintDB, err = sqlx.Connect("postgres", dsn)
+	mintDB, err = sqlx.Connect("postgres", mintDSN)
 	if err != nil {
 		log.Fatal(errors.Details(err))
 	} else {
-		fmt.Printf("Initialized mintDB with dsn: %s\n", dsn)
+		fmt.Printf("Initialized mintDB with DSN: %s\n", mintDSN)
 	}
 }
 

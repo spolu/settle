@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/livemode"
@@ -46,6 +47,27 @@ func AssetResourceFromName(
 		Code:     m[4],
 		Scale:    int8(s),
 	}, nil
+}
+
+// AssetResourcesFromPair parses a pair into an array of AssetResources
+// (without id or created date). Livemode is infered by the current context.
+func AssetResourcesFromPair(
+	ctx context.Context,
+	pair string,
+) ([]AssetResource, error) {
+	ss := strings.Split(pair, "/")
+	if len(ss) != 2 {
+		return nil, errors.Trace(errors.Newf("Invalid asset pair: %s", pair))
+	}
+	base, err := AssetResourceFromName(ctx, ss[0])
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	quote, err := AssetResourceFromName(ctx, ss[1])
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	return []AssetResource{*base, *quote}, nil
 }
 
 // UsernameAndMintHostFromAddress extracts the username and mint host from a
