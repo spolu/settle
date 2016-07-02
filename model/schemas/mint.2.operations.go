@@ -1,6 +1,6 @@
 package schemas
 
-import "github.com/spolu/settle/model"
+import "github.com/spolu/peer_currencies/model"
 
 const (
 	operationsSQL = `

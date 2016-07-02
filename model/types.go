@@ -4,7 +4,7 @@ import (
 	"database/sql/driver"
 	"math/big"
 
-	"github.com/spolu/settle/lib/errors"
+	"github.com/spolu/peer_currencies/lib/errors"
 )
 
 // Amount extends big.Int to implement sql.Scanner and driver.Valuer.

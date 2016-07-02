@@ -3,11 +3,11 @@ package mint
 import (
 	"os"
 
-	"github.com/spolu/settle/lib/errors"
-	"github.com/spolu/settle/lib/livemode"
-	"github.com/spolu/settle/lib/recoverer"
-	"github.com/spolu/settle/lib/requestlogger"
-	"github.com/spolu/settle/mint/lib/authentication"
+	"github.com/spolu/peer_currencies/lib/errors"
+	"github.com/spolu/peer_currencies/lib/livemode"
+	"github.com/spolu/peer_currencies/lib/recoverer"
+	"github.com/spolu/peer_currencies/lib/requestlogger"
+	"github.com/spolu/peer_currencies/mint/lib/authentication"
 	"goji.io"
 )
 

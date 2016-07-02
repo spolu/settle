@@ -1,9 +1,8 @@
-# Settle
+# Peer currencies
 
-An experimental project aiming at making distributed currency issuance and
-exchange easy and accessible.
+Experimental project aiming at making distributed currency issuance and
+exchange easy and accessible, following the following guiding principles:
 
-The guiding principles are the following:
 - **No central currency**: getting rid of central currencies (such as Bitcoin)
   frees the system from the need of a shared blockchain, enabling entirely free
   transactions, just like email--and in particular micropayments.
@@ -17,6 +16,6 @@ The guiding principles are the following:
     your platform but still usable by your users to pay for other products.
 - **Open network**: anyone can join or use the network. Private networks can be
   run independently. The public network of mints would transparently survive
-  our own mint going offline.
+  any server going offline.
 
 - [Mints](mint/README.md)

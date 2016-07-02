@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/spolu/settle/lib/errors"
-	"github.com/spolu/settle/lib/livemode"
+	"github.com/spolu/peer_currencies/lib/errors"
+	"github.com/spolu/peer_currencies/lib/livemode"
 
 	"golang.org/x/net/context"
 )
