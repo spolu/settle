@@ -88,7 +88,8 @@ func (c *controller) CreateAsset(
 // - no `source` specified: issuance.
 // - no `destination` specified: annihilation.
 // - both specified: transfer from a balance to another.
-// Only the asset creator can create operation on an asset.
+// Only the asset creator can create operation on an asset. To transfer money,
+// users owning an asset whould use transactions.
 func (c *controller) CreateOperation(
 	ctx context.Context,
 	w http.ResponseWriter,
@@ -124,9 +125,11 @@ func (c *controller) CreateOperation(
 			400, "operation_not_authorized",
 			"You can only create operations for assets created by the "+
 				"account you are currently authenticated with: %s@%s. This "+
-				"operation's asset was created by: %s@%s.",
+				"operation's asset was created by: %s@%s. If you own %s, "+
+				"and wish to transfer some of it, you should create a "+
+				"transaction directly from your mint instead.",
 			authentication.Get(ctx).User.Username, c.mintHost,
-			username, host,
+			username, host, a.Name,
 		)))
 		return
 	}
@@ -417,5 +420,7 @@ func (c *controller) CreateOffer(
 	// TODO: propagate offer to assets' mints, failing silently if
 	// unsuccessful.
 
-	respond.Success(ctx, w, svc.Resp{})
+	respond.Success(ctx, w, svc.Resp{
+		"offer": format.JSONPtr(NewOfferResource(ctx, offer, nil)),
+	})
 }
