@@ -4,8 +4,8 @@ import (
 	"database/sql"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/spolu/peer_currencies/lib/logging"
-	"github.com/spolu/peer_currencies/lib/token"
+	"github.com/spolu/peer-currencies/lib/logging"
+	"github.com/spolu/peer-currencies/lib/token"
 	"golang.org/x/net/context"
 )
 

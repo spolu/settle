@@ -9,8 +9,8 @@ import (
 
 	"goji.io"
 
-	"github.com/spolu/peer_currencies/lib/errors"
-	"github.com/spolu/peer_currencies/mint"
+	"github.com/spolu/peer-currencies/lib/errors"
+	"github.com/spolu/peer-currencies/mint"
 	"github.com/zenazn/goji/bind"
 	"github.com/zenazn/goji/graceful"
 )

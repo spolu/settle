@@ -6,10 +6,10 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/spolu/peer_currencies/lib/errors"
-	"github.com/spolu/peer_currencies/lib/format"
-	"github.com/spolu/peer_currencies/lib/logging"
-	"github.com/spolu/peer_currencies/lib/svc"
+	"github.com/spolu/peer-currencies/lib/errors"
+	"github.com/spolu/peer-currencies/lib/format"
+	"github.com/spolu/peer-currencies/lib/logging"
+	"github.com/spolu/peer-currencies/lib/svc"
 	"golang.org/x/net/context"
 )
 

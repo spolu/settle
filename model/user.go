@@ -8,10 +8,10 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
-	"github.com/spolu/peer_currencies/lib/errors"
-	"github.com/spolu/peer_currencies/lib/livemode"
-	"github.com/spolu/peer_currencies/lib/token"
-	"github.com/spolu/peer_currencies/lib/tx"
+	"github.com/spolu/peer-currencies/lib/errors"
+	"github.com/spolu/peer-currencies/lib/livemode"
+	"github.com/spolu/peer-currencies/lib/token"
+	"github.com/spolu/peer-currencies/lib/tx"
 	"golang.org/x/crypto/scrypt"
 	"golang.org/x/net/context"
 )

@@ -1,3 +1,2 @@
 - move mint host to context
 - split controller into endpoint.CreateXXX object with Execute and Validate
-- rename to `peer-currencies`

@@ -2,7 +2,7 @@
 
 package model
 
-import "github.com/spolu/peer_currencies/lib/errors"
+import "github.com/spolu/peer-currencies/lib/errors"
 
 var schemas = map[string]map[string]string{
 	"mint": map[string]string{},

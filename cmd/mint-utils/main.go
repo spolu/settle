@@ -7,9 +7,9 @@ import (
 	"golang.org/x/net/context"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/spolu/peer_currencies/lib/livemode"
-	"github.com/spolu/peer_currencies/lib/logging"
-	"github.com/spolu/peer_currencies/model"
+	"github.com/spolu/peer-currencies/lib/livemode"
+	"github.com/spolu/peer-currencies/lib/logging"
+	"github.com/spolu/peer-currencies/model"
 )
 
 // ethBackends map livemode to Ethereum backends.

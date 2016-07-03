@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/spolu/peer_currencies/model"
+	"github.com/spolu/peer-currencies/model"
 
 	"golang.org/x/net/context"
 )

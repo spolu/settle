@@ -9,13 +9,13 @@ import (
 
 	"goji.io/pat"
 
-	"github.com/spolu/peer_currencies/lib/errors"
-	"github.com/spolu/peer_currencies/lib/format"
-	"github.com/spolu/peer_currencies/lib/respond"
-	"github.com/spolu/peer_currencies/lib/svc"
-	"github.com/spolu/peer_currencies/lib/tx"
-	"github.com/spolu/peer_currencies/mint/lib/authentication"
-	"github.com/spolu/peer_currencies/model"
+	"github.com/spolu/peer-currencies/lib/errors"
+	"github.com/spolu/peer-currencies/lib/format"
+	"github.com/spolu/peer-currencies/lib/respond"
+	"github.com/spolu/peer-currencies/lib/svc"
+	"github.com/spolu/peer-currencies/lib/tx"
+	"github.com/spolu/peer-currencies/mint/lib/authentication"
+	"github.com/spolu/peer-currencies/model"
 
 	"golang.org/x/net/context"
 )

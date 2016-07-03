@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/spolu/peer_currencies/lib/errors"
+	"github.com/spolu/peer-currencies/lib/errors"
 
 	// pq is used as underlying sql driver.
 	_ "github.com/lib/pq"

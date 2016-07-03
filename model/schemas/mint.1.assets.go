@@ -1,6 +1,6 @@
 package schemas
 
-import "github.com/spolu/peer_currencies/model"
+import "github.com/spolu/peer-currencies/model"
 
 const (
 	assetsSQL = `
