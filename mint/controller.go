@@ -300,6 +300,57 @@ func (c *controller) CreateOperation(
 	})
 }
 
+// RetrieveOffer retrieves an offer based on its id. It is not authenticated
+// and is used to verify offers when they get propagated.
+func (c *controller) RetrieveOffer(
+	ctx context.Context,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	id := pat.Param(ctx, "offer")
+
+	// Validate id.
+	address, token, err := NormalizedAddressAndTokenFromID(ctx, id)
+	if err != nil {
+		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(err,
+			400, "id_invalid",
+			"The offer id you provided is invalid: %s.",
+			id,
+		)))
+		return
+	}
+
+	ctx = tx.Begin(ctx, model.MintDB())
+	defer tx.LoggedRollback(ctx)
+
+	offer, err := model.LoadOfferByToken(ctx, token)
+	if err != nil {
+		respond.Error(ctx, w, errors.Trace(err)) // 500
+		return
+	} else if offer == nil {
+		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(nil,
+			404, "offer_not_found",
+			"The offer you are trying to retrieve does not exist: %s.",
+			id,
+		)))
+		return
+	}
+
+	if offer.Owner != address {
+		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(nil,
+			404, "offer_not_found",
+			"The offer you are trying to retrieve does not exist: %s.",
+			id,
+		)))
+	}
+
+	tx.Commit(ctx)
+
+	respond.Success(ctx, w, svc.Resp{
+		"offer": format.JSONPtr(NewOfferResource(ctx, offer)),
+	})
+}
+
 // CreateOffer routes the offer creation based on authentication. Initial
 // authenticated offer creation calls into CreateInitialOffer, while
 // non-authenticated cross-mint offer propagation calls into

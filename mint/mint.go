@@ -37,6 +37,7 @@ func (c *Configuration) Bind(
 	// mux.HandleFuncC(pat.Get("/assets/:asset/balances/:address"), c.controller.RetrieveBalance)
 
 	// Distributed exchange.
+	mux.HandleFuncC(pat.Get("/offers/:offer"), c.controller.RetrieveOffer)
 	mux.HandleFuncC(pat.Post("/offers"), c.controller.CreateOffer)
 	//mux.HandleFuncC(pat.Post("/assets/offers/:offer/close"), c.controller.CloseOffer)
 

@@ -94,3 +94,33 @@ RETURNING created
 
 	return &offer, nil
 }
+
+// LoadOfferByToken attempts to load an offer for the given token.
+func LoadOfferByToken(
+	ctx context.Context,
+	token string,
+) (*Offer, error) {
+	offer := Offer{
+		Livemode: livemode.Get(ctx),
+		Token:    token,
+	}
+
+	ext := tx.Ext(ctx, MintDB())
+	if rows, err := sqlx.NamedQuery(ext, `
+SELECT *
+FROM offers
+WHERE livemode = :livemode
+  AND token = :token
+`, offer); err != nil {
+		return nil, errors.Trace(err)
+	} else if !rows.Next() {
+		return nil, nil
+	} else if err := rows.StructScan(&offer); err != nil {
+		defer rows.Close()
+		return nil, errors.Trace(err)
+	} else if err := rows.Close(); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &offer, nil
+}

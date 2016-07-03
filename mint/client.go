@@ -98,3 +98,20 @@ func NormalizedAddress(
 
 	return fmt.Sprintf("%s@%s", m[1], m[3]), nil
 }
+
+// NormalizedAddressAndTokenFromID returns a normalized address and token from
+// an id.
+func NormalizedAddressAndTokenFromID(
+	ctx context.Context,
+	id string,
+) (string, string, error) {
+	ss := strings.Split(id, ":")
+	if len(ss) != 2 {
+		return "", "", errors.Trace(errors.Newf("Invalid id: %s", id))
+	}
+	address, err := NormalizedAddress(ctx, ss[0])
+	if err != nil {
+		return "", "", errors.Trace(err)
+	}
+	return address, ss[1], nil
+}
