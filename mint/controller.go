@@ -300,14 +300,36 @@ func (c *controller) CreateOperation(
 	})
 }
 
+// CreateOffer routes the offer creation based on authentication. Initial
+// authenticated offer creation calls into CreateInitialOffer, while
+// non-authenticated cross-mint offer propagation calls into
+// CreateOfferPropagation.
+func (c *controller) CreateOffer(
+	ctx context.Context,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
+	switch authentication.Get(ctx).Status {
+	case authentication.AutStSucceeded:
+		c.CreateInitialOffer(ctx, w, r)
+	case authentication.AutStSkipped:
+		c.CreateOfferPropagation(ctx, w, r)
+	default:
+		respond.Error(ctx, w, errors.Trace(errors.Newf(
+			"Unexpected authentication status for offer creation: %s",
+			authentication.Get(ctx).Status),
+		)) // 500
+	}
+}
+
 // OfferPriceRegexp is used to validate and parse an offer price.
 var OfferPriceRegexp = regexp.MustCompile(
 	"^([0-9]+)\\/([0-9]+)$")
 
-// CreateOffer creates a new offer. Offer creation involves contacting the
-// mints for the offer's assets and storing the canonical version of the offer
-// locally.
-func (c *controller) CreateOffer(
+// CreateInitialOffer creates a new initial offer. Offer creation involves
+// contacting the mints for the offer's assets and storing the canonical
+// version of the offer locally.
+func (c *controller) CreateInitialOffer(
 	ctx context.Context,
 	w http.ResponseWriter,
 	r *http.Request,
@@ -410,8 +432,6 @@ func (c *controller) CreateOffer(
 		return
 	}
 
-	_ = offer
-
 	// We commit first so that the offer is visible to subsequent requests
 	// hitting the mint (from other mint to validate the offer after
 	// propagation).
@@ -421,6 +441,15 @@ func (c *controller) CreateOffer(
 	// unsuccessful.
 
 	respond.Success(ctx, w, svc.Resp{
-		"offer": format.JSONPtr(NewOfferResource(ctx, offer, nil)),
+		"offer": format.JSONPtr(NewOfferResource(ctx, offer)),
 	})
+}
+
+// CreateOfferPropagation creates a new offer through propagation. Propagation
+// is validated by contacting the mint of the offer's owner and stored locally.
+func (c *controller) CreateOfferPropagation(
+	ctx context.Context,
+	w http.ResponseWriter,
+	r *http.Request,
+) {
 }

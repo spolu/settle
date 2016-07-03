@@ -81,20 +81,17 @@ type OfferResource struct {
 	Created  int64  `json:"created"`
 	Livemode bool   `json:"livemode"`
 
-	Pair            string        `json:"pair"`
-	Type            string        `json:"type"`
-	Price           string        `json:"price"`
-	Amount          *big.Int      `json:"amount"`
-	RemainingAmount *big.Int      `json:"remaining_amount"`
-	Status          string        `json:"status"`
-	Transactions    []interface{} `json:"transactons"`
+	Pair   string   `json:"pair"`
+	Type   string   `json:"type"`
+	Price  string   `json:"price"`
+	Amount *big.Int `json:"amount"`
+	Status string   `json:"status"`
 }
 
 // NewOfferResource generates a new resource.
 func NewOfferResource(
 	ctx context.Context,
 	offer *model.Offer,
-	transactions []interface{},
 ) OfferResource {
 	return OfferResource{
 		ID: fmt.Sprintf(
@@ -108,9 +105,7 @@ func NewOfferResource(
 			"%s/%s",
 			(*big.Int)(&offer.BasePrice).String(),
 			(*big.Int)(&offer.QuotePrice).String()),
-		Amount:          (*big.Int)(&offer.Amount),
-		RemainingAmount: (*big.Int)(&offer.Amount),
-		Status:          string(offer.Status),
-		Transactions:    []interface{}{},
+		Amount: (*big.Int)(&offer.Amount),
+		Status: string(offer.Status),
 	}
 }
