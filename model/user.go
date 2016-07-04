@@ -57,8 +57,8 @@ func CreateUser(
 INSERT INTO users
   (token, livemode, username, password_hash)
 VALUES
-  (:token, :livemode, :username, :password_hash)
-RETURNING created
+  (:token, :livemode, :username, :password_hash);
+SELECT created FROM users WHERE rowid IN (SELECT last_insert_rowid())
 `, user); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:

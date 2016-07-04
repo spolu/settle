@@ -6,7 +6,7 @@ const (
 	operationsSQL = `
 CREATE TABLE IF NOT EXISTS operations(
   token VARCHAR(256) NOT NULL,
-  created TIMESTAMP NOT NULL DEFAULT UTC_NOW(),
+  created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   livemode BOOL NOT NULL,
 
   asset VARCHAR(256) NOT NULL,                     -- asset token

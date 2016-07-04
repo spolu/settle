@@ -12,23 +12,6 @@ var schemas = map[string]map[string]string{
 	"mint": map[string]string{},
 }
 
-const (
-	toolsSQL = `
-CREATE OR REPLACE FUNCTION utc_now() RETURNS TIMESTAMP AS $$
-  SELECT CLOCK_TIMESTAMP() AT TIME ZONE 'utc'
-$$ language sql;
-`
-)
-
-func init() {
-	ensureMintDB()
-	RegisterSchema(
-		"mint",
-		"_tools",
-		toolsSQL,
-	)
-}
-
 // RegisterSchema lets schemas register themselves.
 func RegisterSchema(
 	db string,

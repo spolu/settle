@@ -5,12 +5,14 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/mitchellh/go-homedir"
 	"github.com/spolu/peer-currencies/lib/errors"
 
-	// pq is used as underlying sql driver.
-	_ "github.com/lib/pq"
+	// sqlite is used as underlying driver
+	_ "github.com/mattn/go-sqlite3"
 )
 
 var mintDB *sqlx.DB
@@ -21,18 +23,23 @@ func ensureMintDB() {
 	}
 	err := error(nil)
 
-	mintDSN := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		os.Getenv("MINT_DB_HOST"),
-		os.Getenv("MINT_DB_PORT"),
-		os.Getenv("MINT_DB_USER"),
-		os.Getenv("MINT_DB_PASSWORD"),
-		os.Getenv("MINT_DB_NAME"),
-	)
-	mintDB, err = sqlx.Connect("postgres", mintDSN)
+	path := os.Getenv("MINT_DB_PATH")
+	if path == "" {
+		path, err = homedir.Expand("~/.mint/mint.db")
+		if err != nil {
+			log.Fatal(errors.Details(err))
+		}
+	}
+	err = os.MkdirAll(filepath.Dir(path), 0777)
+	if err != nil {
+		log.Fatal(errors.Details(err))
+	}
+
+	mintDB, err = sqlx.Connect("sqlite3", path)
 	if err != nil {
 		log.Fatal(errors.Details(err))
 	} else {
-		fmt.Printf("Initialized postgres mintDB with DSN: %s\n", mintDSN)
+		fmt.Printf("Initialized sqlite3 mintDB with path: %s\n", path)
 	}
 }
 
