@@ -4,8 +4,15 @@ import "github.com/spolu/peer-currencies/model"
 
 const (
 	offersSQL = `
-CREATE TYPE OFFERTYPE AS ENUM ('bid', 'ask');
-CREATE TYPE OFFERSTATUS AS ENUM ('active', 'closed');
+DO $$
+BEGIN
+IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'offertype') THEN
+  CREATE TYPE offertype AS ENUM ('bid', 'ask');
+END IF;
+IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'offerstatus') THEN
+CREATE TYPE offerstatus AS ENUM ('active', 'closed');
+END IF;
+END$$;
 CREATE TABLE IF NOT EXISTS offers(
   token VARCHAR(256) NOT NULL,
   created TIMESTAMP NOT NULL DEFAULT UTC_NOW(),

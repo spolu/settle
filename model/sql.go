@@ -19,8 +19,8 @@ func ensureMintDB() {
 	if mintDB != nil {
 		return
 	}
-
 	err := error(nil)
+
 	mintDSN := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		os.Getenv("MINT_DB_HOST"),
 		os.Getenv("MINT_DB_PORT"),
@@ -32,7 +32,7 @@ func ensureMintDB() {
 	if err != nil {
 		log.Fatal(errors.Details(err))
 	} else {
-		fmt.Printf("Initialized mintDB with DSN: %s\n", mintDSN)
+		fmt.Printf("Initialized postgres mintDB with DSN: %s\n", mintDSN)
 	}
 }
 

@@ -9,6 +9,9 @@ import (
 	"github.com/spolu/peer-currencies/lib/requestlogger"
 	"github.com/spolu/peer-currencies/mint/lib/authentication"
 	"goji.io"
+
+	// force initialization of schemas
+	_ "github.com/spolu/peer-currencies/model/schemas"
 )
 
 // Build initializes the app and its web stack.
