@@ -6,7 +6,7 @@ const (
 	usersSQL = `
 CREATE TABLE IF NOT EXISTS users(
   token VARCHAR(256) NOT NULL,
-  created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created TIMESTAMP NOT NULL,
   livemode BOOL NOT NULL,
 
   username VARCHAR(256) NOT NULL,

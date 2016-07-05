@@ -43,6 +43,7 @@ func CreateBalance(
 	balance := Balance{
 		Token:    token.New("balance"),
 		Livemode: livemode.Get(ctx),
+		Created:  time.Now(),
 
 		Asset: asset,
 		Owner: owner,
@@ -50,12 +51,11 @@ func CreateBalance(
 	}
 
 	ext := tx.Ext(ctx, MintDB())
-	if rows, err := sqlx.NamedQuery(ext, `
+	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO balances
-  (token, livemode, asset, owner, value)
+  (token, livemode, created, asset, owner, value)
 VALUES
-  (:token, :livemode, :asset, :owner, :value)
-RETURNING created
+  (:token, :livemode, :created, :asset, :owner, :value)
 `, balance); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:
@@ -63,13 +63,6 @@ RETURNING created
 				return nil, errors.Trace(ErrUniqueConstraintViolation{err})
 			}
 		}
-		return nil, errors.Trace(err)
-	} else if !rows.Next() {
-		return nil, errors.Newf("Nothing returned from INSERT.")
-	} else if err := rows.StructScan(&balance); err != nil {
-		defer rows.Close()
-		return nil, errors.Trace(err)
-	} else if err := rows.Close(); err != nil {
 		return nil, errors.Trace(err)
 	}
 
@@ -81,14 +74,13 @@ func (b *Balance) Save(
 	ctx context.Context,
 ) error {
 	ext := tx.Ext(ctx, MintDB())
-	rows, err := sqlx.NamedQuery(ext, `
+	_, err := sqlx.NamedExec(ext, `
 UPDATE balances SET value = :value
 WHERE token = :token
 `, b)
 	if err != nil {
 		return errors.Trace(err)
 	}
-	defer rows.Close()
 
 	return nil
 }

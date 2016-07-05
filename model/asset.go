@@ -50,6 +50,7 @@ func CreateAsset(
 	asset := Asset{
 		Token:    token.New("asset"),
 		Livemode: livemode.Get(ctx),
+		Created:  time.Now(),
 
 		Issuer: issuer,
 		Code:   code,
@@ -57,12 +58,11 @@ func CreateAsset(
 	}
 
 	ext := tx.Ext(ctx, MintDB())
-	if rows, err := sqlx.NamedQuery(ext, `
+	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO assets
-  (token, livemode, issuer, code, scale)
+  (token, livemode, created, issuer, code, scale)
 VALUES
-  (:token, :livemode, :issuer, :code, :scale)
-RETURNING created
+  (:token, :livemode, :created, :issuer, :code, :scale)
 `, asset); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:
@@ -70,13 +70,6 @@ RETURNING created
 				return nil, errors.Trace(ErrUniqueConstraintViolation{err})
 			}
 		}
-		return nil, errors.Trace(err)
-	} else if !rows.Next() {
-		return nil, errors.Newf("Nothing returned from INSERT.")
-	} else if err := rows.StructScan(&asset); err != nil {
-		defer rows.Close()
-		return nil, errors.Trace(err)
-	} else if err := rows.Close(); err != nil {
 		return nil, errors.Trace(err)
 	}
 
@@ -88,14 +81,13 @@ func (u *Asset) Save(
 	ctx context.Context,
 ) error {
 	ext := tx.Ext(ctx, MintDB())
-	rows, err := sqlx.NamedQuery(ext, `
+	_, err := sqlx.NamedExec(ext, `
 UPDATE users SET issuer = :issuer, code = :code, scale = :scale
 WHERE token = :token
 `, u)
 	if err != nil {
 		return errors.Trace(err)
 	}
-	defer rows.Close()
 
 	return nil
 }

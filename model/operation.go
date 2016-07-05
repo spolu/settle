@@ -48,6 +48,7 @@ func CreateOperation(
 	operation := Operation{
 		Token:    token.New("operation"),
 		Livemode: livemode.Get(ctx),
+		Created:  time.Now(),
 
 		Asset:       asset,
 		Source:      source,
@@ -56,12 +57,11 @@ func CreateOperation(
 	}
 
 	ext := tx.Ext(ctx, MintDB())
-	if rows, err := sqlx.NamedQuery(ext, `
+	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO operations
-  (token, livemode, asset, source, destination, amount)
+  (token, livemode, created, asset, source, destination, amount)
 VALUES
-  (:token, :livemode, :asset, :source, :destination, :amount)
-RETURNING created
+  (:token, :livemode, :created, :asset, :source, :destination, :amount)
 `, operation); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:
@@ -69,13 +69,6 @@ RETURNING created
 				return nil, errors.Trace(ErrUniqueConstraintViolation{err})
 			}
 		}
-		return nil, errors.Trace(err)
-	} else if !rows.Next() {
-		return nil, errors.Newf("Nothing returned from INSERT.")
-	} else if err := rows.StructScan(&operation); err != nil {
-		defer rows.Close()
-		return nil, errors.Trace(err)
-	} else if err := rows.Close(); err != nil {
 		return nil, errors.Trace(err)
 	}
 

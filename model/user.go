@@ -41,6 +41,7 @@ func CreateUser(
 	user := User{
 		Token:    token.New("user"),
 		Livemode: livemode.Get(ctx),
+		Created:  time.Now(),
 
 		Username: username,
 	}
@@ -53,12 +54,11 @@ func CreateUser(
 	user.PasswordHash = base64.StdEncoding.EncodeToString(h)
 
 	ext := tx.Ext(ctx, MintDB())
-	if rows, err := sqlx.NamedQuery(ext, `
+	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO users
-  (token, livemode, username, password_hash)
+  (token, livemode, created, username, password_hash)
 VALUES
-  (:token, :livemode, :username, :password_hash);
-SELECT created FROM users WHERE rowid IN (SELECT last_insert_rowid())
+  (:token, :livemode, :created, :username, :password_hash)
 `, user); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:
@@ -66,13 +66,6 @@ SELECT created FROM users WHERE rowid IN (SELECT last_insert_rowid())
 				return nil, errors.Trace(ErrUniqueConstraintViolation{err})
 			}
 		}
-		return nil, errors.Trace(err)
-	} else if !rows.Next() {
-		return nil, errors.Newf("Nothing returned from INSERT.")
-	} else if err := rows.StructScan(&user); err != nil {
-		defer rows.Close()
-		return nil, errors.Trace(err)
-	} else if err := rows.Close(); err != nil {
 		return nil, errors.Trace(err)
 	}
 
@@ -84,14 +77,13 @@ func (u *User) Save(
 	ctx context.Context,
 ) error {
 	ext := tx.Ext(ctx, MintDB())
-	rows, err := sqlx.NamedQuery(ext, `
+	_, err := sqlx.NamedExec(ext, `
 UPDATE users SET username = :username, password_hash = :password_hash
 WHERE token = :token
 `, u)
 	if err != nil {
 		return errors.Trace(err)
 	}
-	defer rows.Close()
 
 	return nil
 }

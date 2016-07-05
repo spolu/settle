@@ -6,12 +6,12 @@ const (
 	balancesSQL = `
 CREATE TABLE IF NOT EXISTS balances(
   token VARCHAR(256) NOT NULL,
-  created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created TIMESTAMP NOT NULL,
   livemode BOOL NOT NULL,
 
   asset VARCHAR(256) NOT NULL,  -- the balance's asset token
   owner VARCHAR(256) NOT NULL,  -- the balance's owner's address
-  value NUMERIC(39) NOT NULL,   -- the balance's value
+  value VARCHAR(64) NOT NULL,   -- the balance's value
 
   PRIMARY KEY(token),
   CONSTRAINT balances_asset_fk FOREIGN KEY (asset) REFERENCES assets(token),

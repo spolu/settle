@@ -55,6 +55,7 @@ func CreateOffer(
 	offer := Offer{
 		Token:    token.New("offer"),
 		Livemode: livemode.Get(ctx),
+		Created:  time.Now(),
 
 		Owner:      owner,
 		BaseAsset:  baseAsset,
@@ -67,13 +68,13 @@ func CreateOffer(
 	}
 
 	ext := tx.Ext(ctx, MintDB())
-	if rows, err := sqlx.NamedQuery(ext, `
+	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO offers
-  (token, livemode, owner, base_asset, quote_asset, type, base_price,
-   quote_price, amount, status)
+  (token, livemode, created, owner, base_asset, quote_asset, type,
+   base_price, quote_price, amount, status)
 VALUES
-  (:token, :livemode, :owner, :base_asset, :quote_asset, :type, :base_price,
-  :quote_price, :amount, :status)
+  (:token, :livemode, :created, :owner, :base_asset, :quote_asset, :type,
+   :base_price, :quote_price, :amount, :status)
 RETURNING created
 `, offer); err != nil {
 		switch err := err.(type) {
@@ -82,13 +83,6 @@ RETURNING created
 				return nil, errors.Trace(ErrUniqueConstraintViolation{err})
 			}
 		}
-		return nil, errors.Trace(err)
-	} else if !rows.Next() {
-		return nil, errors.Newf("Nothing returned from INSERT.")
-	} else if err := rows.StructScan(&offer); err != nil {
-		defer rows.Close()
-		return nil, errors.Trace(err)
-	} else if err := rows.Close(); err != nil {
 		return nil, errors.Trace(err)
 	}
 
