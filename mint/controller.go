@@ -405,7 +405,7 @@ func (c *controller) CreateInitialOffer(
 	case string(model.OfTpBid):
 		oftype = model.OfTpBid
 	case string(model.OfTpAsk):
-		oftype = model.OfTpBid
+		oftype = model.OfTpAsk
 	default:
 		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(err,
 			400, "type_invalid",

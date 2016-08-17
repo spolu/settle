@@ -1,19 +1,31 @@
 package mint
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/spolu/peer-currencies/lib/errors"
 	"github.com/spolu/peer-currencies/lib/livemode"
+	"github.com/spolu/peer-currencies/lib/svc"
 
 	"golang.org/x/net/context"
 )
 
 // Client expose an interface to perform queries on remote mints.
 type Client struct {
+	httpClient *http.Client
+}
+
+// Init initializes the mint client.
+func (c *Client) Init(
+	ctx context.Context,
+) error {
+	c.httpClient = &http.Client{}
+	return nil
 }
 
 // AssetNameRegexp is used to validate and parse asset names.
@@ -114,4 +126,38 @@ func NormalizedAddressAndTokenFromID(
 		return "", "", errors.Trace(err)
 	}
 	return address, ss[1], nil
+}
+
+// RetrieveOffer retrieves an offer given its ID by extracting the mint and
+// retrieving it from there.
+func (c *Client) RetrieveOffer(
+	ctx context.Context,
+	id string,
+) (*OfferResource, error) {
+	address, _, err := NormalizedAddressAndTokenFromID(ctx, id)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	_, host, err := UsernameAndMintHostFromAddress(ctx, address)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	r, err := c.httpClient.Get("https://%s:2406/offers/%s", host, id)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	defer r.Body.Close()
+
+	var raw svc.Resp
+	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	var offer OfferResource
+	if err := raw.Exract("ofer", &offer); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &offer, nil
 }
