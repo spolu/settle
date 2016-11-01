@@ -5,15 +5,14 @@ import (
 
 	"goji.io"
 
-	// force initialization of schemas
-	"github.com/spolu/peer-currencies/lib/errors"
-	"github.com/spolu/peer-currencies/lib/livemode"
-	"github.com/spolu/peer-currencies/lib/recoverer"
-	"github.com/spolu/peer-currencies/lib/requestlogger"
-	"github.com/spolu/peer-currencies/mint/lib/authentication"
+	"github.com/spolu/settle/lib/errors"
+	"github.com/spolu/settle/lib/livemode"
+	"github.com/spolu/settle/lib/recoverer"
+	"github.com/spolu/settle/lib/requestlogger"
+	"github.com/spolu/settle/mint/lib/authentication"
 
 	// force initialization of schemas
-	_ "github.com/spolu/peer-currencies/model/schemas"
+	_ "github.com/spolu/settle/mint/model/schemas"
 )
 
 // Build initializes the app and its web stack.

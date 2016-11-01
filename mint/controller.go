@@ -13,7 +13,7 @@ import (
 	"github.com/spolu/settle/lib/svc"
 	"github.com/spolu/settle/lib/tx"
 	"github.com/spolu/settle/mint/lib/authentication"
-	"github.com/spolu/settle/model"
+	"github.com/spolu/settle/mint/model"
 	"goji.io/pat"
 
 	"golang.org/x/net/context"

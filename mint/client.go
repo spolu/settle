@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/spolu/peer-currencies/lib/errors"
-	"github.com/spolu/peer-currencies/lib/livemode"
-	"github.com/spolu/peer-currencies/lib/svc"
+	"github.com/spolu/settle/lib/errors"
+	"github.com/spolu/settle/lib/livemode"
+	"github.com/spolu/settle/lib/svc"
 	"golang.org/x/net/context"
 )
 
@@ -142,7 +142,8 @@ func (c *Client) RetrieveOffer(
 		return nil, errors.Trace(err)
 	}
 
-	r, err := c.httpClient.Get("https://%s:2406/offers/%s", host, id)
+	r, err := c.httpClient.Get(
+		fmt.Sprintf("https://%s:2406/offers/%s", host, id))
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -154,7 +155,7 @@ func (c *Client) RetrieveOffer(
 	}
 
 	var offer OfferResource
-	if err := raw.Exract("ofer", &offer); err != nil {
+	if err := raw.Extract("ofer", &offer); err != nil {
 		return nil, errors.Trace(err)
 	}
 
