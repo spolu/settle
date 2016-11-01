@@ -1,4 +1,4 @@
-# Settle
+# Settle: Trust graph for the Internet
 
 While cryptocurrencies are maintained by distributed ledgers with no central
 authority, their trust model and graph is still fully centralized: everyone has
