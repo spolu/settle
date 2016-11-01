@@ -5,7 +5,7 @@ package model
 import (
 	"fmt"
 
-	"github.com/spolu/peer-currencies/lib/errors"
+	"github.com/spolu/settle/lib/errors"
 )
 
 var schemas = map[string]map[string]string{

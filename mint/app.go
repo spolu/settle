@@ -3,12 +3,14 @@ package mint
 import (
 	"os"
 
+	"goji.io"
+
+	// force initialization of schemas
 	"github.com/spolu/peer-currencies/lib/errors"
 	"github.com/spolu/peer-currencies/lib/livemode"
 	"github.com/spolu/peer-currencies/lib/recoverer"
 	"github.com/spolu/peer-currencies/lib/requestlogger"
 	"github.com/spolu/peer-currencies/mint/lib/authentication"
-	"goji.io"
 
 	// force initialization of schemas
 	_ "github.com/spolu/peer-currencies/model/schemas"

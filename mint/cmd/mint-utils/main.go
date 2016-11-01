@@ -6,14 +6,10 @@ import (
 
 	"golang.org/x/net/context"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/spolu/peer-currencies/lib/livemode"
-	"github.com/spolu/peer-currencies/lib/logging"
-	"github.com/spolu/peer-currencies/model"
+	"github.com/spolu/settle/lib/livemode"
+	"github.com/spolu/settle/lib/logging"
+	"github.com/spolu/settle/mint/model"
 )
-
-// ethBackends map livemode to Ethereum backends.
-var ethBackends = map[bool]bind.ContractBackend{}
 
 func main() {
 	var fct = flag.String("function", "none", "the function to execute")

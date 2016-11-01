@@ -7,15 +7,14 @@ import (
 	"regexp"
 	"strconv"
 
+	"github.com/spolu/settle/lib/errors"
+	"github.com/spolu/settle/lib/format"
+	"github.com/spolu/settle/lib/respond"
+	"github.com/spolu/settle/lib/svc"
+	"github.com/spolu/settle/lib/tx"
+	"github.com/spolu/settle/mint/lib/authentication"
+	"github.com/spolu/settle/model"
 	"goji.io/pat"
-
-	"github.com/spolu/peer-currencies/lib/errors"
-	"github.com/spolu/peer-currencies/lib/format"
-	"github.com/spolu/peer-currencies/lib/respond"
-	"github.com/spolu/peer-currencies/lib/svc"
-	"github.com/spolu/peer-currencies/lib/tx"
-	"github.com/spolu/peer-currencies/mint/lib/authentication"
-	"github.com/spolu/peer-currencies/model"
 
 	"golang.org/x/net/context"
 )

@@ -3,8 +3,8 @@ package schemas
 import (
 	"log"
 
-	"github.com/spolu/peer-currencies/lib/errors"
-	"github.com/spolu/peer-currencies/model"
+	"github.com/spolu/settle/lib/errors"
+	"github.com/spolu/settle/mint/model"
 )
 
 func init() {

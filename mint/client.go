@@ -11,7 +11,6 @@ import (
 	"github.com/spolu/peer-currencies/lib/errors"
 	"github.com/spolu/peer-currencies/lib/livemode"
 	"github.com/spolu/peer-currencies/lib/svc"
-
 	"golang.org/x/net/context"
 )
 

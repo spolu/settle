@@ -4,11 +4,11 @@ import (
 	"net/http"
 	"regexp"
 
-	"github.com/spolu/peer-currencies/lib/errors"
-	"github.com/spolu/peer-currencies/lib/livemode"
-	"github.com/spolu/peer-currencies/lib/logging"
-	"github.com/spolu/peer-currencies/lib/respond"
-	"github.com/spolu/peer-currencies/model"
+	"github.com/spolu/settle/lib/errors"
+	"github.com/spolu/settle/lib/livemode"
+	"github.com/spolu/settle/lib/logging"
+	"github.com/spolu/settle/lib/respond"
+	"github.com/spolu/settle/mint/model"
 	"goji.io"
 	"golang.org/x/net/context"
 )

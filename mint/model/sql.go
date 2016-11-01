@@ -9,7 +9,7 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/mitchellh/go-homedir"
-	"github.com/spolu/peer-currencies/lib/errors"
+	"github.com/spolu/settle/lib/errors"
 
 	// sqlite is used as underlying driver
 	_ "github.com/mattn/go-sqlite3"

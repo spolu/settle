@@ -8,10 +8,10 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
-	"github.com/spolu/peer-currencies/lib/errors"
-	"github.com/spolu/peer-currencies/lib/livemode"
-	"github.com/spolu/peer-currencies/lib/token"
-	"github.com/spolu/peer-currencies/lib/tx"
+	"github.com/spolu/settle/lib/errors"
+	"github.com/spolu/settle/lib/livemode"
+	"github.com/spolu/settle/lib/token"
+	"github.com/spolu/settle/lib/tx"
 	"golang.org/x/net/context"
 )
 
