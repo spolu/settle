@@ -1,4 +1,6 @@
-# Settle: Trust graph for value exchange on the Internet
+# Settle
+
+*Decentralized trust graph for value exchange on the Internet*
 
 While cryptocurrencies are maintained by distributed ledgers with no central
 authority, their trust model and graph is still fully centralized: everyone has
