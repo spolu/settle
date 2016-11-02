@@ -401,17 +401,6 @@ func (c *controller) CreateCanonicalOffer(
 		return
 	}
 
-	// Validate that the offer shares its base asset owner.
-	if pair[0].Issuer != owner {
-		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(nil,
-			400, "operation_not_authorized",
-			"You can only create offers on base assets you have issued. The "+
-				"issuer of the base asset of this offer is %s, expected %s. "+
-				"You can only create offers on pairs of the form %s/*",
-			pair[0].Issuer, owner, owner)))
-		return
-	}
-
 	// Validate price.
 	m := OfferPriceRegexp.FindStringSubmatch(r.PostFormValue("price"))
 	if len(m) == 0 {
