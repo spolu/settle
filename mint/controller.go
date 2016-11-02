@@ -351,7 +351,7 @@ func (c *controller) RetrieveOffer(
 }
 
 // CreateOffer routes the offer creation based on authentication. Initial
-// authenticated offer creation calls into CreateInitialOffer, while
+// authenticated offer creation calls into CreateCanonicalOffer, while
 // non-authenticated cross-mint offer propagation calls into
 // CreateOfferPropagation.
 func (c *controller) CreateOffer(
@@ -361,7 +361,7 @@ func (c *controller) CreateOffer(
 ) {
 	switch authentication.Get(ctx).Status {
 	case authentication.AutStSucceeded:
-		c.CreateInitialOffer(ctx, w, r)
+		c.CreateCanonicalOffer(ctx, w, r)
 	case authentication.AutStSkipped:
 		c.CreateOfferPropagation(ctx, w, r)
 	default:
@@ -376,14 +376,17 @@ func (c *controller) CreateOffer(
 var OfferPriceRegexp = regexp.MustCompile(
 	"^([0-9]+)\\/([0-9]+)$")
 
-// CreateInitialOffer creates a new initial offer. Offer creation involves
+// CreateCanonicalOffer creates a new canonical offer. Offer creation involves
 // contacting the mints for the offer's assets and storing the canonical
 // version of the offer locally.
-func (c *controller) CreateInitialOffer(
+func (c *controller) CreateCanonicalOffer(
 	ctx context.Context,
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
+	owner := fmt.Sprintf("%s@%s",
+		authentication.Get(ctx).User.Username, c.mintHost)
+
 	// Validate asset pair.
 	pair, err := AssetResourcesFromPair(
 		ctx,
@@ -398,6 +401,17 @@ func (c *controller) CreateInitialOffer(
 		return
 	}
 
+	// Validate that the offer shares its base asset owner.
+	if pair[0].Issuer != owner {
+		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(nil,
+			400, "operation_not_authorized",
+			"You can only create offers on base assets you have issued. The "+
+				"issuer of the base asset of this offer is %s, expected %s. "+
+				"You can only create offers on pairs of the form %s/*",
+			pair[0].Issuer, owner, owner)))
+		return
+	}
+
 	// Validate price.
 	m := OfferPriceRegexp.FindStringSubmatch(r.PostFormValue("price"))
 	if len(m) == 0 {
@@ -408,6 +422,7 @@ func (c *controller) CreateInitialOffer(
 				"is the quote asset price.",
 			r.PostFormValue("type"),
 		)))
+		return
 	}
 	var basePrice big.Int
 	_, success := basePrice.SetString(m[1], 10)
@@ -450,9 +465,6 @@ func (c *controller) CreateInitialOffer(
 		)))
 		return
 	}
-
-	owner := fmt.Sprintf("%s@%s",
-		authentication.Get(ctx).User.Username, c.mintHost)
 
 	ctx = tx.Begin(ctx, model.MintDB())
 	defer tx.LoggedRollback(ctx)
