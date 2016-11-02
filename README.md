@@ -6,14 +6,13 @@ While cryptocurrencies are maintained by distributed ledgers with no central
 authority, their trust model and graph is still fully centralized: everyone has
 to trust the currency.
 
-Settle's goal is to enable a new "verb" on the Internet: trust; doing so,
-constructing a decentralized trust graph that can be leveraged to achieve fluid
-and free exchange of value between humans and machines.
+Settle's goal is to explore a new trust primitive on the Internet, and doing
+so, construct a decentralized trust graph that can be leveraged to achieve
+fluid and free exchange of value between humans and machines.
 
 The Settle network is composed of [mint](mint/README.md) servers. Anyone can
-run a mint and no particular mint is required for the network to operate (a
-network of mints can also properly run in a disconnected split of the
-Internet).
+run a mint and no particular mint or topology is required for the network to
+operate properly.
 
 Basic operations supported by the Settle network:
 - *Issue asset*: users can issue assets (basically IOUs), such as
@@ -29,7 +28,11 @@ their assets against B's assets.
 
 ## Example use cases
 
-### Local communities
+### Peer-to-peer
+
+*TODO*
+
+### Unlinked refunds
 
 *TODO*
 
