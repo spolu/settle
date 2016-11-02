@@ -14,20 +14,25 @@ import (
 	"golang.org/x/net/context"
 )
 
-// Offer represents an offer for an asset pair. Offers are stored on the mint
-// of the offer's owner (which acts as reference on its state). They are also
-// stored indicatively on the mints of the offer's assets (as bid on one, as
-// ask on the other) for discovery.
+// Offer represents an offer for an asset pair.
+// - Offers are always represented as asks (ask on pair A/B offer to sell A for
+//   B).
+// - Canonical offers are stored on the mint of the offer's owner (which acts
+//   as source of truth on its state).
+// - Canonical offers's base price must be in an asset issued by the owner of
+//   the offer.
+// Non canonical offers are indicatively stored on the mints of the offers's
+// assets, to compute order books.
 type Offer struct {
 	Token    string
 	Created  time.Time
 	Livemode bool
 
+	Canonical bool // The offer was created on this mint.
+
 	Owner      string // Owner user address.
 	BaseAsset  string `db:"base_asset"`
 	QuoteAsset string `db:"quote_asset"`
-
-	Type OfType
 
 	BasePrice  Amount `db:"base_price"`
 	QuotePrice Amount `db:"quote_price"`
@@ -43,10 +48,10 @@ func init() {
 // CreateOffer creates and stores a new Offer object.
 func CreateOffer(
 	ctx context.Context,
+	canonical bool,
 	owner string,
 	baseAsset string,
 	quoteAsset string,
-	oftype OfType,
 	basePrice Amount,
 	quotePrice Amount,
 	amount Amount,
@@ -57,10 +62,10 @@ func CreateOffer(
 		Livemode: livemode.Get(ctx),
 		Created:  time.Now(),
 
+		Canonical:  canonical,
 		Owner:      owner,
 		BaseAsset:  baseAsset,
 		QuoteAsset: quoteAsset,
-		Type:       oftype,
 		BasePrice:  basePrice,
 		QuotePrice: quotePrice,
 		Amount:     amount,
@@ -70,12 +75,11 @@ func CreateOffer(
 	ext := tx.Ext(ctx, MintDB())
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO offers
-  (token, livemode, created, owner, base_asset, quote_asset, type,
+  (token, livemode, created, canonical, owner, base_asset, quote_asset,
    base_price, quote_price, amount, status)
 VALUES
-  (:token, :livemode, :created, :owner, :base_asset, :quote_asset, :type,
+  (:token, :livemode, :created, :canonical, :owner, :base_asset, :quote_asset,
    :base_price, :quote_price, :amount, :status)
-RETURNING created
 `, offer); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:

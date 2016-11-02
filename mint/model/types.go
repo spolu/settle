@@ -35,35 +35,6 @@ func (b Amount) Value() (value driver.Value, err error) {
 	return (*big.Int)(&b).String(), nil
 }
 
-// OfType is the type of an offer type.
-type OfType string
-
-const (
-	//OfTpBid is used to mark an offer as a bid.
-	OfTpBid OfType = "bid"
-	//OfTpAsk is used to mark an offer as an ask.
-	OfTpAsk OfType = "ask"
-)
-
-// Value implements driver.Valuer
-func (t OfType) Value() (value driver.Value, err error) {
-	return string(t), nil
-}
-
-// Scan implements sql.Scanner.
-func (t *OfType) Scan(src interface{}) error {
-	switch src := src.(type) {
-	case []byte:
-		*t = OfType(src)
-	case string:
-		*t = OfType(src)
-	default:
-		return errors.Newf("Incompatible type for OfType with value: %q", src)
-	}
-
-	return nil
-}
-
 // OfStatus is the type of an offer status.
 type OfStatus string
 

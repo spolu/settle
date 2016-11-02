@@ -82,7 +82,6 @@ type OfferResource struct {
 	Livemode bool   `json:"livemode"`
 
 	Pair   string   `json:"pair"`
-	Type   string   `json:"type"`
 	Price  string   `json:"price"`
 	Amount *big.Int `json:"amount"`
 	Status string   `json:"status"`
@@ -100,7 +99,6 @@ func NewOfferResource(
 		Livemode: offer.Livemode,
 
 		Pair: fmt.Sprintf("%s/%s", offer.BaseAsset, offer.QuoteAsset),
-		Type: string(offer.Type),
 		Price: fmt.Sprintf(
 			"%s/%s",
 			(*big.Int)(&offer.BasePrice).String(),

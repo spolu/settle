@@ -398,22 +398,6 @@ func (c *controller) CreateInitialOffer(
 		return
 	}
 
-	// Validate bid.
-	var oftype model.OfType
-	switch r.PostFormValue("type") {
-	case string(model.OfTpBid):
-		oftype = model.OfTpBid
-	case string(model.OfTpAsk):
-		oftype = model.OfTpAsk
-	default:
-		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(err,
-			400, "type_invalid",
-			"The offer type you provided is invalid: %s. Accepted values are "+
-				"bid, ask.",
-			r.PostFormValue("type"),
-		)))
-	}
-
 	// Validate price.
 	m := OfferPriceRegexp.FindStringSubmatch(r.PostFormValue("price"))
 	if len(m) == 0 {
@@ -475,8 +459,9 @@ func (c *controller) CreateInitialOffer(
 
 	// Create canonical offer locally.
 	offer, err := model.CreateOffer(ctx,
-		owner, pair[0].Name, pair[1].Name, oftype, model.Amount(basePrice),
-		model.Amount(quotePrice), model.Amount(amount), model.OfStActive)
+		true, owner, pair[0].Name, pair[1].Name,
+		model.Amount(basePrice), model.Amount(quotePrice),
+		model.Amount(amount), model.OfStActive)
 	if err != nil {
 		respond.Error(ctx, w, errors.Trace(err)) // 500
 		return
