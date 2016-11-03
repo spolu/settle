@@ -6,9 +6,11 @@ import (
 	"net/http"
 	"regexp"
 	"strconv"
+	"time"
 
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/format"
+	"github.com/spolu/settle/lib/livemode"
 	"github.com/spolu/settle/lib/respond"
 	"github.com/spolu/settle/lib/svc"
 	"github.com/spolu/settle/lib/tx"
@@ -95,10 +97,7 @@ func (c *controller) CreateOperation(
 	r *http.Request,
 ) {
 	// Validate asset.
-	a, err := AssetResourceFromName(
-		ctx,
-		pat.Param(ctx, "asset"),
-	)
+	a, err := AssetResourceFromName(ctx, pat.Param(ctx, "asset"))
 	if err != nil {
 		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(err,
 			400, "asset_invalid",
@@ -313,7 +312,8 @@ func (c *controller) RetrieveOffer(
 	if err != nil {
 		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(err,
 			400, "id_invalid",
-			"The offer id you provided is invalid: %s.",
+			"The offer id you provided is invalid: %s. Offer ids must have "+
+				"the form kgodel@princeton.edu:offer_*",
 			id,
 		)))
 		return
@@ -363,7 +363,7 @@ func (c *controller) CreateOffer(
 	case authentication.AutStSucceeded:
 		c.CreateCanonicalOffer(ctx, w, r)
 	case authentication.AutStSkipped:
-		c.CreateOfferPropagation(ctx, w, r)
+		c.CreatePropagatedOffer(ctx, w, r)
 	default:
 		respond.Error(ctx, w, errors.Trace(errors.Newf(
 			"Unexpected authentication status for offer creation: %s",
@@ -388,10 +388,7 @@ func (c *controller) CreateCanonicalOffer(
 		authentication.Get(ctx).User.Username, c.mintHost)
 
 	// Validate asset pair.
-	pair, err := AssetResourcesFromPair(
-		ctx,
-		r.PostFormValue("pair"),
-	)
+	pair, err := AssetResourcesFromPair(ctx, r.PostFormValue("pair"))
 	if err != nil {
 		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(err,
 			400, "pair_invalid",
@@ -409,7 +406,7 @@ func (c *controller) CreateCanonicalOffer(
 			"The offer price you provided is invalid: %s. Prices must have "+
 				"the form \"pB/pQ\" where pB is the base asset price and pQ "+
 				"is the quote asset price.",
-			r.PostFormValue("type"),
+			r.PostFormValue("price"),
 		)))
 		return
 	}
@@ -427,7 +424,7 @@ func (c *controller) CreateCanonicalOffer(
 		return
 	}
 	var quotePrice big.Int
-	_, success = quotePrice.SetString(m[1], 10)
+	_, success = quotePrice.SetString(m[2], 10)
 	if !success ||
 		quotePrice.Cmp(new(big.Int)) < 0 ||
 		quotePrice.Cmp(model.MaxAssetAmount) >= 0 {
@@ -435,7 +432,7 @@ func (c *controller) CreateCanonicalOffer(
 			400, "price_invalid",
 			"The quote asset price you provided is invalid: %s. Asset prices "+
 				"must be integers between 0 and 2^128.",
-			m[1],
+			m[2],
 		)))
 		return
 	}
@@ -459,8 +456,8 @@ func (c *controller) CreateCanonicalOffer(
 	defer tx.LoggedRollback(ctx)
 
 	// Create canonical offer locally.
-	offer, err := model.CreateOffer(ctx,
-		true, owner, pair[0].Name, pair[1].Name,
+	offer, err := model.CreateCanonicalOffer(ctx,
+		owner, pair[0].Name, pair[1].Name,
 		model.Amount(basePrice), model.Amount(quotePrice),
 		model.Amount(amount), model.OfStActive)
 	if err != nil {
@@ -481,11 +478,149 @@ func (c *controller) CreateCanonicalOffer(
 	})
 }
 
-// CreateOfferPropagation creates a new offer through propagation. Propagation
+// CreatePropagatedOffer creates a new offer through propagation. Propagation
 // is validated by contacting the mint of the offer's owner and stored locally.
-func (c *controller) CreateOfferPropagation(
+func (c *controller) CreatePropagatedOffer(
 	ctx context.Context,
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
+	// Validate id.
+	id := r.PostFormValue("id")
+	owner, token, err := NormalizedAddressAndTokenFromID(ctx, id)
+	if err != nil {
+		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(err,
+			400, "id_invalid",
+			"The offer id you provided is invalid: %s. Offer ids must have "+
+				"the form kgodel@princeton.edu:offer_*",
+			id,
+		)))
+		return
+	}
+	_, host, err := UsernameAndMintHostFromAddress(ctx, owner)
+	if err != nil {
+		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(err,
+			400, "id_invalid",
+			"The offer id you provided has an invalid owner: %s.",
+			owner,
+		)))
+		return
+	}
+
+	ctx = tx.Begin(ctx, model.MintDB())
+	defer tx.LoggedRollback(ctx)
+
+	// Check if the offer exists locally
+	offer, err := model.LoadOfferByToken(ctx, token)
+	if err != nil {
+		respond.Error(ctx, w, errors.Trace(err)) // 500
+		return
+	}
+
+	// If the mint owns this offer, just return
+	if offer != nil && offer.Type == model.OfTpCanonical {
+		respond.Success(ctx, w, svc.Resp{
+			"offer": format.JSONPtr(NewOfferResource(ctx, offer)),
+		})
+		return
+	}
+
+	// Check that the offer exists and the mint is reachable.
+	o, err := c.client.RetrieveOffer(ctx, id)
+	if err != nil {
+		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(err,
+			402, "canonical_offer_cannot_be_retrieved",
+			"The canonical offer %s could not be retrieved. This might mean "+
+				"that mint %s is not reachable from this mint or can be due "+
+				"to the fact that %s is not valid anymore on %s.",
+			id, host, id, host,
+		)))
+		return
+	}
+
+	// Validate livemode.
+	if o.Livemode != livemode.Get(ctx) {
+		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(err,
+			402, "retrieved_livemode_invalid",
+			"The livemode of the offer retrieved is invalid: %s.",
+			o.Livemode,
+		)))
+		return
+	}
+
+	// Validate asset pair.
+	pair, err := AssetResourcesFromPair(ctx, o.Pair)
+	if err != nil {
+		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(err,
+			402, "retrieved_pair_invalid",
+			"The asset pair of the offer retrieved is invalid: %s.",
+			o.Pair,
+		)))
+		return
+	}
+
+	// Validate price.
+	m := OfferPriceRegexp.FindStringSubmatch(o.Price)
+	if len(m) == 0 {
+		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(err,
+			402, "retrieved_price_invalid",
+			"The offer price of the retrieved offer is invalid: %s.",
+			o.Price,
+		)))
+		return
+	}
+	var basePrice big.Int
+	_, success := basePrice.SetString(m[1], 10)
+	if !success ||
+		basePrice.Cmp(new(big.Int)) < 0 ||
+		basePrice.Cmp(model.MaxAssetAmount) >= 0 {
+		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(err,
+			402, "retrieved_price_invalid",
+			"The base asset price of the retrieved offer is invalid: %s.",
+			m[1],
+		)))
+		return
+	}
+	var quotePrice big.Int
+	_, success = quotePrice.SetString(m[2], 10)
+	if !success ||
+		quotePrice.Cmp(new(big.Int)) < 0 ||
+		quotePrice.Cmp(model.MaxAssetAmount) >= 0 {
+		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(err,
+			400, "price_invalid",
+			"The quote asset price of the retrieved offer is invalid: %s.",
+			m[2],
+		)))
+		return
+	}
+
+	if offer != nil {
+		offer.Owner = owner
+		offer.BaseAsset = pair[0].Name
+		offer.QuoteAsset = pair[1].Name
+		offer.BasePrice = model.Amount(basePrice)
+		offer.QuotePrice = model.Amount(quotePrice)
+		offer.Amount = model.Amount(*o.Amount)
+		offer.Status = model.OfStatus(o.Status)
+
+		err = offer.Save(ctx)
+		if err != nil {
+			respond.Error(ctx, w, errors.Trace(err)) // 500
+			return
+		}
+	} else {
+		// Create non-canonical offer locally.
+		offer, err = model.CreatePropagatedOffer(ctx,
+			token, time.Unix(0, o.Created*1000*1000), owner, pair[0].Name, pair[1].Name,
+			model.Amount(basePrice), model.Amount(quotePrice),
+			model.Amount(*o.Amount), model.OfStActive)
+		if err != nil {
+			respond.Error(ctx, w, errors.Trace(err)) // 500
+			return
+		}
+	}
+
+	respond.Success(ctx, w, svc.Resp{
+		"offer": format.JSONPtr(NewOfferResource(ctx, offer)),
+	})
 }

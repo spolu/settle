@@ -75,7 +75,8 @@ func (b *Balance) Save(
 ) error {
 	ext := tx.Ext(ctx, MintDB())
 	_, err := sqlx.NamedExec(ext, `
-UPDATE balances SET value = :value
+UPDATE balances
+SET value = :value
 WHERE token = :token
 `, b)
 	if err != nil {

@@ -15,20 +15,16 @@ import (
 )
 
 // Offer represents an offer for an asset pair.
-// - Offers are always represented as asks (ask on pair A/B offer to sell A for
-//   B).
+// - Offers are always represented as asks
+//   (ask on pair A/B offer to sell A for B).
 // - Canonical offers are stored on the mint of the offer's owner (which acts
 //   as source of truth on its state).
-// - Canonical offers's base price must be in an asset issued by the owner of
-//   the offer.
-// Non canonical offers are indicatively stored on the mints of the offers's
-// assets, to compute order books.
+// - Propagated offers are indicatively stored on the mints of the offers's
+//   assets, to compute order books.
 type Offer struct {
 	Token    string
 	Created  time.Time
 	Livemode bool
-
-	Canonical bool // The offer was created on this mint.
 
 	Owner      string // Owner user address.
 	BaseAsset  string `db:"base_asset"`
@@ -38,6 +34,7 @@ type Offer struct {
 	QuotePrice Amount `db:"quote_price"`
 	Amount     Amount
 
+	Type   OfType
 	Status OfStatus
 }
 
@@ -45,10 +42,9 @@ func init() {
 	ensureMintDB()
 }
 
-// CreateOffer creates and stores a new Offer object.
-func CreateOffer(
+// CreateCanonicalOffer creates and stores a new canonical Offer object.
+func CreateCanonicalOffer(
 	ctx context.Context,
-	canonical bool,
 	owner string,
 	baseAsset string,
 	quoteAsset string,
@@ -62,24 +58,24 @@ func CreateOffer(
 		Livemode: livemode.Get(ctx),
 		Created:  time.Now(),
 
-		Canonical:  canonical,
 		Owner:      owner,
 		BaseAsset:  baseAsset,
 		QuoteAsset: quoteAsset,
 		BasePrice:  basePrice,
 		QuotePrice: quotePrice,
 		Amount:     amount,
+		Type:       OfTpCanonical,
 		Status:     status,
 	}
 
 	ext := tx.Ext(ctx, MintDB())
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO offers
-  (token, livemode, created, canonical, owner, base_asset, quote_asset,
-   base_price, quote_price, amount, status)
+  (token, livemode, created, owner, base_asset, quote_asset, base_price,
+   quote_price, amount, type, status)
 VALUES
-  (:token, :livemode, :created, :canonical, :owner, :base_asset, :quote_asset,
-   :base_price, :quote_price, :amount, :status)
+  (:token, :livemode, :created, :owner, :base_asset, :quote_asset, :base_price, 
+   :quote_price, :amount, :type, :status)
 `, offer); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:
@@ -91,6 +87,75 @@ VALUES
 	}
 
 	return &offer, nil
+}
+
+// CreatePropagatedOffer creates and stores a new canonical Offer object.
+func CreatePropagatedOffer(
+	ctx context.Context,
+	token string,
+	created time.Time,
+	owner string,
+	baseAsset string,
+	quoteAsset string,
+	basePrice Amount,
+	quotePrice Amount,
+	amount Amount,
+	status OfStatus,
+) (*Offer, error) {
+	offer := Offer{
+		Token:    token,
+		Livemode: livemode.Get(ctx),
+		Created:  created,
+
+		Owner:      owner,
+		BaseAsset:  baseAsset,
+		QuoteAsset: quoteAsset,
+		BasePrice:  basePrice,
+		QuotePrice: quotePrice,
+		Amount:     amount,
+		Type:       OfTpPropagated,
+		Status:     status,
+	}
+
+	ext := tx.Ext(ctx, MintDB())
+	if _, err := sqlx.NamedExec(ext, `
+INSERT INTO offers
+  (token, livemode, created, owner, base_asset, quote_asset, base_price,
+   quote_price, amount, type, status)
+VALUES
+  (:token, :livemode, :created, :owner, :base_asset, :quote_asset, :base_price, 
+   :quote_price, :amount, :type, :status)
+`, offer); err != nil {
+		switch err := err.(type) {
+		case *pq.Error:
+			if err.Code.Name() == "unique_violation" {
+				return nil, errors.Trace(ErrUniqueConstraintViolation{err})
+			}
+		}
+		return nil, errors.Trace(err)
+	}
+
+	return &offer, nil
+}
+
+// Save updates the object database representation with the in-memory values.
+func (o *Offer) Save(
+	ctx context.Context,
+) error {
+	ext := tx.Ext(ctx, MintDB())
+	_, err := sqlx.NamedExec(ext, `
+UPDATE offers
+SET owner = :owner, base_asset = :base_asset, quote_asset = :quote_asset,
+    quote_asset = :quote_asset, base_price = :base_price,
+	quote_price = :quote_price, amount = :amount, type = :type,
+	status = :status
+WHERE token = :token
+`, o)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	return nil
 }
 
 // LoadOfferByToken attempts to load an offer for the given token.

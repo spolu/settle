@@ -78,7 +78,8 @@ func (u *User) Save(
 ) error {
 	ext := tx.Ext(ctx, MintDB())
 	_, err := sqlx.NamedExec(ext, `
-UPDATE users SET username = :username, password_hash = :password_hash
+UPDATE users
+SET username = :username, password_hash = :password_hash
 WHERE token = :token
 `, u)
 	if err != nil {

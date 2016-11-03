@@ -24,6 +24,11 @@ func (m middleware) ServeHTTPC(
 ) {
 	defer func() {
 		if err := recover(); err != nil {
+			logging.Logf(ctx, "---------------------")
+			logging.Logf(ctx, "RECOVERER PRINT STACK")
+			logging.Logf(ctx, "---------------------")
+			debug.PrintStack()
+			logging.Logf(ctx, "---------------------")
 			if e, ok := err.(error); ok {
 				logging.Logf(ctx, "Panic: error=%q", e.Error())
 				respond.Error(ctx, w, errors.Trace(e))
@@ -31,7 +36,6 @@ func (m middleware) ServeHTTPC(
 				logging.Logf(ctx, "Non error panic: dump=%+v", err)
 				respond.Error(ctx, w, errors.Newf("Non error panic: %+v", err))
 			}
-			debug.PrintStack()
 		}
 	}()
 

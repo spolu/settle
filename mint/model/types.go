@@ -35,7 +35,37 @@ func (b Amount) Value() (value driver.Value, err error) {
 	return (*big.Int)(&b).String(), nil
 }
 
-// OfStatus is the type of an offer status.
+// OfType is the type of an offer.
+type OfType string
+
+const (
+	//OfTpCanonical is an offer owned by this mint.
+	OfTpCanonical OfType = "canonical"
+	//OfTpPropagated is an offer propagated to this mint.
+	OfTpPropagated OfType = "propagated"
+)
+
+// Value implements driver.Valuer
+func (s OfType) Value() (value driver.Value, err error) {
+	return string(s), nil
+}
+
+// Scan implements sql.Scanner.
+func (s *OfType) Scan(src interface{}) error {
+	switch src := src.(type) {
+	case []byte:
+		*s = OfType(src)
+	case string:
+		*s = OfType(src)
+	default:
+		return errors.Newf(
+			"Incompatible type for OfType with value: %q", src)
+	}
+
+	return nil
+}
+
+// OfStatus is the status of an offer.
 type OfStatus string
 
 const (
@@ -58,7 +88,8 @@ func (s *OfStatus) Scan(src interface{}) error {
 	case string:
 		*s = OfStatus(src)
 	default:
-		return errors.Newf("Incompatible type for OfStatus with value: %q", src)
+		return errors.Newf(
+			"Incompatible status for OfStatus with value: %q", src)
 	}
 
 	return nil
