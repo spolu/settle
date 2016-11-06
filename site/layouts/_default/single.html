@@ -1,0 +1,38 @@
+    {{ partial "head.html" . }}
+    <body>
+       {{ partial "nav.html" . }}
+
+        <section id="wrapper">
+            <article class="post">
+                <header>
+                    <h1>{{ .Title }}</h1>
+                    <h2 class="headline">
+                    {{ .Date.Format "January 2, 2006" }} 
+                    <br>
+                    {{ with .Params.tags }}
+                    {{ if ge (len .) 1 }}
+                        {{ range . }}
+                            <a href="{{ $.Site.BaseURL }}tags/{{ . | urlize }}">{{ . }}</a>
+                        {{ end }}
+                    {{ end }}
+                    {{ end}}
+                    </h2>
+                </header>
+                <section id="post-body">
+                    {{ .Content }}
+                </section>
+            </article>
+            <footer id="post-meta" class="clearfix">
+                <section id="sharing">
+                    {{ partial "share.html" . }}
+                </section>
+            </footer>
+
+            {{ template "_internal/disqus.html" . }}
+            {{ partial "latest-posts.html" . }}
+            {{ partial "footer.html" . }}
+        </section>
+
+        {{ partial "js.html" . }}
+    </body>
+</html>
