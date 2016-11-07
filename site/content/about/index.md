@@ -1,13 +1,13 @@
 +++
 type = "page"
 description = ""
-title = "index"
+title = "about"
 date = "2016-11-04T09:04:39-07:00"
 
 +++
+# About
 
 Hi there this is Settle and this is the about page.
-
 
 # test
 

@@ -1,20 +1,17 @@
-    {{ partial "head.html" . }}
-    <body>
+{{ partial "head.html" . }}
+  <body>
     {{ partial "nav.html" . }}
-    {{ partial "profile.html" . }}
 
     <section id="wrapper">
-        {{ range .Data.Pages }}
-            {{if eq .Type "index" }} 
-                {{.Content}}
-            {{end}}
-        {{ end }}
+      {{ range .Data.Pages }}
+        {{if eq .Type "index" }} 
+          {{.Content}}
+        {{end}}
+      {{ end }}
 
-        {{ partial "post-list.html"  . }}
-        {{ partial "pagination.html" . }}
-        {{ partial "footer.html"     . }}
+      {{ partial "footer.html"     . }}
     </section>
 
     {{ partial "js.html" . }}
-    </body>
+  </body>
 </html>

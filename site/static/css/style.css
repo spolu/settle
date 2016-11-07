@@ -43,8 +43,12 @@ html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abb
 .icon-facebook-rect:before { content: '\e803'; }
 
 /* Spacing */
-.post h1, h3, h4, h5, p, .post-body ul, #post-list li, pre {
+h1, h2, h3, h4, h5, h6, p, #post-list li, pre {
 margin-bottom: 20px;
+}
+
+ul, li {
+  margin-bottom: 10px;
 }
 
 /* Base */
@@ -58,58 +62,33 @@ body {
 }
 
 h1 {
-	font-size: 20px;
-	letter-spacing: -1px;
+    font-size: 1.2em;
 	color: #222;
 	font-weight: bold;
-    margin-bottom: 10px;
 }
 
 h2 {
-	font: italic 19px/1.3em Georgia,serif;
+    font-size: 1.2em;
+	font-style: italic;
 	color: #bbb;
-    margin-bottom: 10px;
 }
 
+ul 	{ margin:0; padding:0; }
+li	{ list-style-position:outside; line-height:1.7; }
 
-.profile #wrapper {
-	padding: 100px 40px 0px;
-	max-width: 600px;
-	margin: 0 auto;
+h3, h4, h5 { color:#333; }
+
+h3 { font-weight: 400; }
+h4 { font-weight:bold; }
+h5 { font-weight: bold; }
+
+h6 {
+	font-size: 13px;
+	font-weight: bold;
+	color: #666;
+	margin-bottom: 6px;
 }
 
-.profile #header {
-	border-bottom: 1px solid #eee;
-	margin-bottom: 40px;
-	padding-bottom: 40px;
-	text-align: center;
-	position: relative;
-}
-
-.profile #avatar {
-	display: inline-block;
-	width: 80px;
-	height: 80px;
-	border-radius: 50%;
-	margin-bottom: 20px;
-}
-
-.profile h1 {
-	font-weight: 400;
-	letter-spacing: 0px;
-	font-size: 20px;
-	color: #222;
-}
-
-.profile h2 {
-	font-size: 20px;
-	  font-weight: 300;
-	  color: #aaa;
-	  margin-top: 10px;
-	  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-	  font-style: normal;
-
-}
 
 nav.main-nav {
 	padding: 20px 20px 0;
@@ -179,9 +158,6 @@ a,
 	transition: all 0.15s ease;
 }
 
-ul 	{ margin:0; padding:0; }
-li	{ list-style-position:outside; margin-top: 10px; line-height:1.7; }
-
 /* Line Height */
 #post-body, p { line-height:1.7; }
 
@@ -212,19 +188,21 @@ em, i { font-style: italic; }
 .post h1 {
 	margin-bottom: 20px;
 	color: #222;
-	font: 300 32px/1.4em Menlo, "DejaVu Sans Mono", "Lucida Console", monospace;
+    font-size: 1.4em;
+    font-weight: 300;
 }
 
 .post h2 {
 	margin-bottom: 40px;
-    font: 300 24px/1.5 Menlo, "DejaVu Sans Mono", "Lucida Console", monospace;
     color: #111;
+    font-size: 1.5em;
+    font-weight: 300;
 }
 
 
 .post h2.headline {
 	/*font: italic 22px/1.3em Georgia,serif;*/
-	font: normal 13px/1.5em Menlo, "DejaVu Sans Mono", "Lucida Console", monospace;
+    font-size: 1.5em;
 	margin: -5px 0 40px 0;
     color: #b2b9be;
     font-size: 13px;
@@ -235,23 +213,10 @@ em, i { font-style: italic; }
 }
 
 #post-list h2 {
-	font: normal 17px/1.5em Menlo, "DejaVu Sans Mono", "Lucida Console", monospace;
+    font-size: 1.5em;
 	color: #aaa;
 	max-width: 400px;
 	margin-top: 2px;
-}
-
-h3, h4, h5 { color:#333; }
-
-h3 { font-size:20px; font-weight: 400; }
-h4 { font-size:16px; font-weight:bold; }
-h5 { font-size:15px; font-weight: bold; }
-
-h6 {
-	font-size: 13px;
-	font-weight: bold;
-	color: #666;
-	margin-bottom: 6px;
 }
 
 p.small {
@@ -276,7 +241,11 @@ hr {
 	background: #eee;
 }
 
-span.code { font-family:Menlo, Monaco, Courier; background-color:#EEE; font-size:14px; }
+span.code {
+    font-family:Menlo, Monaco, Courier;
+    background-color:#EEE;
+    font-size:14px;
+}
 
 pre	{
 	font-family:Menlo, Monaco, Courier;
@@ -376,6 +345,7 @@ Post List
 	color: #333;
 	display: block;
 	font: bold 19px/1.7 Menlo, "DejaVu Sans Mono", "Lucida Console", monospace;
+    font-size: 1.7em;
 }
 
 #post-list .dates {
