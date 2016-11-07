@@ -4,10 +4,9 @@ title = "Settle"
 description = ""
 date = "2016-11-04T17:28:19-07:00"
 +++
-
 # Settle
 
-*Decentralized trust graph for value exchange on the Internet*
+*Decentralized trust graph for value exchange on the Internet.*
 
 While cryptocurrencies are maintained by distributed ledgers with no central
 authority, their trust model and graph is still fully centralized: everyone has
