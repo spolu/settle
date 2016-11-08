@@ -1,6 +1,7 @@
 package authentication
 
 import (
+	"context"
 	"net/http"
 	"regexp"
 
@@ -9,13 +10,15 @@ import (
 	"github.com/spolu/settle/lib/logging"
 	"github.com/spolu/settle/lib/respond"
 	"github.com/spolu/settle/mint/model"
-	"goji.io"
-	"golang.org/x/net/context"
 )
+
+// ContextKey is the type of the key used with context to carry contextual
+// authentication status.
+type ContextKey string
 
 const (
 	// statusKey the context.Context key to store the authentication status.
-	statusKey string = "authentication.status"
+	statusKey ContextKey = "authentication.status"
 )
 
 // AutStatus indicates the status of the authentication.
@@ -53,7 +56,7 @@ func Get(
 }
 
 type middleware struct {
-	goji.Handler
+	http.Handler
 }
 
 // SkipRule defines a skip rule for authentication
@@ -69,12 +72,12 @@ var SkipList = []*SkipRule{
 	&SkipRule{"POST", regexp.MustCompile("^/offers$")},
 }
 
-// ServeHTTPC handles incoming HTTP requests and attempt to authenticate them.
-func (m middleware) ServeHTTPC(
-	ctx context.Context,
+// ServeHTTP handles incoming HTTP requests and attempt to authenticate them.
+func (m middleware) ServeHTTP(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
+	ctx := r.Context()
 	withStatus := With(ctx, Status{AutStFailed, nil})
 
 	username, password, _ := r.BasicAuth()
@@ -93,7 +96,7 @@ func (m middleware) ServeHTTPC(
 			logging.Logf(ctx,
 				"Authentication: status=%q livemode=%t username=%q",
 				Get(withStatus).Status, livemode.Get(ctx), username)
-			m.Handler.ServeHTTPC(withStatus, w, r)
+			m.Handler.ServeHTTP(w, r.WithContext(withStatus))
 		} else {
 			withStatus = With(ctx, Status{AutStFailed, nil})
 			logging.Logf(ctx,
@@ -129,10 +132,10 @@ func (m middleware) ServeHTTPC(
 		Get(withStatus).Status, livemode.Get(ctx), Get(withStatus).User.Token,
 		username)
 
-	m.Handler.ServeHTTPC(withStatus, w, r)
+	m.Handler.ServeHTTP(w, r.WithContext(withStatus))
 }
 
 // Middleware that authenticates API requests.
-func Middleware(h goji.Handler) goji.Handler {
+func Middleware(h http.Handler) http.Handler {
 	return middleware{h}
 }

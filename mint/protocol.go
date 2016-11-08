@@ -1,12 +1,11 @@
 package mint
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 
 	"github.com/spolu/settle/mint/model"
-
-	"golang.org/x/net/context"
 )
 
 // AssetResource is the representation of an asset in the mint API.

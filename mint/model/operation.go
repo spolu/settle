@@ -3,6 +3,7 @@
 package model
 
 import (
+	"context"
 	"math/big"
 	"time"
 
@@ -12,7 +13,6 @@ import (
 	"github.com/spolu/settle/lib/livemode"
 	"github.com/spolu/settle/lib/token"
 	"github.com/spolu/settle/lib/tx"
-	"golang.org/x/net/context"
 )
 
 // MaxAssetAmount is the maximum amount for an asset (2^128).

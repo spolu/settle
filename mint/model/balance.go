@@ -3,6 +3,7 @@
 package model
 
 import (
+	"context"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -11,8 +12,6 @@ import (
 	"github.com/spolu/settle/lib/livemode"
 	"github.com/spolu/settle/lib/token"
 	"github.com/spolu/settle/lib/tx"
-
-	"golang.org/x/net/context"
 )
 
 // Balance represents a user balance for a given asset. Balances are updated as

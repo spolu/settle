@@ -1,18 +1,19 @@
 package livemode
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/spolu/settle/lib/logging"
-
-	"goji.io"
-
-	"golang.org/x/net/context"
 )
+
+// ContextKey is the type of the key used with context to carry contextual
+// livemode.
+type ContextKey string
 
 const (
 	// livemodeKey the context.Context key to store the livemode.
-	livemodeKey string = "livemode.livemode"
+	livemodeKey ContextKey = "livemode.livemode"
 	// livemodeHeader is the livemode header.
 	livemodeHeader = "Livemode"
 )
@@ -33,16 +34,16 @@ func Get(
 }
 
 type middleware struct {
-	goji.Handler
+	http.Handler
 }
 
 // ServeHTTPC handles incoming HTTP requests and attempts to extract the
 // livemode from it, defaulting to `false`.
-func (m middleware) ServeHTTPC(
-	ctx context.Context,
+func (m middleware) ServeHTTP(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
+	ctx := r.Context()
 	withLivemode := With(ctx, false)
 	if lvm := r.Header.Get(livemodeHeader); lvm == "true" {
 		withLivemode = With(ctx, true)
@@ -50,10 +51,10 @@ func (m middleware) ServeHTTPC(
 
 	logging.Logf(ctx, "Livemode: livemode=%t", Get(withLivemode))
 
-	m.Handler.ServeHTTPC(withLivemode, w, r)
+	m.Handler.ServeHTTP(w, r.WithContext(withLivemode))
 }
 
 // Middleware that logs methods, URLs, remote addresses, status, lantency.
-func Middleware(h goji.Handler) goji.Handler {
+func Middleware(h http.Handler) http.Handler {
 	return middleware{h}
 }

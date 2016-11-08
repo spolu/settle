@@ -7,10 +7,6 @@ import (
 
 	"github.com/spolu/settle/lib/logging"
 	"github.com/zenazn/goji/web/mutil"
-
-	"goji.io"
-
-	"golang.org/x/net/context"
 )
 
 func init() {
@@ -18,15 +14,15 @@ func init() {
 }
 
 type middleware struct {
-	goji.Handler
+	http.Handler
 }
 
-// ServeHTTPC handles incoming HTTP requests and attempt to log them.
-func (m middleware) ServeHTTPC(
-	ctx context.Context,
+// ServeHTTP handles incoming HTTP requests and attempt to log them.
+func (m middleware) ServeHTTP(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
+	ctx := r.Context()
 	start := time.Now()
 	url := *r.URL
 	wp := mutil.WrapWriter(w)
@@ -40,10 +36,10 @@ func (m middleware) ServeHTTPC(
 			wp.Status(), time.Now().Sub(start)/time.Millisecond)
 	}()
 
-	m.Handler.ServeHTTPC(ctx, wp, r)
+	m.Handler.ServeHTTP(wp, r)
 }
 
 // Middleware that logs methods, URLs, remote addresses, status, lantency.
-func Middleware(h goji.Handler) goji.Handler {
+func Middleware(h http.Handler) http.Handler {
 	return middleware{h}
 }

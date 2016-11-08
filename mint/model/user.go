@@ -3,6 +3,7 @@
 package model
 
 import (
+	"context"
 	"encoding/base64"
 	"time"
 
@@ -13,7 +14,6 @@ import (
 	"github.com/spolu/settle/lib/token"
 	"github.com/spolu/settle/lib/tx"
 	"golang.org/x/crypto/scrypt"
-	"golang.org/x/net/context"
 )
 
 // User represents a user object. User objects are not managed by the mint and

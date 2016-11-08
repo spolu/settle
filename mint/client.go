@@ -1,6 +1,7 @@
 package mint
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -11,7 +12,6 @@ import (
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/livemode"
 	"github.com/spolu/settle/lib/svc"
-	"golang.org/x/net/context"
 )
 
 // Client expose an interface to perform queries on remote mints.

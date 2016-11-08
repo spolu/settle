@@ -1,9 +1,8 @@
 package logging
 
 import (
+	"context"
 	"log"
-
-	"golang.org/x/net/context"
 )
 
 var silentKey = new(int)

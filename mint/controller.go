@@ -17,8 +17,6 @@ import (
 	"github.com/spolu/settle/mint/lib/authentication"
 	"github.com/spolu/settle/mint/model"
 	"goji.io/pat"
-
-	"golang.org/x/net/context"
 )
 
 type controller struct {
@@ -28,10 +26,10 @@ type controller struct {
 
 // CreateAsset controls the creation of new assets.
 func (c *controller) CreateAsset(
-	ctx context.Context,
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
+	ctx := r.Context()
 	userToken := authentication.Get(ctx).User.Token
 
 	code := r.PostFormValue("code")
@@ -92,17 +90,17 @@ func (c *controller) CreateAsset(
 // Only the asset creator can create operation on an asset. To transfer money,
 // users owning an asset whould use transactions.
 func (c *controller) CreateOperation(
-	ctx context.Context,
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
+	ctx := r.Context()
 	// Validate asset.
-	a, err := AssetResourceFromName(ctx, pat.Param(ctx, "asset"))
+	a, err := AssetResourceFromName(ctx, pat.Param(r, "asset"))
 	if err != nil {
 		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(err,
 			400, "asset_invalid",
 			"The asset name you provided is invalid: %s.",
-			pat.Param(ctx, "asset"),
+			pat.Param(r, "asset"),
 		)))
 		return
 	}
@@ -301,11 +299,11 @@ func (c *controller) CreateOperation(
 // RetrieveOffer retrieves an offer based on its id. It is not authenticated
 // and is used to verify offers when they get propagated.
 func (c *controller) RetrieveOffer(
-	ctx context.Context,
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	id := pat.Param(ctx, "offer")
+	ctx := r.Context()
+	id := pat.Param(r, "offer")
 
 	// Validate id.
 	address, token, err := NormalizedAddressAndTokenFromID(ctx, id)
@@ -355,15 +353,15 @@ func (c *controller) RetrieveOffer(
 // non-authenticated cross-mint offer propagation calls into
 // CreateOfferPropagation.
 func (c *controller) CreateOffer(
-	ctx context.Context,
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
+	ctx := r.Context()
 	switch authentication.Get(ctx).Status {
 	case authentication.AutStSucceeded:
-		c.CreateCanonicalOffer(ctx, w, r)
+		c.CreateCanonicalOffer(w, r)
 	case authentication.AutStSkipped:
-		c.CreatePropagatedOffer(ctx, w, r)
+		c.CreatePropagatedOffer(w, r)
 	default:
 		respond.Error(ctx, w, errors.Trace(errors.Newf(
 			"Unexpected authentication status for offer creation: %s",
@@ -380,10 +378,10 @@ var OfferPriceRegexp = regexp.MustCompile(
 // contacting the mints for the offer's assets and storing the canonical
 // version of the offer locally.
 func (c *controller) CreateCanonicalOffer(
-	ctx context.Context,
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
+	ctx := r.Context()
 	owner := fmt.Sprintf("%s@%s",
 		authentication.Get(ctx).User.Username, c.mintHost)
 
@@ -481,10 +479,10 @@ func (c *controller) CreateCanonicalOffer(
 // CreatePropagatedOffer creates a new offer through propagation. Propagation
 // is validated by contacting the mint of the offer's owner and stored locally.
 func (c *controller) CreatePropagatedOffer(
-	ctx context.Context,
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
+	ctx := r.Context()
 	// Validate id.
 	id := r.PostFormValue("id")
 	owner, token, err := NormalizedAddressAndTokenFromID(ctx, id)

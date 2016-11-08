@@ -30,17 +30,17 @@ func (c *Configuration) Bind(
 	mux *goji.Mux,
 ) {
 	// Local.
-	mux.HandleFuncC(pat.Post("/assets"), c.controller.CreateAsset)
-	mux.HandleFuncC(pat.Post("/assets/:asset/operations"), c.controller.CreateOperation)
-	// mux.HandleFuncC(pat.Get("/assets/:asset/operations/:operation"), c.controller.RetrieveOperation)
-	// mux.HandleFuncC(pat.Get("/assets/:asset/operations"), c.controller.RetrieveOperations)
-	// mux.HandleFuncC(pat.Get("/assets/:asset/balances/:address"), c.controller.RetrieveBalance)
+	mux.HandleFunc(pat.Post("/assets"), c.controller.CreateAsset)
+	mux.HandleFunc(pat.Post("/assets/:asset/operations"), c.controller.CreateOperation)
+	// mux.HandleFunc(pat.Get("/assets/:asset/operations/:operation"), c.controller.RetrieveOperation)
+	// mux.HandleFunc(pat.Get("/assets/:asset/operations"), c.controller.RetrieveOperations)
+	// mux.HandleFunc(pat.Get("/assets/:asset/balances/:address"), c.controller.RetrieveBalance)
 
-	// Distributed exchange.
-	mux.HandleFuncC(pat.Get("/offers/:offer"), c.controller.RetrieveOffer)
-	mux.HandleFuncC(pat.Post("/offers"), c.controller.CreateOffer)
-	//mux.HandleFuncC(pat.Post("/assets/offers/:offer/close"), c.controller.CloseOffer)
+	// Public.
+	mux.HandleFunc(pat.Get("/offers/:offer"), c.controller.RetrieveOffer)
+	mux.HandleFunc(pat.Post("/offers"), c.controller.CreateOffer)
+	//mux.HandleFunc(pat.Post("/assets/offers/:offer/close"), c.controller.CloseOffer)
 
-	//mux.HandleFuncC(pat.Post("/assets/:asset/transactions"), c.controller.CreateTransaction)
-	//mux.HandleFuncC(pat.Post("/assets/:asset/transactions/:transaction/settle"), c.controller.SettleOperation)
+	//mux.HandleFunc(pat.Post("/assets/:asset/transactions"), c.controller.CreateTransaction)
+	//mux.HandleFunc(pat.Post("/assets/:asset/transactions/:transaction/settle"), c.controller.SettleOperation)
 }

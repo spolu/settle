@@ -1,16 +1,13 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
 	"net"
 	"net/http"
 	"strings"
 	"time"
-
-	"golang.org/x/net/context"
-
-	"goji.io"
 
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/livemode"
@@ -19,6 +16,7 @@ import (
 	"github.com/spolu/settle/mint/model"
 	"github.com/zenazn/goji/bind"
 	"github.com/zenazn/goji/graceful"
+	"goji.io"
 )
 
 var lvmFlag string

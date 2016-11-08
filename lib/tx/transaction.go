@@ -1,17 +1,21 @@
 package tx
 
 import (
+	"context"
 	"database/sql"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/spolu/settle/lib/logging"
 	"github.com/spolu/settle/lib/token"
-	"golang.org/x/net/context"
 )
+
+// ContextKey is the type of the key used with context to carry contextual
+// transaction.
+type ContextKey string
 
 const (
 	// transactionKey the context.Context key to store the current transaction.
-	transactionKey string = "tx.transaction"
+	transactionKey ContextKey = "tx.transaction"
 )
 
 // Transaction stores the current mintDB transaction.

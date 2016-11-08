@@ -2,6 +2,7 @@ package respond
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -10,7 +11,6 @@ import (
 	"github.com/spolu/settle/lib/format"
 	"github.com/spolu/settle/lib/logging"
 	"github.com/spolu/settle/lib/svc"
-	"golang.org/x/net/context"
 )
 
 func panicError() errors.UserError {
