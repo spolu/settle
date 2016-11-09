@@ -29,11 +29,11 @@ func NewAssetResource(
 ) AssetResource {
 	return AssetResource{
 		ID: fmt.Sprintf(
-			"%s@%s:%s", issuer.Username, host, asset.Token),
+			"%s@%s[%s]", issuer.Username, host, asset.Token),
 		Created:  asset.Created.UnixNano() / (1000 * 1000),
 		Livemode: asset.Livemode,
 		Name: fmt.Sprintf(
-			"%s@%s:%s.%d",
+			"%s@%s[%s.%d]",
 			issuer.Username, host, asset.Code, asset.Scale,
 		),
 		Issuer: fmt.Sprintf(
@@ -64,7 +64,7 @@ func NewOperationResource(
 ) OperationResource {
 	return OperationResource{
 		ID: fmt.Sprintf(
-			"%s:%s", assetResource.Issuer, operation.Token),
+			"%s[%s]", assetResource.Issuer, operation.Token),
 		Created:     operation.Created.UnixNano() / (1000 * 1000),
 		Livemode:    operation.Livemode,
 		Asset:       assetResource,
@@ -93,7 +93,7 @@ func NewOfferResource(
 ) OfferResource {
 	return OfferResource{
 		ID: fmt.Sprintf(
-			"%s:%s", offer.Owner, offer.Token),
+			"%s[%s]", offer.Owner, offer.Token),
 		Created:  offer.Created.UnixNano() / (1000 * 1000),
 		Livemode: offer.Livemode,
 

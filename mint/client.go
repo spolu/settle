@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
 
+	"github.com/spolu/settle/lib/env"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/livemode"
 	"github.com/spolu/settle/lib/svc"
@@ -27,13 +29,36 @@ func (c *Client) Init(
 	return nil
 }
 
+// DefaultPort is the mint default port by environment.
+var DefaultPort = map[env.Environment]int64{
+	env.Production: 2406,
+	env.QA:         2407,
+}
+
+// DefaultScheme is the mint default scheme by environment.
+var DefaultScheme = map[env.Environment]string{
+	env.Production: "https",
+	env.QA:         "http",
+}
+
+// Possible address: von.neumann@ias.edu:8989
+var addressRegexpStr = "([a-zA-Z0-9\\-_.]{1,256})(\\+[a-zA-Z0-9\\-_.]+){0,1}@" +
+	"([a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+(:[0-9]{1,5}){0,1})"
+
 // AssetNameRegexp is used to validate and parse asset names.
 var AssetNameRegexp = regexp.MustCompile(
-	"^([a-zA-Z0-9\\-_.]{1,256})(\\+[a-zA-Z0-9\\-_.]+){0,1}@([a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+):([A-Z0-9\\-]{1,64})\\.([0-9]{1,2})$")
+	"^" + addressRegexpStr + "\\[([A-Z0-9\\-]{1,64})\\.([0-9]{1,2})\\]" + "$",
+)
 
 // AddressRegexp is used to validate and parse issuer names.
 var AddressRegexp = regexp.MustCompile(
-	"^([a-zA-Z0-9\\-_.]{1,256})(\\+[a-zA-Z0-9\\-_.]+){0,1}@([a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+)$")
+	"^" + addressRegexpStr + "$",
+)
+
+// IDRegexp is used to validate a full id including issuer and token.
+var IDRegexp = regexp.MustCompile(
+	"^(.+)\\[([a-z]+_[a-zA-Z0-9]+)\\]$",
+)
 
 // AssetResourceFromName parses an asset fully qualified name into an
 // AssetResource object (without id or created date). Livemode is infered by
@@ -46,7 +71,7 @@ func AssetResourceFromName(
 	if len(m) == 0 {
 		return nil, errors.Trace(errors.Newf("Invalid asset name: %s", name))
 	}
-	s, err := strconv.ParseInt(m[5], 10, 8)
+	s, err := strconv.ParseInt(m[6], 10, 8)
 	if err != nil {
 		return nil, errors.Trace(errors.Newf("Invalid asset name: %s", name))
 	}
@@ -55,7 +80,7 @@ func AssetResourceFromName(
 		Livemode: livemode.Get(ctx),
 		Name:     name,
 		Issuer:   fmt.Sprintf("%s@%s", m[1], m[3]),
-		Code:     m[4],
+		Code:     m[5],
 		Scale:    int8(s),
 	}, nil
 }
@@ -103,8 +128,7 @@ func NormalizedAddress(
 ) (string, error) {
 	m := AddressRegexp.FindStringSubmatch(address)
 	if len(m) == 0 {
-		return "", errors.Trace(errors.Newf(
-			"Invalid address: %s", address))
+		return "", errors.Trace(errors.Newf("Invalid address: %s", address))
 	}
 
 	return fmt.Sprintf("%s@%s", m[1], m[3]), nil
@@ -116,15 +140,32 @@ func NormalizedAddressAndTokenFromID(
 	ctx context.Context,
 	id string,
 ) (string, string, error) {
-	ss := strings.Split(id, ":")
-	if len(ss) != 2 {
+	m := IDRegexp.FindStringSubmatch(id)
+	if len(m) == 0 {
 		return "", "", errors.Trace(errors.Newf("Invalid id: %s", id))
 	}
-	address, err := NormalizedAddress(ctx, ss[0])
+	address, err := NormalizedAddress(ctx, m[1])
 	if err != nil {
 		return "", "", errors.Trace(err)
 	}
-	return address, ss[1], nil
+	return address, m[2], nil
+}
+
+// FullMintURL constructs a fully qualified URL to contact a mint defaulting to
+// the correct scheme and port based on the current environment.
+func FullMintURL(
+	host string,
+	path string,
+) *url.URL {
+	if len(strings.Split(host, ":")) == 1 {
+		host += fmt.Sprintf(":%d", DefaultPort[env.Current])
+	}
+	url := url.URL{
+		Scheme: DefaultScheme[env.Current],
+		Host:   host,
+		Path:   path,
+	}
+	return &url
 }
 
 // RetrieveOffer retrieves an offer given its ID by extracting the mint and
@@ -143,7 +184,7 @@ func (c *Client) RetrieveOffer(
 	}
 
 	r, err := c.httpClient.Get(
-		fmt.Sprintf("https://%s:2406/offers/%s", host, id))
+		FullMintURL(host, fmt.Sprintf("/offers/%s", id)).String())
 	if err != nil {
 		return nil, errors.Trace(err)
 	}

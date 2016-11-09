@@ -54,7 +54,7 @@ func (m middleware) ServeHTTP(
 	m.Handler.ServeHTTP(w, r.WithContext(withLivemode))
 }
 
-// Middleware that logs methods, URLs, remote addresses, status, lantency.
+// Middleware that extracts and inject the current livemode in the context.
 func Middleware(h http.Handler) http.Handler {
 	return middleware{h}
 }

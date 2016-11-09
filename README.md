@@ -16,9 +16,9 @@ operate properly.
 
 Basic operations supported by the Settle network:
 - *Issue asset*: users can issue assets (basically IOUs), such as
-  **stan@foobar.com:USD.2 320**, and transfer these IOUs to other users.
+  **stan@foobar.com[USD.2] 320**, and transfer these IOUs to other users.
 - *Create offer*: users can create offers to exchange assets, such as
-  **stan@foobar.com:USD.2/info@sightglasscofee.com:AU-LAIT.0** at price
+  **stan@foobar.com[USD.2]/info@sightglasscofee.com[AU-LAIT.0]** at price
   **320/1** for quantity **2**.
 - *Create transaction*: exchange assets by crossing a path of offers.
 

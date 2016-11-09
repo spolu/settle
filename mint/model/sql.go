@@ -9,6 +9,7 @@ import (
 
 	"github.com/jmoiron/sqlx"
 	"github.com/mitchellh/go-homedir"
+	"github.com/spolu/settle/lib/env"
 	"github.com/spolu/settle/lib/errors"
 
 	// sqlite is used as underlying driver
@@ -25,7 +26,8 @@ func ensureMintDB() {
 
 	path := os.Getenv("MINT_DB_PATH")
 	if path == "" {
-		path, err = homedir.Expand("~/.mint/mint.db")
+		path, err = homedir.Expand(
+			fmt.Sprintf("~/.mint/mint-%s.db", env.Current))
 		if err != nil {
 			log.Fatal(errors.Details(err))
 		}
@@ -39,7 +41,7 @@ func ensureMintDB() {
 	if err != nil {
 		log.Fatal(errors.Details(err))
 	} else {
-		fmt.Printf("Initialized sqlite3 mintDB with path: %s\n", path)
+		fmt.Printf("Opened sqlite3 mintDB: path=%s\n", path)
 	}
 }
 

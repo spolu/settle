@@ -311,7 +311,7 @@ func (c *controller) RetrieveOffer(
 		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(err,
 			400, "id_invalid",
 			"The offer id you provided is invalid: %s. Offer ids must have "+
-				"the form kgodel@princeton.edu:offer_*",
+				"the form kgodel@princeton.edu[offer_*]",
 			id,
 		)))
 		return
@@ -402,7 +402,7 @@ func (c *controller) CreateCanonicalOffer(
 		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(err,
 			400, "price_invalid",
 			"The offer price you provided is invalid: %s. Prices must have "+
-				"the form \"pB/pQ\" where pB is the base asset price and pQ "+
+				"the form 'pB/pQ' where pB is the base asset price and pQ "+
 				"is the quote asset price.",
 			r.PostFormValue("price"),
 		)))
@@ -490,7 +490,7 @@ func (c *controller) CreatePropagatedOffer(
 		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(err,
 			400, "id_invalid",
 			"The offer id you provided is invalid: %s. Offer ids must have "+
-				"the form kgodel@princeton.edu:offer_*",
+				"the form kgodel@princeton.edu[offer_*]",
 			id,
 		)))
 		return

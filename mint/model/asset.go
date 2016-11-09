@@ -4,13 +4,16 @@ package model
 
 import (
 	"context"
+	"reflect"
 	"regexp"
 	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
+	sqlite3 "github.com/mattn/go-sqlite3"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/livemode"
+	"github.com/spolu/settle/lib/logging"
 	"github.com/spolu/settle/lib/token"
 	"github.com/spolu/settle/lib/tx"
 )
@@ -64,9 +67,14 @@ INSERT INTO assets
 VALUES
   (:token, :livemode, :created, :issuer, :code, :scale)
 `, asset); err != nil {
+		logging.Logf(ctx, "ERROR: %+v / %s", err, reflect.TypeOf(err))
 		switch err := err.(type) {
 		case *pq.Error:
 			if err.Code.Name() == "unique_violation" {
+				return nil, errors.Trace(ErrUniqueConstraintViolation{err})
+			}
+		case sqlite3.Error:
+			if err.ExtendedCode == sqlite3.ErrConstraintUnique {
 				return nil, errors.Trace(ErrUniqueConstraintViolation{err})
 			}
 		}
