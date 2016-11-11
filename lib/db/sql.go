@@ -1,6 +1,4 @@
-// OWNER: stan
-
-package model
+package db
 
 import (
 	"context"
@@ -10,12 +8,10 @@ import (
 	"path/filepath"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/mitchellh/go-homedir"
+	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spolu/settle/lib/env"
 	"github.com/spolu/settle/lib/errors"
-
-	// sqlite is used as underlying driver
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/spolu/settle/lib/logging"
 )
 
 // NewSqlite3DBForPath returns a new sqlite3 DB stored at the provided path or
@@ -42,7 +38,22 @@ func NewSqlite3DBForPath(
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("Opened sqlite3 DB: path=%s\n", path)
+	logging.Logf(ctx, "Opened sqlite3 DB: in_memory=false path=%s\n", path)
+
+	return mintDB, nil
+}
+
+// NewSqlite3DBInMemory returns a new in-memory sqlite3 DB.
+func NewSqlite3DBInMemory(
+	ctx context.Context,
+) (*sqlx.DB, error) {
+	err := error(nil)
+
+	mintDB, err := sqlx.Connect("sqlite3", ":memory:")
+	if err != nil {
+		return nil, err
+	}
+	logging.Logf(ctx, "Opened sqlite3 DB: in_memory=true\n")
 
 	return mintDB, nil
 }

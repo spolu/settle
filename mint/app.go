@@ -37,10 +37,9 @@ func BackgroundContextFromFlags(
 		mintEnv.Environment = env.Production
 	}
 	mintEnv.Config[EnvCfgMintHost] = hstFlag
-
 	ctx = env.With(ctx, &mintEnv)
 
-	mintDB, err := model.NewSqlite3DBForPath(ctx, dbpFlag)
+	mintDB, err := db.NewSqlite3DBForPath(ctx, dbpFlag)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +47,6 @@ func BackgroundContextFromFlags(
 	if err != nil {
 		return nil, err
 	}
-
 	ctx = db.WithDB(ctx, mintDB)
 
 	// Not used by `run`.
@@ -77,10 +75,10 @@ func Build(
 	}
 
 	mux := goji.NewMux()
-	mux.Use(env.Middleware(env.Get(ctx)))
 	mux.Use(requestlogger.Middleware)
 	mux.Use(recoverer.Middleware)
 	mux.Use(db.Middleware(db.GetDB(ctx)))
+	mux.Use(env.Middleware(env.Get(ctx)))
 	mux.Use(livemode.Middleware)
 	mux.Use(authentication.Middleware)
 
