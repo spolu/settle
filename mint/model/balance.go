@@ -9,10 +9,10 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	sqlite3 "github.com/mattn/go-sqlite3"
+	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/livemode"
 	"github.com/spolu/settle/lib/token"
-	"github.com/spolu/settle/lib/tx"
 )
 
 // Balance represents a user balance for a given asset. Balances are updated as
@@ -25,10 +25,6 @@ type Balance struct {
 	Asset string // Asset token.
 	Owner string // Owner user address.
 	Value Amount
-}
-
-func init() {
-	ensureMintDB()
 }
 
 // CreateBalance creates and store a new Balance object. Only one balance can
@@ -50,7 +46,7 @@ func CreateBalance(
 		Value: value,
 	}
 
-	ext := tx.Ext(ctx, MintDB())
+	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO balances
   (token, livemode, created, asset, owner, value)
@@ -77,7 +73,7 @@ VALUES
 func (b *Balance) Save(
 	ctx context.Context,
 ) error {
-	ext := tx.Ext(ctx, MintDB())
+	ext := db.Ext(ctx)
 	_, err := sqlx.NamedExec(ext, `
 UPDATE balances
 SET value = :value
@@ -103,7 +99,7 @@ func LoadBalanceByAssetOwner(
 		Owner:    owner,
 	}
 
-	ext := tx.Ext(ctx, MintDB())
+	ext := db.Ext(ctx)
 	if rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM balances

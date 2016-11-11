@@ -2,10 +2,10 @@ package mint
 
 import (
 	"context"
-	"os"
 
 	"goji.io"
 
+	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/env"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/livemode"
@@ -13,48 +13,83 @@ import (
 	"github.com/spolu/settle/lib/recoverer"
 	"github.com/spolu/settle/lib/requestlogger"
 	"github.com/spolu/settle/mint/lib/authentication"
+	"github.com/spolu/settle/mint/model"
 
 	// force initialization of schemas
 	_ "github.com/spolu/settle/mint/model/schemas"
 )
 
+// BackgroundContextFromFlags initializes a background context fully loaded
+// with everything that could be extracted from the flags.
+func BackgroundContextFromFlags(
+	envFlag string,
+	dbpFlag string,
+	hstFlag string,
+	lvmFlag string,
+) (context.Context, error) {
+	ctx := context.Background()
+
+	mintEnv := env.Env{
+		Environment: env.QA,
+		Config:      map[env.ConfigKey]string{},
+	}
+	if envFlag == "production" {
+		mintEnv.Environment = env.Production
+	}
+	mintEnv.Config[EnvCfgMintHost] = hstFlag
+
+	ctx = env.With(ctx, &mintEnv)
+
+	mintDB, err := model.NewSqlite3DBForPath(ctx, dbpFlag)
+	if err != nil {
+		return nil, err
+	}
+	err = model.CreateMintDBTables(ctx, mintDB)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx = db.WithDB(ctx, mintDB)
+
+	// Not used by `run`.
+	if lvmFlag == "true" {
+		ctx = livemode.With(ctx, true)
+	} else {
+		ctx = livemode.With(ctx, false)
+	}
+
+	return ctx, nil
+}
+
 // Build initializes the app and its web stack.
-func Build() (*goji.Mux, error) {
-	mux := goji.NewMux()
-	mux.Use(requestlogger.Middleware)
-	mux.Use(recoverer.Middleware)
-	mux.Use(livemode.Middleware)
-	mux.Use(authentication.Middleware)
-
-	err := error(nil)
-
-	if os.Getenv("MINT_HOST") == "" {
-		if os.Getenv("ENVIRONMENT") == "production" {
+func Build(
+	ctx context.Context,
+) (*goji.Mux, error) {
+	if env.Get(ctx).Config[EnvCfgMintHost] == "" {
+		if env.Get(ctx).Environment == env.Production {
 			return nil, errors.Newf(
-				"In production, you must set the environment variable " +
-					"`MINT_HOST` to the host name under which you want to " +
-					"run this mint, for which you must have an SSL " +
-					"certificate.",
+				"You must set the flag `-mint_host` to an externally accessible hostname that other mints can use to contact this mint over HTTPS. If you're just testing and don't have an SSL certificate, please run with `-env=qa`",
 			)
 		}
 		return nil, errors.Newf(
-			"You must set the environment variable `MINT_HOST` to the host " +
-				"name under which you want to run this mint. In QA you don't " +
-				"need to provide an SSL certificate for this hostname and " +
-				"you can use `localhost:2046` for testing purposes.",
+			"You must set the flag `-mint_host` to the hostname that other mints can use to contact this mint over HTTP (since you're running in QA). You can use `-mint_host=127.0.0.1:2407` for testing purposes.",
 		)
 	}
 
-	a := &Configuration{
-		MintHost: os.Getenv("MINT_HOST"),
-	}
+	mux := goji.NewMux()
+	mux.Use(env.Middleware(env.Get(ctx)))
+	mux.Use(requestlogger.Middleware)
+	mux.Use(recoverer.Middleware)
+	mux.Use(db.Middleware(db.GetDB(ctx)))
+	mux.Use(livemode.Middleware)
+	mux.Use(authentication.Middleware)
 
-	ctx := context.Background()
+	a := &Configuration{}
 
-	logging.Logf(ctx, "Initializing: environment=%s mint_host=%q",
-		env.Current, a.MintHost)
+	logging.Logf(ctx, "Initializing: environment=%s mint_host=%s",
+		env.Get(ctx).Environment, env.Get(ctx).Config[EnvCfgMintHost])
 
-	err = a.Init()
+	err := a.Init()
 	if err != nil {
 		return nil, errors.Trace(err)
 	}

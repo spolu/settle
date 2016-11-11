@@ -10,10 +10,10 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	sqlite3 "github.com/mattn/go-sqlite3"
+	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/livemode"
 	"github.com/spolu/settle/lib/token"
-	"github.com/spolu/settle/lib/tx"
 )
 
 // MaxAssetAmount is the maximum amount for an asset (2^128).
@@ -32,10 +32,6 @@ type Operation struct {
 	Source      *string // Source user address (if nil issuance).
 	Destination *string // Destination user addres (if nil annihilation).
 	Amount      Amount
-}
-
-func init() {
-	ensureMintDB()
 }
 
 // CreateOperation creates and stores a new Operation object.
@@ -57,7 +53,7 @@ func CreateOperation(
 		Amount:      amount,
 	}
 
-	ext := tx.Ext(ctx, MintDB())
+	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO operations
   (token, livemode, created, asset, source, destination, amount)

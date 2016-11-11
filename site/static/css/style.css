@@ -51,12 +51,45 @@ ul, li {
   margin-bottom: 10px;
 }
 
+/* Before */
+
+h1:before {
+  content: "# ";
+  font-size: 0.9em;
+}
+h2:before {
+  content: "## ";
+  font-size: 0.9em;
+}
+h3:before {
+  content: "### ";
+  font-size: 0.9em;
+}
+
+em:before, i:before {
+  content: "/";
+  opacity: 0.5;
+}
+em:after, i:after {
+  content: "/";
+  opacity: 0.5;
+}
+
+strong:before {
+  content: "*";
+  opacity: 0.5;
+}
+strong:after {
+  content: "*";
+  opacity: 0.5;
+}
+
 /* Base */
 html, body { height: 100%; }
 
 body {
 	font:12px/1 Menlo, "DejaVu Sans Mono", "Lucida Console", monospace;
-	color: #666;
+	color: #444;
 	-webkit-font-smoothing: antialiased;
 	text-rendering: optimizeLegibility;
 }
@@ -68,19 +101,15 @@ h1 {
 }
 
 h2 {
-    font-size: 1.2em;
-	font-style: italic;
-	color: #bbb;
+    font-size: 1.1em;
+	color: #222;
+	font-weight: bold;
 }
 
-ul 	{ margin:0; padding:0; }
-li	{ list-style-position:outside; line-height:1.7; }
-
-h3, h4, h5 { color:#333; }
-
-h3 { font-weight: 400; }
-h4 { font-weight:bold; }
-h5 { font-weight: bold; }
+h3, h4, h5 {
+    color: #444;
+    font-weight: bold
+}
 
 h6 {
 	font-size: 13px;
@@ -89,6 +118,18 @@ h6 {
 	margin-bottom: 6px;
 }
 
+ul 	{ margin:0; padding:0; }
+li	{ list-style-position:outside; line-height:1.7; }
+
+em, i {
+  color: #777;
+  font-style: italic;
+}
+
+b, strong {
+  font-weight: bold;
+  color: #333;
+}
 
 nav.main-nav {
 	padding: 20px 20px 0;
@@ -160,10 +201,6 @@ a,
 
 /* Line Height */
 #post-body, p { line-height:1.7; }
-
-b, strong { font-weight: 500;
-  color: #1E2025; }
-em, i { font-style: italic; }
 
 #title {
 	display: inline-block;

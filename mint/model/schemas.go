@@ -3,9 +3,11 @@
 package model
 
 import (
-	"fmt"
+	"context"
 
+	"github.com/jmoiron/sqlx"
 	"github.com/spolu/settle/lib/errors"
+	"github.com/spolu/settle/lib/logging"
 )
 
 var schemas = map[string]map[string]string{
@@ -22,11 +24,13 @@ func RegisterSchema(
 }
 
 // CreateMintDBTables creates the Mint DB tables if they don't exist.
-func CreateMintDBTables() error {
-	ensureMintDB()
+func CreateMintDBTables(
+	ctx context.Context,
+	db *sqlx.DB,
+) error {
 	for name, sch := range schemas["mint"] {
-		fmt.Printf("Executing schema: %s\n", name)
-		_, err := mintDB.Exec(sch)
+		logging.Logf(ctx, "Executing schema: %s\n", name)
+		_, err := db.Exec(sch)
 		if err != nil {
 			return errors.Trace(err)
 		}

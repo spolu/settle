@@ -12,15 +12,13 @@ const (
 
 // Configuration is used to create and bind the APi controller
 type Configuration struct {
-	MintHost   string
 	controller *controller
 }
 
 // Init initializes the API controller
 func (c *Configuration) Init() error {
 	c.controller = &controller{
-		mintHost: c.MintHost,
-		client:   &Client{},
+		client: &Client{},
 	}
 	return nil
 }

@@ -10,10 +10,10 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	sqlite3 "github.com/mattn/go-sqlite3"
+	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/livemode"
 	"github.com/spolu/settle/lib/token"
-	"github.com/spolu/settle/lib/tx"
 	"golang.org/x/crypto/scrypt"
 )
 
@@ -27,10 +27,6 @@ type User struct {
 
 	Username     string
 	PasswordHash string `db:"password_hash"`
-}
-
-func init() {
-	ensureMintDB()
 }
 
 // CreateUser creates and stores a new User object.
@@ -54,7 +50,7 @@ func CreateUser(
 
 	user.PasswordHash = base64.StdEncoding.EncodeToString(h)
 
-	ext := tx.Ext(ctx, MintDB())
+	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO users
   (token, livemode, created, username, password_hash)
@@ -81,7 +77,7 @@ VALUES
 func (u *User) Save(
 	ctx context.Context,
 ) error {
-	ext := tx.Ext(ctx, MintDB())
+	ext := db.Ext(ctx)
 	_, err := sqlx.NamedExec(ext, `
 UPDATE users
 SET username = :username, password_hash = :password_hash
@@ -104,7 +100,7 @@ func LoadUserByToken(
 		Livemode: livemode.Get(ctx),
 	}
 
-	ext := tx.Ext(ctx, MintDB())
+	ext := db.Ext(ctx)
 	if rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM users
@@ -134,7 +130,7 @@ func LoadUserByUsername(
 		Livemode: livemode.Get(ctx),
 	}
 
-	ext := tx.Ext(ctx, MintDB())
+	ext := db.Ext(ctx)
 	if rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM users

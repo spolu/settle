@@ -1,4 +1,4 @@
-package tx
+package db
 
 import (
 	"context"
@@ -9,13 +9,9 @@ import (
 	"github.com/spolu/settle/lib/token"
 )
 
-// ContextKey is the type of the key used with context to carry contextual
-// transaction.
-type ContextKey string
-
 const (
 	// transactionKey the context.Context key to store the current transaction.
-	transactionKey ContextKey = "tx.transaction"
+	transactionKey ContextKey = "db.transaction"
 )
 
 // Transaction stores the current mintDB transaction.
@@ -24,16 +20,16 @@ type Transaction struct {
 	Token string
 }
 
-// With stores the transaction in the provided context.
-func With(
+// WithTransaction stores the transaction in the provided context.
+func WithTransaction(
 	ctx context.Context,
 	transaction Transaction,
 ) context.Context {
 	return context.WithValue(ctx, transactionKey, transaction)
 }
 
-// Get retrieves the current transaction form the context.
-func Get(
+// GetTransaction retrieves the current transaction form the context.
+func GetTransaction(
 	ctx context.Context,
 ) Transaction {
 	return ctx.Value(transactionKey).(Transaction)
@@ -42,13 +38,15 @@ func Get(
 // Begin returns a new context with a new transaction set.
 func Begin(
 	ctx context.Context,
-	db *sqlx.DB,
 ) context.Context {
+	if ctx.Value(dbKey) == nil || GetDB(ctx) == nil {
+		panic("db: no DB in context")
+	}
 	token := token.New("tx")
 	logging.Logf(ctx,
 		"Transaction: begin %s.", token)
-	return With(ctx, Transaction{
-		Tx:    db.MustBegin(),
+	return WithTransaction(ctx, Transaction{
+		Tx:    GetDB(ctx).MustBegin(),
 		Token: token,
 	})
 }
@@ -58,8 +56,8 @@ func Commit(
 	ctx context.Context,
 ) {
 	logging.Logf(ctx,
-		"Transaction: commit %s.", Get(ctx).Token)
-	err := Get(ctx).Tx.Commit()
+		"Transaction: commit %s.", GetTransaction(ctx).Token)
+	err := GetTransaction(ctx).Tx.Commit()
 	if err != nil {
 		panic(err)
 	}
@@ -73,12 +71,12 @@ func Commit(
 //   defer tx.LoggedRollback(ctx)
 // ```
 func LoggedRollback(ctx context.Context) {
-	err := Get(ctx).Tx.Rollback()
+	err := GetTransaction(ctx).Tx.Rollback()
 	if err != sql.ErrTxDone && err != nil {
 		panic(err)
 	} else if err == nil {
 		logging.Logf(ctx,
-			"Transaction: rollback %s.", Get(ctx).Token)
+			"Transaction: rollback %s.", GetTransaction(ctx).Token)
 	}
 }
 
@@ -86,10 +84,9 @@ func LoggedRollback(ctx context.Context) {
 // otherwise).
 func Ext(
 	ctx context.Context,
-	db *sqlx.DB,
 ) sqlx.Ext {
-	if ctx.Value(transactionKey) != nil && Get(ctx).Tx != nil {
-		return Get(ctx).Tx
+	if ctx.Value(transactionKey) != nil && GetTransaction(ctx).Tx != nil {
+		return GetTransaction(ctx).Tx
 	}
-	return db
+	return GetDB(ctx)
 }

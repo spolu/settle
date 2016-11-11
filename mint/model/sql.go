@@ -1,8 +1,10 @@
+// OWNER: stan
+
 package model
 
 import (
+	"context"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -16,54 +18,31 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var mintDB *sqlx.DB
-
-func ensureMintDB() {
-	if mintDB != nil {
-		return
-	}
+// NewSqlite3DBForPath returns a new sqlite3 DB stored at the provided path or
+// defaulting to `~/.mint/mint-$env.dr`.
+func NewSqlite3DBForPath(
+	ctx context.Context,
+	path string,
+) (*sqlx.DB, error) {
 	err := error(nil)
 
-	path := os.Getenv("MINT_DB_PATH")
 	if path == "" {
 		path, err = homedir.Expand(
-			fmt.Sprintf("~/.mint/mint-%s.db", env.Current))
+			fmt.Sprintf("~/.mint/mint-%s.db", env.Get(ctx).Environment))
 		if err != nil {
 			log.Fatal(errors.Details(err))
 		}
 	}
 	err = os.MkdirAll(filepath.Dir(path), 0777)
 	if err != nil {
-		log.Fatal(errors.Details(err))
+		return nil, err
 	}
 
-	mintDB, err = sqlx.Connect("sqlite3", path)
+	mintDB, err := sqlx.Connect("sqlite3", path)
 	if err != nil {
-		log.Fatal(errors.Details(err))
-	} else {
-		fmt.Printf("Opened sqlite3 mintDB: path=%s\n", path)
+		return nil, err
 	}
-}
+	fmt.Printf("Opened sqlite3 DB: path=%s\n", path)
 
-func init() {
-	ensureMintDB()
-}
-
-// MintDB returns the mintDB singeleton.
-func MintDB() *sqlx.DB {
-	return mintDB
-}
-
-// Shutdown attempts to close all existing DB connections.
-func Shutdown() {
-	if mintDB != nil {
-		mintDB.Close()
-	}
-}
-
-// MustClose is used to ensure statement get closed.
-func MustClose(statement io.Closer) {
-	if err := statement.Close(); err != nil {
-		panic(err)
-	}
+	return mintDB, nil
 }

@@ -9,10 +9,10 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	sqlite3 "github.com/mattn/go-sqlite3"
+	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/livemode"
 	"github.com/spolu/settle/lib/token"
-	"github.com/spolu/settle/lib/tx"
 )
 
 // Offer represents an offer for an asset pair.
@@ -37,10 +37,6 @@ type Offer struct {
 
 	Type   OfType
 	Status OfStatus
-}
-
-func init() {
-	ensureMintDB()
 }
 
 // CreateCanonicalOffer creates and stores a new canonical Offer object.
@@ -69,7 +65,7 @@ func CreateCanonicalOffer(
 		Status:     status,
 	}
 
-	ext := tx.Ext(ctx, MintDB())
+	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO offers
   (token, livemode, created, owner, base_asset, quote_asset, base_price,
@@ -122,7 +118,7 @@ func CreatePropagatedOffer(
 		Status:     status,
 	}
 
-	ext := tx.Ext(ctx, MintDB())
+	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO offers
   (token, livemode, created, owner, base_asset, quote_asset, base_price,
@@ -151,7 +147,7 @@ VALUES
 func (o *Offer) Save(
 	ctx context.Context,
 ) error {
-	ext := tx.Ext(ctx, MintDB())
+	ext := db.Ext(ctx)
 	_, err := sqlx.NamedExec(ext, `
 UPDATE offers
 SET owner = :owner, base_asset = :base_asset, quote_asset = :quote_asset,
@@ -177,7 +173,7 @@ func LoadOfferByToken(
 		Token:    token,
 	}
 
-	ext := tx.Ext(ctx, MintDB())
+	ext := db.Ext(ctx)
 	if rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM offers

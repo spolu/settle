@@ -1,4 +1,10 @@
 # mint
 
- move mint host to context
- split controller into endpoint.CreateXXX object with Execute and Validate
+ [x] move mint host to context
+ [ ] split controller into endpoint.CreateXXX object with Execute and Validate
+
+  # test
+
+    [x] make the DB a context value that can be created independently for tests
+    [x] find a way to set the MintHost after start or set the mux after creating the httptest.Server
+    [ ] support in memory db

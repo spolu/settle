@@ -11,11 +11,11 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/lib/pq"
 	sqlite3 "github.com/mattn/go-sqlite3"
+	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/livemode"
 	"github.com/spolu/settle/lib/logging"
 	"github.com/spolu/settle/lib/token"
-	"github.com/spolu/settle/lib/tx"
 )
 
 const (
@@ -39,10 +39,6 @@ type Asset struct {
 	Scale  int8   // Asset scale.
 }
 
-func init() {
-	ensureMintDB()
-}
-
 // CreateAsset creates and stores a new Asset object.
 func CreateAsset(
 	ctx context.Context,
@@ -60,7 +56,7 @@ func CreateAsset(
 		Scale:  scale,
 	}
 
-	ext := tx.Ext(ctx, MintDB())
+	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO assets
   (token, livemode, created, issuer, code, scale)
@@ -88,7 +84,7 @@ VALUES
 func (u *Asset) Save(
 	ctx context.Context,
 ) error {
-	ext := tx.Ext(ctx, MintDB())
+	ext := db.Ext(ctx)
 	_, err := sqlx.NamedExec(ext, `
 UPDATE assets
 SET issuer = :issuer, code = :code, scale = :scale
@@ -116,7 +112,7 @@ func LoadAssetByIssuerCodeScale(
 		Scale:    scale,
 	}
 
-	ext := tx.Ext(ctx, MintDB())
+	ext := db.Ext(ctx)
 	if rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM assets

@@ -154,14 +154,15 @@ func NormalizedAddressAndTokenFromID(
 // FullMintURL constructs a fully qualified URL to contact a mint defaulting to
 // the correct scheme and port based on the current environment.
 func FullMintURL(
+	ctx context.Context,
 	host string,
 	path string,
 ) *url.URL {
 	if len(strings.Split(host, ":")) == 1 {
-		host += fmt.Sprintf(":%d", DefaultPort[env.Current])
+		host += fmt.Sprintf(":%d", DefaultPort[env.Get(ctx).Environment])
 	}
 	url := url.URL{
-		Scheme: DefaultScheme[env.Current],
+		Scheme: DefaultScheme[env.Get(ctx).Environment],
 		Host:   host,
 		Path:   path,
 	}
@@ -184,7 +185,7 @@ func (c *Client) RetrieveOffer(
 	}
 
 	r, err := c.httpClient.Get(
-		FullMintURL(host, fmt.Sprintf("/offers/%s", id)).String())
+		FullMintURL(ctx, host, fmt.Sprintf("/offers/%s", id)).String())
 	if err != nil {
 		return nil, errors.Trace(err)
 	}

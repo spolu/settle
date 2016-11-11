@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/spolu/settle/lib/errors"
-	"github.com/spolu/settle/lib/livemode"
 	"github.com/spolu/settle/lib/logging"
 	"github.com/spolu/settle/mint"
 	"github.com/spolu/settle/mint/model"
@@ -19,16 +18,33 @@ import (
 	"goji.io"
 )
 
+var actFlag string
+
+var envFlag string
+var dbpFlag string
+var hstFlag string
+
 var lvmFlag string
 var usrFlag string
 var pasFlag string
-var actFlag string
 
 func init() {
-	flag.StringVar(&lvmFlag, "livemode", "false", "The livemode to use")
-	flag.StringVar(&usrFlag, "username", "foo", "The user name of the user to upsert")
-	flag.StringVar(&pasFlag, "password", "bar", "The password of the user to upsert")
-	flag.StringVar(&actFlag, "action", "run", "The action to perform")
+	flag.StringVar(&actFlag, "action",
+		"run", "The action to perform")
+
+	flag.StringVar(&envFlag, "env",
+		"qa", "The environment to run in (qa, production), default: qa")
+	flag.StringVar(&dbpFlag, "dbpath",
+		"", "The path of the sqlite3 mintDB, default: ~/.mint/mint-$env.db")
+	flag.StringVar(&hstFlag, "mint_host",
+		"", "The externally accessible hostname of this mint, default: none")
+
+	flag.StringVar(&lvmFlag, "livemode",
+		"false", "The livemode to use")
+	flag.StringVar(&usrFlag, "username",
+		"foo", "The user name of the user to upsert")
+	flag.StringVar(&pasFlag, "password",
+		"bar", "The password of the user to upsert")
 
 	bind.WithFlag()
 	if fl := log.Flags(); fl&log.Ltime != 0 {
@@ -70,23 +86,22 @@ func main() {
 		flag.Parse()
 	}
 
+	ctx, err := mint.BackgroundContextFromFlags(
+		envFlag, dbpFlag, hstFlag, lvmFlag,
+	)
+	if err != nil {
+		log.Fatal(errors.Details(err))
+	}
+
 	validActions := []string{"run", "create_user"}
 	switch actFlag {
 	case "run":
-		mux, err := mint.Build()
+		mux, err := mint.Build(ctx)
 		if err != nil {
 			log.Fatal(errors.Details(err))
 		}
-
 		Serve(mux)
-
 	case "create_user":
-		ctx := context.Background()
-		if lvmFlag == "true" {
-			ctx = livemode.With(ctx, true)
-		} else {
-			ctx = livemode.With(ctx, false)
-		}
 		createUser(ctx, usrFlag, pasFlag)
 	default:
 		log.Fatalf("Invalid action `%s`, valid actions are: %s",
@@ -108,17 +123,17 @@ func createUser(
 		logging.Logf(ctx, "Updating user: %s", username)
 		err := user.UpdatePassword(ctx, password)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal(errors.Details(err))
 		}
 		err = user.Save(ctx)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal(errors.Details(err))
 		}
 	} else {
 		logging.Logf(ctx, "Creating user: %s", username)
 		_, err := model.CreateUser(ctx, username, password)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal(errors.Details(err))
 		}
 	}
 }

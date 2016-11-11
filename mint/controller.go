@@ -8,20 +8,20 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/spolu/settle/lib/db"
+	"github.com/spolu/settle/lib/env"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/format"
 	"github.com/spolu/settle/lib/livemode"
 	"github.com/spolu/settle/lib/respond"
 	"github.com/spolu/settle/lib/svc"
-	"github.com/spolu/settle/lib/tx"
 	"github.com/spolu/settle/mint/lib/authentication"
 	"github.com/spolu/settle/mint/model"
 	"goji.io/pat"
 )
 
 type controller struct {
-	mintHost string
-	client   *Client
+	client *Client
 }
 
 // CreateAsset controls the creation of new assets.
@@ -56,8 +56,8 @@ func (c *controller) CreateAsset(
 		return
 	}
 
-	ctx = tx.Begin(ctx, model.MintDB())
-	defer tx.LoggedRollback(ctx)
+	ctx = db.Begin(ctx)
+	defer db.LoggedRollback(ctx)
 
 	asset, err := model.CreateAsset(ctx, userToken, code, int8(scale))
 	if err != nil {
@@ -74,11 +74,12 @@ func (c *controller) CreateAsset(
 		return
 	}
 
-	tx.Commit(ctx)
+	db.Commit(ctx)
 
 	respond.Success(ctx, w, svc.Resp{
 		"asset": format.JSONPtr(NewAssetResource(ctx,
-			asset, authentication.Get(ctx).User, c.mintHost)),
+			asset, authentication.Get(ctx).User,
+			env.Get(ctx).Config[EnvCfgMintHost])),
 	})
 }
 
@@ -116,7 +117,8 @@ func (c *controller) CreateOperation(
 	}
 
 	// Validate that the issuer is attempting to create the operation.
-	if host != c.mintHost || username != authentication.Get(ctx).User.Username {
+	if host != env.Get(ctx).Config[EnvCfgMintHost] ||
+		username != authentication.Get(ctx).User.Username {
 		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(nil,
 			400, "operation_not_authorized",
 			"You can only create operations for assets created by the "+
@@ -124,7 +126,8 @@ func (c *controller) CreateOperation(
 				"operation's asset was created by: %s@%s. If you own %s, "+
 				"and wish to transfer some of it, you should create a "+
 				"transaction directly from your mint instead.",
-			authentication.Get(ctx).User.Username, c.mintHost,
+			authentication.Get(ctx).User.Username,
+			env.Get(ctx).Config[EnvCfgMintHost],
 			username, host, a.Name,
 		)))
 		return
@@ -186,8 +189,8 @@ func (c *controller) CreateOperation(
 		return
 	}
 
-	ctx = tx.Begin(ctx, model.MintDB())
-	defer tx.LoggedRollback(ctx)
+	ctx = db.Begin(ctx)
+	defer db.LoggedRollback(ctx)
 
 	asset, err := model.LoadAssetByIssuerCodeScale(ctx,
 		authentication.Get(ctx).User.Token, a.Code, a.Scale)
@@ -286,13 +289,14 @@ func (c *controller) CreateOperation(
 		}
 	}
 
-	tx.Commit(ctx)
+	db.Commit(ctx)
 
 	respond.Success(ctx, w, svc.Resp{
 		"operation": format.JSONPtr(NewOperationResource(ctx,
 			operation,
 			NewAssetResource(ctx,
-				asset, authentication.Get(ctx).User, c.mintHost))),
+				asset, authentication.Get(ctx).User,
+				env.Get(ctx).Config[EnvCfgMintHost]))),
 	})
 }
 
@@ -317,8 +321,8 @@ func (c *controller) RetrieveOffer(
 		return
 	}
 
-	ctx = tx.Begin(ctx, model.MintDB())
-	defer tx.LoggedRollback(ctx)
+	ctx = db.Begin(ctx)
+	defer db.LoggedRollback(ctx)
 
 	offer, err := model.LoadOfferByToken(ctx, token)
 	if err != nil {
@@ -341,7 +345,7 @@ func (c *controller) RetrieveOffer(
 		)))
 	}
 
-	tx.Commit(ctx)
+	db.Commit(ctx)
 
 	respond.Success(ctx, w, svc.Resp{
 		"offer": format.JSONPtr(NewOfferResource(ctx, offer)),
@@ -383,7 +387,8 @@ func (c *controller) CreateCanonicalOffer(
 ) {
 	ctx := r.Context()
 	owner := fmt.Sprintf("%s@%s",
-		authentication.Get(ctx).User.Username, c.mintHost)
+		authentication.Get(ctx).User.Username,
+		env.Get(ctx).Config[EnvCfgMintHost])
 
 	// Validate asset pair.
 	pair, err := AssetResourcesFromPair(ctx, r.PostFormValue("pair"))
@@ -450,8 +455,8 @@ func (c *controller) CreateCanonicalOffer(
 		return
 	}
 
-	ctx = tx.Begin(ctx, model.MintDB())
-	defer tx.LoggedRollback(ctx)
+	ctx = db.Begin(ctx)
+	defer db.LoggedRollback(ctx)
 
 	// Create canonical offer locally.
 	offer, err := model.CreateCanonicalOffer(ctx,
@@ -466,7 +471,7 @@ func (c *controller) CreateCanonicalOffer(
 	// We commit first so that the offer is visible to subsequent requests
 	// hitting the mint (from other mint to validate the offer after
 	// propagation).
-	tx.Commit(ctx)
+	db.Commit(ctx)
 
 	// TODO: propagate offer to assets' mints, failing silently if
 	// unsuccessful.
@@ -505,8 +510,8 @@ func (c *controller) CreatePropagatedOffer(
 		return
 	}
 
-	ctx = tx.Begin(ctx, model.MintDB())
-	defer tx.LoggedRollback(ctx)
+	ctx = db.Begin(ctx)
+	defer db.LoggedRollback(ctx)
 
 	// Check if the offer exists locally
 	offer, err := model.LoadOfferByToken(ctx, token)
