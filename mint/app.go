@@ -8,7 +8,6 @@ import (
 	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/env"
 	"github.com/spolu/settle/lib/errors"
-	"github.com/spolu/settle/lib/livemode"
 	"github.com/spolu/settle/lib/logging"
 	"github.com/spolu/settle/lib/recoverer"
 	"github.com/spolu/settle/lib/requestlogger"
@@ -25,7 +24,6 @@ func BackgroundContextFromFlags(
 	envFlag string,
 	dbpFlag string,
 	hstFlag string,
-	lvmFlag string,
 ) (context.Context, error) {
 	ctx := context.Background()
 
@@ -48,13 +46,6 @@ func BackgroundContextFromFlags(
 		return nil, err
 	}
 	ctx = db.WithDB(ctx, mintDB)
-
-	// Not used by `run`.
-	if lvmFlag == "true" {
-		ctx = livemode.With(ctx, true)
-	} else {
-		ctx = livemode.With(ctx, false)
-	}
 
 	return ctx, nil
 }
@@ -79,7 +70,6 @@ func Build(
 	mux.Use(recoverer.Middleware)
 	mux.Use(db.Middleware(db.GetDB(ctx)))
 	mux.Use(env.Middleware(env.Get(ctx)))
-	mux.Use(livemode.Middleware)
 	mux.Use(authentication.Middleware)
 
 	a := &Configuration{}
