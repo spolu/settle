@@ -8,6 +8,7 @@ import (
 	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/env"
 	"github.com/spolu/settle/lib/livemode"
+	"github.com/spolu/settle/lib/logging"
 	"github.com/spolu/settle/lib/recoverer"
 	"github.com/spolu/settle/lib/requestlogger"
 	"github.com/spolu/settle/mint"
@@ -19,11 +20,12 @@ import (
 // Mint represents a test mint.
 type Mint struct {
 	Server *httptest.Server
+	Env    *env.Env
 }
 
-// CreateTestMint creates a new test mint with an in-memory DB and returns
+// CreateMint creates a new test mint with an in-memory DB and returns
 // test.Mint object.
-func CreateTestMint(
+func CreateMint(
 	t *testing.T,
 ) (*Mint, error) {
 	ctx := context.Background()
@@ -62,7 +64,12 @@ func CreateTestMint(
 
 	m := Mint{
 		Server: httptest.NewServer(mux),
+		Env:    env.Get(ctx),
 	}
+	m.Env.Config[mint.EnvCfgMintHost] = m.Server.URL[7:]
+
+	logging.Logf(ctx, "Creating test mint: minst_host=%s",
+		m.Env.Config[mint.EnvCfgMintHost])
 
 	return &m, nil
 }
