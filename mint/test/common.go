@@ -106,6 +106,10 @@ func (m *Mint) CreateUser(
 	if err != nil {
 		t.Fatal(err)
 	}
+	m.Env.Config[mint.EnvCfgMintHost] = m.Server.URL[7:]
+
+	logging.Logf(ctx, "Creating test mint: minst_host=%s",
+		m.Env.Config[mint.EnvCfgMintHost])
 
 	return &MintUser{m, username, password}
 }
