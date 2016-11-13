@@ -2,8 +2,13 @@ package test
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"math/rand"
+	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/jmoiron/sqlx"
@@ -12,6 +17,7 @@ import (
 	"github.com/spolu/settle/lib/logging"
 	"github.com/spolu/settle/lib/recoverer"
 	"github.com/spolu/settle/lib/requestlogger"
+	"github.com/spolu/settle/lib/svc"
 	"github.com/spolu/settle/lib/token"
 	"github.com/spolu/settle/mint"
 	"github.com/spolu/settle/mint/lib/authentication"
@@ -110,4 +116,34 @@ func (m *Mint) CreateUser(
 		m.Env.Config[mint.EnvCfgMintHost])
 
 	return &MintUser{m, username, password}
+}
+
+// Post posts to a specified endpoint on the mint.
+func (m *Mint) Post(
+	t *testing.T,
+	user *MintUser,
+	path string,
+	params url.Values,
+) (int, svc.Resp) {
+	req, err := http.NewRequest("POST",
+		fmt.Sprintf("%s%s", m.Server.URL, path),
+		strings.NewReader(params.Encode()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.SetBasicAuth(user.Username, user.Password)
+
+	r, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.Body.Close()
+
+	var raw svc.Resp
+	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
+		t.Fatal(err)
+	}
+
+	return r.StatusCode, raw
 }

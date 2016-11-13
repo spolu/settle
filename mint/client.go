@@ -194,7 +194,7 @@ func (c *Client) RetrieveOffer(
 	}
 
 	var offer OfferResource
-	if err := raw.Extract("ofer", &offer); err != nil {
+	if err := raw.Extract("offer", &offer); err != nil {
 		return nil, errors.Trace(err)
 	}
 
