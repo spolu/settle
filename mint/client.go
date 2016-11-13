@@ -12,7 +12,6 @@ import (
 
 	"github.com/spolu/settle/lib/env"
 	"github.com/spolu/settle/lib/errors"
-	"github.com/spolu/settle/lib/livemode"
 	"github.com/spolu/settle/lib/svc"
 )
 
@@ -61,8 +60,7 @@ var IDRegexp = regexp.MustCompile(
 )
 
 // AssetResourceFromName parses an asset fully qualified name into an
-// AssetResource object (without id or created date). Livemode is infered by
-// the current context.
+// AssetResource object (without id or created date).
 func AssetResourceFromName(
 	ctx context.Context,
 	name string,
@@ -77,16 +75,15 @@ func AssetResourceFromName(
 	}
 
 	return &AssetResource{
-		Livemode: livemode.Get(ctx),
-		Name:     name,
-		Issuer:   fmt.Sprintf("%s@%s", m[1], m[3]),
-		Code:     m[5],
-		Scale:    int8(s),
+		Name:   name,
+		Issuer: fmt.Sprintf("%s@%s", m[1], m[3]),
+		Code:   m[5],
+		Scale:  int8(s),
 	}, nil
 }
 
 // AssetResourcesFromPair parses a pair into an array of AssetResources
-// (without id or created date). Livemode is infered by the current context.
+// (without id or created date).
 func AssetResourcesFromPair(
 	ctx context.Context,
 	pair string,

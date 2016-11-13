@@ -12,7 +12,6 @@ import (
 	sqlite3 "github.com/mattn/go-sqlite3"
 	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/errors"
-	"github.com/spolu/settle/lib/livemode"
 	"github.com/spolu/settle/lib/token"
 )
 
@@ -24,9 +23,8 @@ var MaxAssetAmount = new(big.Int).Exp(
 // another, or to an account only in the case of issuance. Amount is
 // represented as a Amount and store in database as a NUMERIC(39).
 type Operation struct {
-	Token    string
-	Created  time.Time
-	Livemode bool
+	Token   string
+	Created time.Time
 
 	Asset       string  // Asset token.
 	Source      *string // Source user address (if nil issuance).
@@ -43,9 +41,8 @@ func CreateOperation(
 	amount Amount,
 ) (*Operation, error) {
 	operation := Operation{
-		Token:    token.New("operation"),
-		Livemode: livemode.Get(ctx),
-		Created:  time.Now(),
+		Token:   token.New("operation"),
+		Created: time.Now(),
 
 		Asset:       asset,
 		Source:      source,
@@ -56,9 +53,9 @@ func CreateOperation(
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO operations
-  (token, livemode, created, asset, source, destination, amount)
+  (token, created, asset, source, destination, amount)
 VALUES
-  (:token, :livemode, :created, :asset, :source, :destination, :amount)
+  (:token, :created, :asset, :source, :destination, :amount)
 `, operation); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:

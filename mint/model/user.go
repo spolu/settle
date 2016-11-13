@@ -12,7 +12,6 @@ import (
 	sqlite3 "github.com/mattn/go-sqlite3"
 	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/errors"
-	"github.com/spolu/settle/lib/livemode"
 	"github.com/spolu/settle/lib/token"
 	"golang.org/x/crypto/scrypt"
 )
@@ -21,9 +20,8 @@ import (
 // solely accesed in read-only mode, leaving user management to an external
 // system with access to the same underlying mintDB.
 type User struct {
-	Token    string
-	Created  time.Time
-	Livemode bool
+	Token   string
+	Created time.Time
 
 	Username     string
 	PasswordHash string `db:"password_hash"`
@@ -36,9 +34,8 @@ func CreateUser(
 	password string,
 ) (*User, error) {
 	user := User{
-		Token:    token.New("user"),
-		Livemode: livemode.Get(ctx),
-		Created:  time.Now(),
+		Token:   token.New("user"),
+		Created: time.Now(),
 
 		Username: username,
 	}
@@ -53,9 +50,9 @@ func CreateUser(
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO users
-  (token, livemode, created, username, password_hash)
+  (token, created, username, password_hash)
 VALUES
-  (:token, :livemode, :created, :username, :password_hash)
+  (:token, :created, :username, :password_hash)
 `, user); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:
@@ -96,16 +93,14 @@ func LoadUserByToken(
 	token string,
 ) (*User, error) {
 	user := User{
-		Token:    token,
-		Livemode: livemode.Get(ctx),
+		Token: token,
 	}
 
 	ext := db.Ext(ctx)
 	if rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM users
-WHERE livemode = :livemode
-  AND token = :token
+WHERE token = :token
 `, user); err != nil {
 		return nil, errors.Trace(err)
 	} else if !rows.Next() {
@@ -127,15 +122,13 @@ func LoadUserByUsername(
 ) (*User, error) {
 	user := User{
 		Username: username,
-		Livemode: livemode.Get(ctx),
 	}
 
 	ext := db.Ext(ctx)
 	if rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM users
-WHERE livemode = :livemode
-  AND username = :username
+WHERE username = :username
 `, user); err != nil {
 		return nil, errors.Trace(err)
 	} else if !rows.Next() {

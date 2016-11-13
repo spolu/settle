@@ -7,7 +7,6 @@ const (
 CREATE TABLE IF NOT EXISTS offers(
   token VARCHAR(256) NOT NULL,
   created TIMESTAMP NOT NULL,
-  livemode BOOL NOT NULL,
 
   owner VARCHAR(256) NOT NULL,       -- the offer's owner's address
   base_asset VARCHAR(256) NOT NULL,  -- the base asset

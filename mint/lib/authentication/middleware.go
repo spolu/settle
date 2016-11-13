@@ -6,7 +6,6 @@ import (
 	"regexp"
 
 	"github.com/spolu/settle/lib/errors"
-	"github.com/spolu/settle/lib/livemode"
 	"github.com/spolu/settle/lib/logging"
 	"github.com/spolu/settle/lib/respond"
 	"github.com/spolu/settle/mint/model"
@@ -94,14 +93,14 @@ func (m middleware) ServeHTTP(
 		if skip {
 			withStatus = With(ctx, Status{AutStSkipped, nil})
 			logging.Logf(ctx,
-				"Authentication: status=%q livemode=%t username=%q",
-				Get(withStatus).Status, livemode.Get(ctx), username)
+				"Authentication: status=%q username=%q",
+				Get(withStatus).Status, username)
 			m.Handler.ServeHTTP(w, r.WithContext(withStatus))
 		} else {
 			withStatus = With(ctx, Status{AutStFailed, nil})
 			logging.Logf(ctx,
-				"Authentication: status=%q livemode=%t username=%q",
-				Get(withStatus).Status, livemode.Get(ctx), username)
+				"Authentication: status=%q username=%q",
+				Get(withStatus).Status, username)
 			respond.Error(withStatus, w, errors.Trace(err))
 		}
 	}
@@ -128,8 +127,8 @@ func (m middleware) ServeHTTP(
 
 	withStatus = With(ctx, Status{AutStSucceeded, user})
 	logging.Logf(ctx,
-		"Authentication: status=%q livemode=%t user=%q username=%q",
-		Get(withStatus).Status, livemode.Get(ctx), Get(withStatus).User.Token,
+		"Authentication: status=%q user=%q username=%q",
+		Get(withStatus).Status, Get(withStatus).User.Token,
 		username)
 
 	m.Handler.ServeHTTP(w, r.WithContext(withStatus))

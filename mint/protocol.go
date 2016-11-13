@@ -10,9 +10,8 @@ import (
 
 // AssetResource is the representation of an asset in the mint API.
 type AssetResource struct {
-	ID       string `json:"id"`
-	Created  int64  `json:"created"`
-	Livemode bool   `json:"livemode"`
+	ID      string `json:"id"`
+	Created int64  `json:"created"`
 
 	Name   string `json:"name"`
 	Issuer string `json:"issuer"`
@@ -30,8 +29,7 @@ func NewAssetResource(
 	return AssetResource{
 		ID: fmt.Sprintf(
 			"%s@%s[%s]", issuer.Username, host, asset.Token),
-		Created:  asset.Created.UnixNano() / (1000 * 1000),
-		Livemode: asset.Livemode,
+		Created: asset.Created.UnixNano() / (1000 * 1000),
 		Name: fmt.Sprintf(
 			"%s@%s[%s.%d]",
 			issuer.Username, host, asset.Code, asset.Scale,
@@ -46,9 +44,8 @@ func NewAssetResource(
 
 // OperationResource is the representation of an operation in the mint API.
 type OperationResource struct {
-	ID       string `json:"id"`
-	Created  int64  `json:"created"`
-	Livemode bool   `json:"livemode"`
+	ID      string `json:"id"`
+	Created int64  `json:"created"`
 
 	Asset       AssetResource `json:"asset"`
 	Source      *string       `json:"source"`
@@ -66,7 +63,6 @@ func NewOperationResource(
 		ID: fmt.Sprintf(
 			"%s[%s]", assetResource.Issuer, operation.Token),
 		Created:     operation.Created.UnixNano() / (1000 * 1000),
-		Livemode:    operation.Livemode,
 		Asset:       assetResource,
 		Source:      operation.Source,
 		Destination: operation.Destination,
@@ -76,9 +72,8 @@ func NewOperationResource(
 
 // OfferResource is the representation of an offer in the mint API.
 type OfferResource struct {
-	ID       string `json:"id"`
-	Created  int64  `json:"created"`
-	Livemode bool   `json:"livemode"`
+	ID      string `json:"id"`
+	Created int64  `json:"created"`
 
 	Pair   string   `json:"pair"`
 	Price  string   `json:"price"`
@@ -94,8 +89,7 @@ func NewOfferResource(
 	return OfferResource{
 		ID: fmt.Sprintf(
 			"%s[%s]", offer.Owner, offer.Token),
-		Created:  offer.Created.UnixNano() / (1000 * 1000),
-		Livemode: offer.Livemode,
+		Created: offer.Created.UnixNano() / (1000 * 1000),
 
 		Pair: fmt.Sprintf("%s/%s", offer.BaseAsset, offer.QuoteAsset),
 		Price: fmt.Sprintf(
