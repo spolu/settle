@@ -7,4 +7,8 @@
 
     [x] make the DB a context value that can be created independently for tests
     [x] find a way to set the MintHost after start or set the mux after creating the httptest.Server
-    [ ] support in memory db
+    [x] support in memory db
+
+# site
+
+  [ ] have the get started guide on github, to generate stars?

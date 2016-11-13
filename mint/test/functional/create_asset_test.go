@@ -9,10 +9,15 @@ import (
 func TestCreateAssetSimple(
 	t *testing.T,
 ) {
+	//ctx := context.Background()
 
-	mint, err := test.CreateMint(t)
-	if err != nil {
-		t.Errorf("create test mint failed: %v", err)
-	}
-	_ = mint
+	mint := test.CreateMint(t)
+	user := mint.CreateUser(t)
+
+	_ = user
+
+	//mint.Post(ctx, "/assets", map[string]string{
+	//	"code":  "USD",
+	//	"scale": "2",
+	//})
 }
