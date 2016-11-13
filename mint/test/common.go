@@ -9,7 +9,6 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/env"
-	"github.com/spolu/settle/lib/livemode"
 	"github.com/spolu/settle/lib/logging"
 	"github.com/spolu/settle/lib/recoverer"
 	"github.com/spolu/settle/lib/requestlogger"
@@ -61,7 +60,6 @@ func CreateMint(
 	mux.Use(recoverer.Middleware)
 	mux.Use(db.Middleware(db.GetDB(ctx)))
 	mux.Use(env.Middleware(env.Get(ctx)))
-	mux.Use(livemode.Middleware)
 	mux.Use(authentication.Middleware)
 
 	a := &mint.Configuration{}
@@ -106,6 +104,10 @@ func (m *Mint) CreateUser(
 	if err != nil {
 		t.Fatal(err)
 	}
+	m.Env.Config[mint.EnvCfgMintHost] = m.Server.URL[7:]
+
+	logging.Logf(m.Ctx, "Creating test mint: minst_host=%s",
+		m.Env.Config[mint.EnvCfgMintHost])
 
 	return &MintUser{m, username, password}
 }

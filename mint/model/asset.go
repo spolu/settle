@@ -13,7 +13,6 @@ import (
 	sqlite3 "github.com/mattn/go-sqlite3"
 	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/errors"
-	"github.com/spolu/settle/lib/livemode"
 	"github.com/spolu/settle/lib/logging"
 	"github.com/spolu/settle/lib/token"
 )
@@ -30,9 +29,8 @@ var AssetCodeRegexp = regexp.MustCompile("^[A-Z0-9\\-]{1,64}$")
 
 // Asset represents an asset object. Asset are created by users (issuer).
 type Asset struct {
-	Token    string
-	Created  time.Time
-	Livemode bool
+	Token   string
+	Created time.Time
 
 	Issuer string // Issuer user token.
 	Code   string // Asset code.
@@ -47,9 +45,8 @@ func CreateAsset(
 	scale int8,
 ) (*Asset, error) {
 	asset := Asset{
-		Token:    token.New("asset"),
-		Livemode: livemode.Get(ctx),
-		Created:  time.Now(),
+		Token:   token.New("asset"),
+		Created: time.Now(),
 
 		Issuer: issuer,
 		Code:   code,
@@ -59,9 +56,9 @@ func CreateAsset(
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO assets
-  (token, livemode, created, issuer, code, scale)
+  (token, created, issuer, code, scale)
 VALUES
-  (:token, :livemode, :created, :issuer, :code, :scale)
+  (:token, :created, :issuer, :code, :scale)
 `, asset); err != nil {
 		logging.Logf(ctx, "ERROR: %+v / %s", err, reflect.TypeOf(err))
 		switch err := err.(type) {
@@ -106,18 +103,16 @@ func LoadAssetByIssuerCodeScale(
 	scale int8,
 ) (*Asset, error) {
 	asset := Asset{
-		Livemode: livemode.Get(ctx),
-		Issuer:   issuer,
-		Code:     code,
-		Scale:    scale,
+		Issuer: issuer,
+		Code:   code,
+		Scale:  scale,
 	}
 
 	ext := db.Ext(ctx)
 	if rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM assets
-WHERE livemode = :livemode
-  AND issuer = :issuer
+WHERE issuer = :issuer
   AND code = :code
   AND scale = :scale
 `, asset); err != nil {

@@ -7,13 +7,12 @@ const (
 CREATE TABLE IF NOT EXISTS users(
   token VARCHAR(256) NOT NULL,
   created TIMESTAMP NOT NULL,
-  livemode BOOL NOT NULL,
 
   username VARCHAR(256) NOT NULL,
   password_hash VARCHAR(256) NOT NULL,
 
   PRIMARY KEY(token),
-  CONSTRAINT users_username_livemode_u UNIQUE (username, livemode)
+  CONSTRAINT users_usernameu UNIQUE (username)
 );
 `
 )

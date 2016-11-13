@@ -24,7 +24,6 @@ var envFlag string
 var dbpFlag string
 var hstFlag string
 
-var lvmFlag string
 var usrFlag string
 var pasFlag string
 
@@ -39,8 +38,6 @@ func init() {
 	flag.StringVar(&hstFlag, "mint_host",
 		"", "The externally accessible hostname of this mint, default: none")
 
-	flag.StringVar(&lvmFlag, "livemode",
-		"false", "The livemode to use")
 	flag.StringVar(&usrFlag, "username",
 		"foo", "The user name of the user to upsert")
 	flag.StringVar(&pasFlag, "password",
@@ -87,7 +84,7 @@ func main() {
 	}
 
 	ctx, err := mint.BackgroundContextFromFlags(
-		envFlag, dbpFlag, hstFlag, lvmFlag,
+		envFlag, dbpFlag, hstFlag,
 	)
 	if err != nil {
 		log.Fatal(errors.Details(err))

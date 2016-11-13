@@ -7,7 +7,6 @@ const (
 CREATE TABLE IF NOT EXISTS balances(
   token VARCHAR(256) NOT NULL,
   created TIMESTAMP NOT NULL,
-  livemode BOOL NOT NULL,
 
   asset VARCHAR(256) NOT NULL,  -- the balance's asset token
   owner VARCHAR(256) NOT NULL,  -- the balance's owner's address

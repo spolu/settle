@@ -30,13 +30,6 @@ A few examples of valid assets are:
 
 ## API
 
-### Livemode
-
-All requests should specify a `Livemode` header. If `true` the request is
-considered live, otherwise it is a test request. The test environment behaves
-similarly to the live one with the only added convention that assets are not
-due in testmode, and consequently have no value whatsoever.
-
 ### User API
 
 #### Onboarding and authentication
@@ -89,7 +82,6 @@ two other mints otherwise).
 
 ```
 curl -XPOST https://foo.bar:2406/offers \
-  -H livemode: true \
   -u username:password \
   -d type=bid \
   -d pair=stan@foo.bar[USD.2]/info@sightglasscofee.com:AU-LAIT.0 \
@@ -98,7 +90,6 @@ curl -XPOST https://foo.bar:2406/offers \
 
 {
   id: "stan@foo.bar[offer_7t3sk24sdvz0a]",
-  livemode: true,
   pair: "stan@foo.bar:USD.2/info@sightglasscoffee.com:AU-LAIT.0",
   type: "bid",
   price: "320/1",
@@ -116,7 +107,6 @@ curl -XGET https://sightglasscofee.com:2406/offers/stan@foo.bar[offer_7t3sk24sdv
 
 {
   id: "stan@foo.bar[offer_7t3sk24sdvz0a]",
-  livemode: true,
   pair: "info@sightglasscoffee.com:AU-LAIT.0/stan@foo.bar[USD.2]",
   type: "ask",
   price: "1/320",
@@ -133,7 +123,6 @@ Creating a simple transaction let you credit a user account with a given asset.
 
 ```
 curl -XPOST https://foo.bar:2406/transactions \
-  -H livemode: true \
   -u username:password \
   -d pair=stan@foo.bar[USD.2]/stan@foo.bar[USD.2] \
   -d amount=500 \
@@ -141,7 +130,6 @@ curl -XPOST https://foo.bar:2406/transactions \
 
 {
   id: "stan@foo.bar[transaction_9iop2182cm73s]",
-  livemode: true,
   pair: "stan@foo.bar[USD.2]/stan@foo.bar[USD.2]",
   operations: [{
     offer: null,
@@ -170,7 +158,6 @@ Assuming we have the following active offer on the network:
 
 ```
 curl -XPOST https://foo.bar:2406/transactions \
-  -H livemode: true \
   -u username:password \
   -d pair=stan@foo.bar[USD.2]/bob@corewars.org[USD.2] \
   -d price=100/100 \
@@ -179,7 +166,6 @@ curl -XPOST https://foo.bar:2406/transactions \
 
 {
   id: "stan@foo.bar[transaction_8yhs2op9sckD2]",
-  livemode: true,
   lock: "ae7b2a3ffd9c43a...",
   pair: "stan@foo.bar[USD.2]/bob@corewars.org[USD.2]",
   operations: [{
@@ -220,7 +206,6 @@ for **500 stan@foo.bar[USD.2]**.
 
 ```
 curl -XPOST https://foo.bar:2406/transactions \
-  -H livemode: true \
   -u username:password \
   -d pair=stan@foo.bar[USD.2]/alice@rocket.science[USD.2]
   -d price=100/100 \
@@ -230,7 +215,6 @@ curl -XPOST https://foo.bar:2406/transactions \
 
 {
   id: "stan@foo.bar[transaction_9iop2182cm73s]",
-  livemode: true,
   lock: "ae7b2a3ffd9c43a...",
   pair: "stan@foo.bar[USD.2]/alice@rocket.science[USD.2]",
   operations: [{
@@ -269,11 +253,9 @@ legs lets your reconstruct the full order book for an asset pair:
 curl -XGET https://foo.bar:2406/offers?
   pair=stan@foo.bar[USD.2]/bob@corewars.org[USD.2]
   type=ask \
-  -H livemode: true
 
 [{
   id: "stan@foo.bar[offer_7t3sk24sdvz0a]",
-  livemode: true,
   pair: "stan@foo.bar[USD.2]/bob@corewars.org[USD.2]",
   type: "ask",
   price: "100/100",
@@ -286,7 +268,6 @@ curl -XGET https://foo.bar:2406/offers?
 curl -XGET https://foo.bar:2406/offers?
   pair=stan@foo.bar[USD.2]/bob@corewars.org[USD.2]
   type=bid \
-  -H livemode: true
 
 [{
   ...
@@ -312,11 +293,9 @@ following state:
 
 ```
 curl -XGET https://foo.bar:2406/transactions[transaction_9iop2182cm73s] \
-  -H livemode: true
 
 {
   id: "stan@foo.bar[transaction_9iop2182cm73s]",
-  livemode: true,
   lock: "ae7b2a3ffd9c43a...",
   pair: "stan@foo.bar[USD.2]/alice@rocket.science[USD.2]",
   operations: [{
@@ -351,7 +330,6 @@ the newly generated transaction:
 
 ```
 curl -XPOST https://corewars.org:2406/transactions \
-  -H livemode: true \
   -d id=stan@foo.bar[transaction_9iop2182cm73s]
 ```
 
@@ -363,11 +341,9 @@ copy the transaction object and makes it available at the following URL:
 
 ```
 curl -XGET https://corewars.org:2406/transactions[transaction_9iop2182cm73s] \
-  -H livemode: true
 
 {
   id: "stan@foo.bar[transaction_9iop2182cm73s]",
-  livemode: true,
   lock: "ae7b2a3ffd9c43a...",
   pair: "stan@foo.bar[USD.2]/alice@rocket.science[USD.2]",
   operations: [{
@@ -405,12 +381,10 @@ transaction (since it is the last mint on the path of the transaction):
 
 ```
 curl -XPOST https://rocket.science:2406/transactions \
-  -H livemode: true \
   -d id=stan@foo.bar[transaction_9iop2182cm73s]
 
 {
   id: "stan@foo.bar[transaction_9iop2182cm73s]",
-  livemode: true,
   lock: "ae7b2a3ffd9c43a...",
   pair: "stan@foo.bar[USD.2]/alice@rocket.science[USD.2]",
   operations: [{
@@ -466,12 +440,10 @@ and finally **foo.bar** itself.
 
 ```
 curl -XPOST https://rocket.science:2406/transactions/stan@foo.bar[transaction_9iop2182cm73s]/settle \
-  -H livemode: true \
   -d secret=a2bd3ef2249add...
 
 {
   id: "stan@foo.bar[transaction_9iop2182cm73s]",
-  livemode: true,
   lock: "ae7b2a3ffd9c43a...",
   pair: "stan@foo.bar[USD.2]/alice@rocket.science[USD.2]",
   operations: [{

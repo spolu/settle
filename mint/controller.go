@@ -12,7 +12,6 @@ import (
 	"github.com/spolu/settle/lib/env"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/format"
-	"github.com/spolu/settle/lib/livemode"
 	"github.com/spolu/settle/lib/respond"
 	"github.com/spolu/settle/lib/svc"
 	"github.com/spolu/settle/mint/lib/authentication"
@@ -537,16 +536,6 @@ func (c *controller) CreatePropagatedOffer(
 				"that mint %s is not reachable from this mint or can be due "+
 				"to the fact that %s is not valid anymore on %s.",
 			id, host, id, host,
-		)))
-		return
-	}
-
-	// Validate livemode.
-	if o.Livemode != livemode.Get(ctx) {
-		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(err,
-			402, "retrieved_livemode_invalid",
-			"The livemode of the offer retrieved is invalid: %s.",
-			o.Livemode,
 		)))
 		return
 	}

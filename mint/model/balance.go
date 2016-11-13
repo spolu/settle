@@ -11,16 +11,14 @@ import (
 	sqlite3 "github.com/mattn/go-sqlite3"
 	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/errors"
-	"github.com/spolu/settle/lib/livemode"
 	"github.com/spolu/settle/lib/token"
 )
 
 // Balance represents a user balance for a given asset. Balances are updated as
 // operations are created.
 type Balance struct {
-	Token    string
-	Created  time.Time
-	Livemode bool
+	Token   string
+	Created time.Time
 
 	Asset string // Asset token.
 	Owner string // Owner user address.
@@ -37,9 +35,8 @@ func CreateBalance(
 	value Amount,
 ) (*Balance, error) {
 	balance := Balance{
-		Token:    token.New("balance"),
-		Livemode: livemode.Get(ctx),
-		Created:  time.Now(),
+		Token:   token.New("balance"),
+		Created: time.Now(),
 
 		Asset: asset,
 		Owner: owner,
@@ -49,9 +46,9 @@ func CreateBalance(
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO balances
-  (token, livemode, created, asset, owner, value)
+  (token, created, asset, owner, value)
 VALUES
-  (:token, :livemode, :created, :asset, :owner, :value)
+  (:token, :created, :asset, :owner, :value)
 `, balance); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:
@@ -94,17 +91,15 @@ func LoadBalanceByAssetOwner(
 	owner string,
 ) (*Balance, error) {
 	balance := Balance{
-		Livemode: livemode.Get(ctx),
-		Asset:    asset,
-		Owner:    owner,
+		Asset: asset,
+		Owner: owner,
 	}
 
 	ext := db.Ext(ctx)
 	if rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM balances
-WHERE livemode = :livemode
-  AND asset = :asset
+WHERE asset = :asset
   AND owner = :owner
 `, balance); err != nil {
 		return nil, errors.Trace(err)

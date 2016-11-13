@@ -11,7 +11,6 @@ import (
 	sqlite3 "github.com/mattn/go-sqlite3"
 	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/errors"
-	"github.com/spolu/settle/lib/livemode"
 	"github.com/spolu/settle/lib/token"
 )
 
@@ -23,9 +22,8 @@ import (
 // - Propagated offers are indicatively stored on the mints of the offers's
 //   assets, to compute order books.
 type Offer struct {
-	Token    string
-	Created  time.Time
-	Livemode bool
+	Token   string
+	Created time.Time
 
 	Owner      string // Owner user address.
 	BaseAsset  string `db:"base_asset"`
@@ -51,9 +49,8 @@ func CreateCanonicalOffer(
 	status OfStatus,
 ) (*Offer, error) {
 	offer := Offer{
-		Token:    token.New("offer"),
-		Livemode: livemode.Get(ctx),
-		Created:  time.Now(),
+		Token:   token.New("offer"),
+		Created: time.Now(),
 
 		Owner:      owner,
 		BaseAsset:  baseAsset,
@@ -68,10 +65,10 @@ func CreateCanonicalOffer(
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO offers
-  (token, livemode, created, owner, base_asset, quote_asset, base_price,
+  (token, created, owner, base_asset, quote_asset, base_price,
    quote_price, amount, type, status)
 VALUES
-  (:token, :livemode, :created, :owner, :base_asset, :quote_asset, :base_price, 
+  (:token, :created, :owner, :base_asset, :quote_asset, :base_price, 
    :quote_price, :amount, :type, :status)
 `, offer); err != nil {
 		switch err := err.(type) {
@@ -104,9 +101,8 @@ func CreatePropagatedOffer(
 	status OfStatus,
 ) (*Offer, error) {
 	offer := Offer{
-		Token:    token,
-		Livemode: livemode.Get(ctx),
-		Created:  created,
+		Token:   token,
+		Created: created,
 
 		Owner:      owner,
 		BaseAsset:  baseAsset,
@@ -121,10 +117,10 @@ func CreatePropagatedOffer(
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO offers
-  (token, livemode, created, owner, base_asset, quote_asset, base_price,
+  (token, created, owner, base_asset, quote_asset, base_price,
    quote_price, amount, type, status)
 VALUES
-  (:token, :livemode, :created, :owner, :base_asset, :quote_asset, :base_price, 
+  (:token, :created, :owner, :base_asset, :quote_asset, :base_price, 
    :quote_price, :amount, :type, :status)
 `, offer); err != nil {
 		switch err := err.(type) {
@@ -169,16 +165,14 @@ func LoadOfferByToken(
 	token string,
 ) (*Offer, error) {
 	offer := Offer{
-		Livemode: livemode.Get(ctx),
-		Token:    token,
+		Token: token,
 	}
 
 	ext := db.Ext(ctx)
 	if rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM offers
-WHERE livemode = :livemode
-  AND token = :token
+WHERE token = :token
 `, offer); err != nil {
 		return nil, errors.Trace(err)
 	} else if !rows.Next() {
