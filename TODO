@@ -1,6 +1,7 @@
 # mint
 
  [x] move mint host to context
+ [ ] pass DSN for DB, support Postgres
  [ ] split controller into endpoint.CreateXXX object with Execute and Validate
 
   # test

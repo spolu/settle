@@ -27,7 +27,8 @@ Basic operations supported by the Settle network:
 - *Create offer*: users can create offers to exchange assets, such as
   **stan@foobar.com:USD.2/info@sightglasscofee.com:AU-LAIT.0** at price
   **320/1** for quantity **2**.
-- *Create transaction*: exchange assets by crossing a path of offers.
+- *Create transaction*: exchange assets by atomically crossing a path of
+  offers.
 
 A trust relationship between user A and user B (A trusting B) is simply
 expressed in that model by an outstanding offer by user A to exchange some of
