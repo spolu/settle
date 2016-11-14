@@ -47,7 +47,7 @@ func (c *controller) CreateAsset(
 		(int8(scale) < model.AssetMinScale ||
 			int8(scale) > model.AssetMaxScale) {
 		respond.Error(ctx, w, errors.Trace(errors.NewUserErrorf(err,
-			400, "username_invalid",
+			400, "scale_invalid",
 			"The asset scale provided is invalid: %s. Asset scales must be "+
 				"integers between %d and %d.",
 			r.PostFormValue("scale"), model.AssetMinScale, model.AssetMaxScale,
@@ -75,7 +75,7 @@ func (c *controller) CreateAsset(
 
 	db.Commit(ctx)
 
-	respond.Success(ctx, w, svc.Resp{
+	respond.Created(ctx, w, svc.Resp{
 		"asset": format.JSONPtr(NewAssetResource(ctx,
 			asset, authentication.Get(ctx).User,
 			env.Get(ctx).Config[EnvCfgMintHost])),
@@ -290,7 +290,7 @@ func (c *controller) CreateOperation(
 
 	db.Commit(ctx)
 
-	respond.Success(ctx, w, svc.Resp{
+	respond.OK(ctx, w, svc.Resp{
 		"operation": format.JSONPtr(NewOperationResource(ctx,
 			operation,
 			NewAssetResource(ctx,
@@ -346,7 +346,7 @@ func (c *controller) RetrieveOffer(
 
 	db.Commit(ctx)
 
-	respond.Success(ctx, w, svc.Resp{
+	respond.OK(ctx, w, svc.Resp{
 		"offer": format.JSONPtr(NewOfferResource(ctx, offer)),
 	})
 }
@@ -475,7 +475,7 @@ func (c *controller) CreateCanonicalOffer(
 	// TODO: propagate offer to assets' mints, failing silently if
 	// unsuccessful.
 
-	respond.Success(ctx, w, svc.Resp{
+	respond.OK(ctx, w, svc.Resp{
 		"offer": format.JSONPtr(NewOfferResource(ctx, offer)),
 	})
 }
@@ -521,7 +521,7 @@ func (c *controller) CreatePropagatedOffer(
 
 	// If the mint owns this offer, just return
 	if offer != nil && offer.Type == model.OfTpCanonical {
-		respond.Success(ctx, w, svc.Resp{
+		respond.OK(ctx, w, svc.Resp{
 			"offer": format.JSONPtr(NewOfferResource(ctx, offer)),
 		})
 		return
@@ -612,7 +612,7 @@ func (c *controller) CreatePropagatedOffer(
 		}
 	}
 
-	respond.Success(ctx, w, svc.Resp{
+	respond.OK(ctx, w, svc.Resp{
 		"offer": format.JSONPtr(NewOfferResource(ctx, offer)),
 	})
 }

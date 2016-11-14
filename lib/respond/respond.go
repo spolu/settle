@@ -33,8 +33,8 @@ func errorResponse(
 	return resp
 }
 
-// Success is used to successfully respond with status 200.
-func Success(
+// OK is used to successfully respond with status 200.
+func OK(
 	ctx context.Context,
 	w http.ResponseWriter,
 	resp svc.Resp,
