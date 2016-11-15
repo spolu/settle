@@ -41,15 +41,12 @@ func TestCreateAsset(
 	assert.Equal(t, 201, status)
 	assert.Regexp(t, mint.IDRegexp, asset.ID)
 	assert.WithinDuration(t,
-		time.Now(), time.Unix(0, asset.Created*1000*1000), 2*time.Millisecond)
-	assert.Equal(t,
-		fmt.Sprintf("%s@%s", user.Username, m.Env.Config[mint.EnvCfgMintHost]),
-		asset.Issuer)
+		time.Now(),
+		time.Unix(0, asset.Created*1000*1000), 2*time.Millisecond)
+
+	assert.Equal(t, user.Address, asset.Issuer)
 	assert.Regexp(t, mint.AssetNameRegexp, asset.Name)
-	assert.Equal(t,
-		fmt.Sprintf("%s@%s[USD.2]",
-			user.Username, m.Env.Config[mint.EnvCfgMintHost]),
-		asset.Name)
+	assert.Equal(t, fmt.Sprintf("%s[USD.2]", user.Address), asset.Name)
 	assert.Equal(t, "USD", asset.Code)
 	assert.Equal(t, int8(2), asset.Scale)
 }

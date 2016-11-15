@@ -29,9 +29,9 @@ func (c *Configuration) Bind(
 ) {
 	// Local.
 	mux.HandleFunc(pat.Post("/assets"), c.controller.CreateAsset)
+	// mux.HandleFunc(pat.Get("/assets/:asset/operations"), c.controller.RetrieveOperations)
 	mux.HandleFunc(pat.Post("/assets/:asset/operations"), c.controller.CreateOperation)
 	// mux.HandleFunc(pat.Get("/assets/:asset/operations/:operation"), c.controller.RetrieveOperation)
-	// mux.HandleFunc(pat.Get("/assets/:asset/operations"), c.controller.RetrieveOperations)
 	// mux.HandleFunc(pat.Get("/assets/:asset/balances/:address"), c.controller.RetrieveBalance)
 
 	// Public.

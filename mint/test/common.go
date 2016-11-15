@@ -95,6 +95,7 @@ type MintUser struct {
 	Mint     *Mint
 	Username string
 	Password string
+	Address  string
 }
 
 var userFirstnames = []string{"kurt", "alan", "albert", "john"}
@@ -115,7 +116,10 @@ func (m *Mint) CreateUser(
 	logging.Logf(m.Ctx, "Creating test mint: minst_host=%s",
 		m.Env.Config[mint.EnvCfgMintHost])
 
-	return &MintUser{m, username, password}
+	return &MintUser{
+		m, username, password,
+		fmt.Sprintf("%s@%s", username, m.Env.Config[mint.EnvCfgMintHost]),
+	}
 }
 
 // Post posts to a specified endpoint on the mint.

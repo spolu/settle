@@ -290,7 +290,7 @@ func (c *controller) CreateOperation(
 
 	db.Commit(ctx)
 
-	respond.OK(ctx, w, svc.Resp{
+	respond.Created(ctx, w, svc.Resp{
 		"operation": format.JSONPtr(NewOperationResource(ctx,
 			operation,
 			NewAssetResource(ctx,
