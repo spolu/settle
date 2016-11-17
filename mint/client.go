@@ -15,6 +15,17 @@ import (
 	"github.com/spolu/settle/lib/svc"
 )
 
+var defaultHTTPClient = (*http.Client)(nil)
+
+// getDefaultHTTPClient returns the default HTTP client to use (to avoid
+// re-instantiating one for each request)
+func getDefaultHTTPClient() *http.Client {
+	if defaultHTTPClient == nil {
+		defaultHTTPClient = &http.Client{}
+	}
+	return defaultHTTPClient
+}
+
 // Client expose an interface to perform queries on remote mints.
 type Client struct {
 	httpClient *http.Client
@@ -24,7 +35,7 @@ type Client struct {
 func (c *Client) Init(
 	ctx context.Context,
 ) error {
-	c.httpClient = &http.Client{}
+	c.httpClient = getDefaultHTTPClient()
 	return nil
 }
 

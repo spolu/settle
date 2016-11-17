@@ -27,13 +27,19 @@ func DerefStr(strPtr *string, defaultValue string) string {
 	return defaultValue
 }
 
-// Int64 returns a pointer to an int
+// Int64 returns a pointer to an int64
 func Int64(n int64) *int64 {
 	ret := n
 	return &ret
 }
 
-// Float64 returns a pointer to a float
+// Int returns a pointer to an int
+func Int(n int) *int {
+	ret := n
+	return &ret
+}
+
+// Float64 returns a pointer to a float64
 func Float64(n float64) *float64 {
 	ret := n
 	return &ret

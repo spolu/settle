@@ -11,7 +11,7 @@ import (
 
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/logging"
-	"github.com/spolu/settle/mint"
+	"github.com/spolu/settle/mint/app"
 	"github.com/spolu/settle/mint/model"
 	"github.com/zenazn/goji/bind"
 	"github.com/zenazn/goji/graceful"
@@ -83,7 +83,7 @@ func main() {
 		flag.Parse()
 	}
 
-	ctx, err := mint.BackgroundContextFromFlags(
+	ctx, err := app.BackgroundContextFromFlags(
 		envFlag, dbpFlag, hstFlag,
 	)
 	if err != nil {
@@ -93,7 +93,7 @@ func main() {
 	validActions := []string{"run", "create_user"}
 	switch actFlag {
 	case "run":
-		mux, err := mint.Build(ctx)
+		mux, err := app.Build(ctx)
 		if err != nil {
 			log.Fatal(errors.Details(err))
 		}

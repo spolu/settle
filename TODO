@@ -2,7 +2,7 @@
 
  [ ] propagation protocol for both operations and offers
  [ ] pass DSN for DB, support Postgres
- [ ] split controller into endpoint.CreateXXX object with Execute and Validate
+ [x] split controller into endpoint.CreateXXX object with Execute and Validate
  [x] move mint host to context
 
   # test

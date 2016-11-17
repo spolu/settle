@@ -66,9 +66,7 @@ type SkipRule struct {
 
 // SkipList is the list of endpoints that do not require authentication.
 var SkipList = []*SkipRule{
-	&SkipRule{"GET", regexp.MustCompile("^/users/[a-zA-Z0-9_]+$")},
 	&SkipRule{"GET", regexp.MustCompile("^/offers/[a-zA-Z0-9_\\+:@\\.\\[\\]]+$")},
-	&SkipRule{"POST", regexp.MustCompile("^/offers$")},
 }
 
 // ServeHTTP handles incoming HTTP requests and attempt to authenticate them.

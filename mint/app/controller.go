@@ -1,42 +1,28 @@
-package mint
+package app
 
 import (
+	"github.com/spolu/settle/mint/endpoint"
 	"goji.io"
 	"goji.io/pat"
 )
 
-const (
-	// Version is the current version.
-	Version string = "0.0.1"
-)
-
-// Configuration is used to create and bind the APi controller
-type Configuration struct {
-	controller *controller
-}
-
-// Init initializes the API controller
-func (c *Configuration) Init() error {
-	c.controller = &controller{
-		client: &Client{},
-	}
-	return nil
-}
+// Controller binds the API
+type Controller struct{}
 
 // Bind registers the API routes.
-func (c *Configuration) Bind(
+func (c *Controller) Bind(
 	mux *goji.Mux,
 ) {
 	// Local.
-	mux.HandleFunc(pat.Post("/assets"), c.controller.CreateAsset)
+	mux.HandleFunc(pat.Post("/assets"), endpoint.HandlerFor(endpoint.EndPtCreateAsset))
 	// mux.HandleFunc(pat.Get("/assets/:asset/operations"), c.controller.RetrieveOperations)
-	mux.HandleFunc(pat.Post("/assets/:asset/operations"), c.controller.CreateOperation)
+	mux.HandleFunc(pat.Post("/assets/:asset/operations"), endpoint.HandlerFor(endpoint.EndPtCreateOperation))
 	// mux.HandleFunc(pat.Get("/assets/:asset/operations/:operation"), c.controller.RetrieveOperation)
 	// mux.HandleFunc(pat.Get("/assets/:asset/balances/:address"), c.controller.RetrieveBalance)
 
 	// Public.
-	mux.HandleFunc(pat.Get("/offers/:offer"), c.controller.RetrieveOffer)
-	mux.HandleFunc(pat.Post("/offers"), c.controller.CreateOffer)
+	mux.HandleFunc(pat.Get("/offers/:offer"), endpoint.HandlerFor(endpoint.EndPtRetrieveOffer))
+	mux.HandleFunc(pat.Post("/offers"), endpoint.HandlerFor(endpoint.EndPtCreateOffer))
 	//mux.HandleFunc(pat.Post("/assets/offers/:offer/close"), c.controller.CloseOffer)
 
 	//mux.HandleFunc(pat.Post("/assets/:asset/transactions"), c.controller.CreateTransaction)

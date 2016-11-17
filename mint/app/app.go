@@ -1,4 +1,4 @@
-package mint
+package app
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 	"github.com/spolu/settle/lib/logging"
 	"github.com/spolu/settle/lib/recoverer"
 	"github.com/spolu/settle/lib/requestlogger"
+	"github.com/spolu/settle/mint"
 	"github.com/spolu/settle/mint/lib/authentication"
 	"github.com/spolu/settle/mint/model"
 
@@ -34,7 +35,7 @@ func BackgroundContextFromFlags(
 	if envFlag == "production" {
 		mintEnv.Environment = env.Production
 	}
-	mintEnv.Config[EnvCfgMintHost] = hstFlag
+	mintEnv.Config[mint.EnvCfgMintHost] = hstFlag
 	ctx = env.With(ctx, &mintEnv)
 
 	mintDB, err := db.NewSqlite3DBForPath(ctx, dbpFlag)
@@ -54,7 +55,7 @@ func BackgroundContextFromFlags(
 func Build(
 	ctx context.Context,
 ) (*goji.Mux, error) {
-	if env.Get(ctx).Config[EnvCfgMintHost] == "" {
+	if env.Get(ctx).Config[mint.EnvCfgMintHost] == "" {
 		if env.Get(ctx).Environment == env.Production {
 			return nil, errors.Newf(
 				"You must set the flag `-mint_host` to an externally accessible hostname that other mints can use to contact this mint over HTTPS. If you're just testing and don't have an SSL certificate, please run with `-env=qa`",
@@ -72,16 +73,10 @@ func Build(
 	mux.Use(env.Middleware(env.Get(ctx)))
 	mux.Use(authentication.Middleware)
 
-	a := &Configuration{}
-
 	logging.Logf(ctx, "Initializing: environment=%s mint_host=%s",
-		env.Get(ctx).Environment, env.Get(ctx).Config[EnvCfgMintHost])
+		env.Get(ctx).Environment, env.Get(ctx).Config[mint.EnvCfgMintHost])
 
-	err := a.Init()
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-	a.Bind(mux)
+	(&Controller{}).Bind(mux)
 
 	return mux, nil
 }

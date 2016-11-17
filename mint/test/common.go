@@ -20,6 +20,7 @@ import (
 	"github.com/spolu/settle/lib/svc"
 	"github.com/spolu/settle/lib/token"
 	"github.com/spolu/settle/mint"
+	"github.com/spolu/settle/mint/app"
 	"github.com/spolu/settle/mint/lib/authentication"
 	"github.com/spolu/settle/mint/model"
 	goji "goji.io"
@@ -68,13 +69,7 @@ func CreateMint(
 	mux.Use(env.Middleware(env.Get(ctx)))
 	mux.Use(authentication.Middleware)
 
-	a := &mint.Configuration{}
-
-	err = a.Init()
-	if err != nil {
-		t.Fatal(err)
-	}
-	a.Bind(mux)
+	(&app.Controller{}).Bind(mux)
 
 	m := Mint{
 		Server: httptest.NewServer(mux),
