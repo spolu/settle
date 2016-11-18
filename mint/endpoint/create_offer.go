@@ -156,13 +156,25 @@ func (e *CreateOffer) Execute(
 		return nil, nil, errors.Trace(err) // 500
 	}
 
-	// We commit first so that the offer is visible to subsequent requests
-	// hitting the mint (from other mint to validate the offer after
-	// propagation).
-	db.Commit(ctx)
+	// Create updates if required.
+	updates := []*model.Update{}
+	for _, asset := range e.Pair {
+		_, host, err := mint.UsernameAndMintHostFromAddress(ctx, asset.Owner)
+		if err != nil {
+			return nil, nil, errors.Trace(err) // 500
+		}
+		if host != env.Get(ctx).Config[mint.EnvCfgMintHost] {
+			update, err := model.CreateCanonicalUpdate(ctx,
+				offer.Owner, offer.Token,
+				env.Get(ctx).Config[mint.EnvCfgMintHost], host)
+			if err != nil {
+				return nil, nil, errors.Trace(err) // 500
+			}
+			updates = append(updates, update)
+		}
+	}
 
-	// TODO: propagate offer to assets' mints, failing silently if
-	// unsuccessful.
+	db.Commit(ctx)
 
 	return ptr.Int(http.StatusCreated), &svc.Resp{
 		"offer": format.JSONPtr(mint.NewOfferResource(ctx, offer)),

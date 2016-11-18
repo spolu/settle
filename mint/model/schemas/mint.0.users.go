@@ -1,3 +1,5 @@
+// OWNER: stan
+
 package schemas
 
 import "github.com/spolu/settle/mint/model"

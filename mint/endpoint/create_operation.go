@@ -177,6 +177,8 @@ func (e *CreateOperation) Execute(
 		"%s[%s.%d]",
 		asset.Owner, asset.Code, asset.Scale)
 
+	balances := []*model.Balance{}
+
 	var srcBalance *model.Balance
 	if e.SrcAddress != nil {
 		srcBalance, err = model.LoadBalanceByAssetHolder(ctx,
@@ -190,6 +192,7 @@ func (e *CreateOperation) Execute(
 				*e.SrcAddress,
 			))
 		}
+		balances = append(balances, srcBalance)
 	}
 
 	var dstBalance *model.Balance
@@ -201,6 +204,8 @@ func (e *CreateOperation) Execute(
 		if err != nil {
 			return nil, nil, errors.Trace(err) // 500
 		}
+
+		balances = append(balances, dstBalance)
 	}
 
 	operation, err := model.CreateCanonicalOperation(ctx,
@@ -252,6 +257,24 @@ func (e *CreateOperation) Execute(
 		err = srcBalance.Save(ctx)
 		if err != nil {
 			return nil, nil, errors.Trace(err) // 500
+		}
+	}
+
+	// Create updates if required.
+	updates := []*model.Update{}
+	for _, balance := range balances {
+		_, host, err := mint.UsernameAndMintHostFromAddress(ctx, balance.Holder)
+		if err != nil {
+			return nil, nil, errors.Trace(err) // 500
+		}
+		if host != env.Get(ctx).Config[mint.EnvCfgMintHost] {
+			update, err := model.CreateCanonicalUpdate(ctx,
+				operation.Owner, operation.Token,
+				env.Get(ctx).Config[mint.EnvCfgMintHost], host)
+			if err != nil {
+				return nil, nil, errors.Trace(err) // 500
+			}
+			updates = append(updates, update)
 		}
 	}
 

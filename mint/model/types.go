@@ -1,3 +1,5 @@
+// OWNER: stan
+
 package model
 
 import (
@@ -30,12 +32,12 @@ func (b *Amount) Scan(src interface{}) error {
 	return nil
 }
 
-// Value implements driver.Valuer
+// Value implements driver.Valuer.
 func (b Amount) Value() (value driver.Value, err error) {
 	return (*big.Int)(&b).String(), nil
 }
 
-// PgType is the propagation type of an object
+// PgType is the propagation type of an object.
 type PgType string
 
 const (
@@ -75,7 +77,7 @@ const (
 	OfStClosed OfStatus = "closed"
 )
 
-// Value implements driver.Valuer
+// Value implements driver.Valuer.
 func (s OfStatus) Value() (value driver.Value, err error) {
 	return string(s), nil
 }
@@ -90,6 +92,38 @@ func (s *OfStatus) Scan(src interface{}) error {
 	default:
 		return errors.Newf(
 			"Incompatible status for OfStatus with value: %q", src)
+	}
+
+	return nil
+}
+
+// UpStatus is the status of an offer.
+type UpStatus string
+
+const (
+	//UpStPending is used to mark an update as pending.
+	UpStPending UpStatus = "pending"
+	//UpStSucceeded is used to mark an update as succeeded.
+	UpStSucceeded UpStatus = "succeeded"
+	//UpStFailed is used to mark an update as failed.
+	UpStFailed UpStatus = "failed"
+)
+
+// Value implements driver.Valuer.
+func (s UpStatus) Value() (value driver.Value, err error) {
+	return string(s), nil
+}
+
+// Scan implements sql.Scanner.
+func (s *UpStatus) Scan(src interface{}) error {
+	switch src := src.(type) {
+	case []byte:
+		*s = UpStatus(src)
+	case string:
+		*s = UpStatus(src)
+	default:
+		return errors.Newf(
+			"Incompatible status for UpStatus with value: %q", src)
 	}
 
 	return nil

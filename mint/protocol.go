@@ -89,6 +89,7 @@ func NewOfferResource(
 		ID: fmt.Sprintf(
 			"%s[%s]", offer.Owner, offer.Token),
 		Created: offer.Created.UnixNano() / (1000 * 1000),
+		Owner:   offer.Owner,
 		Pair:    fmt.Sprintf("%s/%s", offer.BaseAsset, offer.QuoteAsset),
 		Price: fmt.Sprintf(
 			"%s/%s",
