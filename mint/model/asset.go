@@ -4,7 +4,7 @@ package model
 
 import (
 	"context"
-	"reflect"
+	"fmt"
 	"regexp"
 	"time"
 
@@ -13,8 +13,9 @@ import (
 	sqlite3 "github.com/mattn/go-sqlite3"
 	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/errors"
-	"github.com/spolu/settle/lib/logging"
 	"github.com/spolu/settle/lib/token"
+	"github.com/spolu/settle/mint/lib/authentication"
+	"github.com/spolu/settle/mint/lib/env"
 )
 
 const (
@@ -29,38 +30,41 @@ var AssetCodeRegexp = regexp.MustCompile("^[A-Z0-9\\-]{1,64}$")
 
 // Asset represents an asset object. Asset are created by users (issuer).
 type Asset struct {
+	User    string
+	Owner   string
 	Token   string
 	Created time.Time
 
-	Issuer string // Issuer user token.
-	Code   string // Asset code.
-	Scale  int8   // Asset scale.
+	Code  string // Asset code.
+	Scale int8   // Asset scale.
 }
 
 // CreateAsset creates and stores a new Asset object.
 func CreateAsset(
 	ctx context.Context,
-	issuer string,
+	owner string,
 	code string,
 	scale int8,
 ) (*Asset, error) {
 	asset := Asset{
+		User: authentication.Get(ctx).User.Token,
+		Owner: fmt.Sprintf("%s@%s",
+			authentication.Get(ctx).User.Username,
+			env.GetMintHost(ctx)),
 		Token:   token.New("asset"),
 		Created: time.Now(),
 
-		Issuer: issuer,
-		Code:   code,
-		Scale:  scale,
+		Code:  code,
+		Scale: scale,
 	}
 
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO assets
-  (token, created, issuer, code, scale)
+  (user, owner, token, created, code, scale)
 VALUES
-  (:token, :created, :issuer, :code, :scale)
+  (:user, :owner, :token, :created, :code, :scale)
 `, asset); err != nil {
-		logging.Logf(ctx, "ERROR: %+v / %s", err, reflect.TypeOf(err))
 		switch err := err.(type) {
 		case *pq.Error:
 			if err.Code.Name() == "unique_violation" {
@@ -77,42 +81,25 @@ VALUES
 	return &asset, nil
 }
 
-// Save updates the object database representation with the in-memory values.
-func (u *Asset) Save(
-	ctx context.Context,
-) error {
-	ext := db.Ext(ctx)
-	_, err := sqlx.NamedExec(ext, `
-UPDATE assets
-SET issuer = :issuer, code = :code, scale = :scale
-WHERE token = :token
-`, u)
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	return nil
-}
-
-// LoadAssetByIssuerCodeScale attempts to load an asset by its issuer token,
+// LoadAssetByOwnerCodeScale attempts to load an asset by its owner address,
 // code and scale.
-func LoadAssetByIssuerCodeScale(
+func LoadAssetByOwnerCodeScale(
 	ctx context.Context,
-	issuer string,
+	owner string,
 	code string,
 	scale int8,
 ) (*Asset, error) {
 	asset := Asset{
-		Issuer: issuer,
-		Code:   code,
-		Scale:  scale,
+		Owner: owner,
+		Code:  code,
+		Scale: scale,
 	}
 
 	ext := db.Ext(ctx)
 	if rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM assets
-WHERE issuer = :issuer
+WHERE owner = :owner
   AND code = :code
   AND scale = :scale
 `, asset); err != nil {

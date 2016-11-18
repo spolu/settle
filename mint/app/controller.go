@@ -15,15 +15,17 @@ func (c *Controller) Bind(
 ) {
 	// Local.
 	mux.HandleFunc(pat.Post("/assets"), endpoint.HandlerFor(endpoint.EndPtCreateAsset))
-	// mux.HandleFunc(pat.Get("/assets/:asset/operations"), c.controller.RetrieveOperations)
 	mux.HandleFunc(pat.Post("/assets/:asset/operations"), endpoint.HandlerFor(endpoint.EndPtCreateOperation))
+	mux.HandleFunc(pat.Post("/offers"), endpoint.HandlerFor(endpoint.EndPtCreateOffer))
+	// mux.HandleFunc(pat.Get("/assets/:asset/operations"), c.controller.RetrieveOperations)
 	// mux.HandleFunc(pat.Get("/assets/:asset/operations/:operation"), c.controller.RetrieveOperation)
 	// mux.HandleFunc(pat.Get("/assets/:asset/balances/:address"), c.controller.RetrieveBalance)
 
 	// Public.
 	mux.HandleFunc(pat.Get("/offers/:offer"), endpoint.HandlerFor(endpoint.EndPtRetrieveOffer))
-	mux.HandleFunc(pat.Post("/offers"), endpoint.HandlerFor(endpoint.EndPtCreateOffer))
-	//mux.HandleFunc(pat.Post("/assets/offers/:offer/close"), c.controller.CloseOffer)
+
+	mux.HandleFunc(pat.Post("/offers/:offer/updates"), endpointHandlerFor(endpoint.EndPtCreateOfferUpdate))
+	mux.HandleFunc(pat.Post("/operations/:operation/updates"), endpointHandlerFor(endpoint.EndPtCreateOperationUpdate))
 
 	//mux.HandleFunc(pat.Post("/assets/:asset/transactions"), c.controller.CreateTransaction)
 	//mux.HandleFunc(pat.Post("/assets/:asset/transactions/:transaction/settle"), c.controller.SettleOperation)

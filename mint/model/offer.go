@@ -4,6 +4,7 @@ package model
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -12,6 +13,8 @@ import (
 	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/token"
+	"github.com/spolu/settle/mint/lib/authentication"
+	"github.com/spolu/settle/mint/lib/env"
 )
 
 // Offer represents an offer for an asset pair.
@@ -22,25 +25,25 @@ import (
 // - Propagated offers are indicatively stored on the mints of the offers's
 //   assets, to compute order books.
 type Offer struct {
+	User    string
+	Owner   string
 	Token   string
 	Created time.Time
+	Type    PgType
 
-	Owner      string // Owner user address.
-	BaseAsset  string `db:"base_asset"`
-	QuoteAsset string `db:"quote_asset"`
+	Status OfStatus
+
+	BaseAsset  string `db:"base_asset"`  // BaseAsset name.
+	QuoteAsset string `db:"quote_asset"` // QuoteAsset name.
 
 	BasePrice  Amount `db:"base_price"`
 	QuotePrice Amount `db:"quote_price"`
 	Amount     Amount
-
-	Type   OfType
-	Status OfStatus
 }
 
 // CreateCanonicalOffer creates and stores a new canonical Offer object.
 func CreateCanonicalOffer(
 	ctx context.Context,
-	owner string,
 	baseAsset string,
 	quoteAsset string,
 	basePrice Amount,
@@ -49,8 +52,13 @@ func CreateCanonicalOffer(
 	status OfStatus,
 ) (*Offer, error) {
 	offer := Offer{
+		User: authentication.Get(ctx).User.Token,
+		Owner: fmt.Sprintf("%s@%s",
+			authentication.Get(ctx).User.Username,
+			env.GetMintHost(ctx)),
 		Token:   token.New("offer"),
 		Created: time.Now(),
+		Type:    PgTpCanonical,
 
 		Owner:      owner,
 		BaseAsset:  baseAsset,
@@ -58,18 +66,17 @@ func CreateCanonicalOffer(
 		BasePrice:  basePrice,
 		QuotePrice: quotePrice,
 		Amount:     amount,
-		Type:       OfTpCanonical,
 		Status:     status,
 	}
 
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO offers
-  (token, created, owner, base_asset, quote_asset, base_price,
-   quote_price, amount, type, status)
+  (user, owner, token, created, type, base_asset, quote_asset,
+   base_price, quote_price, amount, status)
 VALUES
-  (:token, :created, :owner, :base_asset, :quote_asset, :base_price, 
-   :quote_price, :amount, :type, :status)
+  (:user, :owner, :token, :created, :type, :base_asset, :quote_asset,
+   :base_price, :quote_price, :amount, :status)
 `, offer); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:
@@ -87,12 +94,12 @@ VALUES
 	return &offer, nil
 }
 
-// CreatePropagatedOffer creates and stores a new canonical Offer object.
+// CreatePropagatedOffer creates and stores a new propagated Offer object.
 func CreatePropagatedOffer(
 	ctx context.Context,
+	owner string,
 	token string,
 	created time.Time,
-	owner string,
 	baseAsset string,
 	quoteAsset string,
 	basePrice Amount,
@@ -101,27 +108,28 @@ func CreatePropagatedOffer(
 	status OfStatus,
 ) (*Offer, error) {
 	offer := Offer{
+		User:    authentication.Get(ctx).User.Token,
+		Owner:   owner,
 		Token:   token,
 		Created: created,
+		Type:    OfTpPropagated,
 
-		Owner:      owner,
 		BaseAsset:  baseAsset,
 		QuoteAsset: quoteAsset,
 		BasePrice:  basePrice,
 		QuotePrice: quotePrice,
 		Amount:     amount,
-		Type:       OfTpPropagated,
 		Status:     status,
 	}
 
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO offers
-  (token, created, owner, base_asset, quote_asset, base_price,
-   quote_price, amount, type, status)
+  (user, owner, token, created, type, base_asset, quote_asset,
+   base_price, quote_price, amount, status)
 VALUES
-  (:token, :created, :owner, :base_asset, :quote_asset, :base_price, 
-   :quote_price, :amount, :type, :status)
+  (:user, :owner, :token, :created, :type, :base_asset, :quote_asset,
+   :base_price, :quote_price, :amount, :status)
 `, offer); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:
@@ -146,11 +154,10 @@ func (o *Offer) Save(
 	ext := db.Ext(ctx)
 	_, err := sqlx.NamedExec(ext, `
 UPDATE offers
-SET owner = :owner, base_asset = :base_asset, quote_asset = :quote_asset,
-    quote_asset = :quote_asset, base_price = :base_price,
-	quote_price = :quote_price, amount = :amount, type = :type,
-	status = :status
-WHERE token = :token
+SET status = :status
+WHERE user = :user
+  AND owner = :owner
+  AND token = :token
 `, o)
 	if err != nil {
 		return errors.Trace(err)
@@ -159,20 +166,25 @@ WHERE token = :token
 	return nil
 }
 
-// LoadOfferByToken attempts to load an offer for the given token.
-func LoadOfferByToken(
+// LoadCanonicalOfferByOwnerToken attempts to load the canonical offer for the
+// given owner and token.
+func LoadCanonicalOfferByOwnerToken(
 	ctx context.Context,
 	token string,
 ) (*Offer, error) {
 	offer := Offer{
+		Owner: owner,
 		Token: token,
+		Type:  PgTpCanonical,
 	}
 
 	ext := db.Ext(ctx)
 	if rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM offers
-WHERE token = :token
+WHERE owner = :owner
+  AND token = :token
+  AND type = :type
 `, offer); err != nil {
 		return nil, errors.Trace(err)
 	} else if !rows.Next() {

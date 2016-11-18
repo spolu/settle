@@ -4,6 +4,7 @@ package model
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"time"
 
@@ -13,6 +14,8 @@ import (
 	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/token"
+	"github.com/spolu/settle/mint/lib/authentication"
+	"github.com/spolu/settle/mint/lib/env"
 )
 
 // MaxAssetAmount is the maximum amount for an asset (2^128).
@@ -22,18 +25,26 @@ var MaxAssetAmount = new(big.Int).Exp(
 // Operation represents a movement of an asset, either from an account to
 // another, or to an account only in the case of issuance. Amount is
 // represented as a Amount and store in database as a NUMERIC(39).
+// - Canonical operations are stored on the mint of the operation's owner
+//   (which acts as source of truth on its state).
+// - Propagated operations are indicatively stored on the mints of the
+//   operation's source or destination, for retrieval by impacted users.
+// - Operations are immutable.
 type Operation struct {
+	User    string
+	Owner   string // Owner address.
 	Token   string
 	Created time.Time
+	Type    PgType
 
-	Asset       string  // Asset token.
-	Source      *string // Source user address (if nil issuance).
-	Destination *string // Destination user addres (if nil annihilation).
+	Asset       string  // Asset name.
+	Source      *string // Source address (if nil issuance).
+	Destination *string // Destination addres (if nil annihilation).
 	Amount      Amount
 }
 
-// CreateOperation creates and stores a new Operation object.
-func CreateOperation(
+// CreateCanonicalOperation creates and stores a new canonical Operation.
+func CreateCanonicalOperation(
 	ctx context.Context,
 	asset string,
 	source *string,
@@ -41,8 +52,13 @@ func CreateOperation(
 	amount Amount,
 ) (*Operation, error) {
 	operation := Operation{
+		User: authentication.Get(ctx).User.Token,
+		Owner: fmt.Sprintf("%s@%s",
+			authentication.Get(ctx).User.Username,
+			env.GetMintHost(ctx)),
 		Token:   token.New("operation"),
 		Created: time.Now(),
+		Type:    PgTpCanonical,
 
 		Asset:       asset,
 		Source:      source,
@@ -53,9 +69,11 @@ func CreateOperation(
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO operations
-  (token, created, asset, source, destination, amount)
+  (user, owner, token, created, type, asset, source, destination,
+   amount)
 VALUES
-  (:token, :created, :asset, :source, :destination, :amount)
+  (:user, :owner: :token, :created, :type, :asset, :source, :destination,
+   :amount)
 `, operation); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:
@@ -67,6 +85,88 @@ VALUES
 				return nil, errors.Trace(ErrUniqueConstraintViolation{err})
 			}
 		}
+		return nil, errors.Trace(err)
+	}
+
+	return &operation, nil
+}
+
+// CreatePropagatedOperation creates and stores a new propagated Operation.
+func CreatePropagatedOperation(
+	ctx context.Context,
+	owner string,
+	token string,
+	created time.Time,
+	asset string,
+	source *string,
+	destination *string,
+	amount Amount,
+) (*Operation, error) {
+	operation := Operation{
+		User:    authentication.Get(ctx).User.Token,
+		Owner:   owner,
+		Token:   token,
+		Created: created,
+		Type:    PgTpPropagated,
+
+		Asset:       asset,
+		Source:      source,
+		Destination: destination,
+		Amount:      amount,
+	}
+
+	ext := db.Ext(ctx)
+	if _, err := sqlx.NamedExec(ext, `
+INSERT INTO operations
+  (user, owner, token, created, type, asset, source, destination,
+   amount)
+VALUES
+  (:user, :owner: :token, :created, :type, :asset, :source, :destination,
+   :amount)
+`, operation); err != nil {
+		switch err := err.(type) {
+		case *pq.Error:
+			if err.Code.Name() == "unique_violation" {
+				return nil, errors.Trace(ErrUniqueConstraintViolation{err})
+			}
+		case sqlite3.Error:
+			if err.ExtendedCode == sqlite3.ErrConstraintUnique {
+				return nil, errors.Trace(ErrUniqueConstraintViolation{err})
+			}
+		}
+		return nil, errors.Trace(err)
+	}
+
+	return &operation, nil
+}
+
+// LoadCanonicalOperationByOwnerToken attempts to load the canonical operation
+// for the given owner and token.
+func LoadCanonicalOperationByOwnerToken(
+	ctx context.Context,
+	token string,
+) (*Operation, error) {
+	operation := Operation{
+		Owner: owner,
+		Token: token,
+		Type:  PgTpCanonical,
+	}
+
+	ext := db.Ext(ctx)
+	if rows, err := sqlx.NamedQuery(ext, `
+SELECT *
+FROM operations
+WHERE owner = :owner
+  AND token = :token
+  AND type = :type
+`, operation); err != nil {
+		return nil, errors.Trace(err)
+	} else if !rows.Next() {
+		return nil, nil
+	} else if err := rows.StructScan(&operation); err != nil {
+		defer rows.Close()
+		return nil, errors.Trace(err)
+	} else if err := rows.Close(); err != nil {
 		return nil, errors.Trace(err)
 	}
 

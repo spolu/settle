@@ -4,6 +4,7 @@ package model
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -12,43 +13,51 @@ import (
 	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/token"
+	"github.com/spolu/settle/mint/lib/authentication"
+	"github.com/spolu/settle/mint/lib/env"
 )
 
 // Balance represents a user balance for a given asset. Balances are updated as
 // operations are created.
 type Balance struct {
+	User    string
+	Owner   string
 	Token   string
 	Created time.Time
 
-	Asset string // Asset token.
-	Owner string // Owner user address.
-	Value Amount
+	Asset  string // Asset name.
+	Holder string // Holder address.
+	Value  Amount
 }
 
 // CreateBalance creates and store a new Balance object. Only one balance can
-// exist for an asset, owner pair. Existing balance should be retrieved and
-// updated instead.
+// exist for an asset, holder pair (since they are not propagated). Existing
+// balance should be retrieved and updated instead.
 func CreateBalance(
 	ctx context.Context,
 	asset string,
-	owner string,
+	holder string,
 	value Amount,
 ) (*Balance, error) {
 	balance := Balance{
+		User: authentication.Get(ctx).User.Token,
+		Owner: fmt.Sprintf("%s@%s",
+			authentication.Get(ctx).User.Username,
+			env.GetMintHost(ctx)),
 		Token:   token.New("balance"),
 		Created: time.Now(),
 
-		Asset: asset,
-		Owner: owner,
-		Value: value,
+		Asset:  asset,
+		Holder: holder,
+		Value:  value,
 	}
 
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO balances
-  (token, created, asset, owner, value)
+  (user, owner, token, created, asset, holder, value)
 VALUES
-  (:token, :created, :asset, :owner, :value)
+  (:user, :owner, :token, :created, :asset, :holder, :value)
 `, balance); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:
@@ -74,7 +83,9 @@ func (b *Balance) Save(
 	_, err := sqlx.NamedExec(ext, `
 UPDATE balances
 SET value = :value
-WHERE token = :token
+WHERE user = :user
+  AND owner = :owner
+  AND token = :token
 `, b)
 	if err != nil {
 		return errors.Trace(err)
@@ -83,16 +94,16 @@ WHERE token = :token
 	return nil
 }
 
-// LoadBalanceByAssetOwner attempts to load a balance for the given asset token
-// and owner address.
-func LoadBalanceByAssetOwner(
+// LoadBalanceByAssetHolder attempts to load a balance for the given holder
+// address and asset name.
+func LoadBalanceByAssetHolder(
 	ctx context.Context,
 	asset string,
-	owner string,
+	holder string,
 ) (*Balance, error) {
 	balance := Balance{
-		Asset: asset,
-		Owner: owner,
+		Asset:  asset,
+		Holder: holder,
 	}
 
 	ext := db.Ext(ctx)
@@ -100,7 +111,7 @@ func LoadBalanceByAssetOwner(
 SELECT *
 FROM balances
 WHERE asset = :asset
-  AND owner = :owner
+  AND holder = :holder
 `, balance); err != nil {
 		return nil, errors.Trace(err)
 	} else if !rows.Next() {
@@ -115,18 +126,18 @@ WHERE asset = :asset
 	return &balance, nil
 }
 
-// LoadOrCreateBalanceByAssetOwner loads an existing balance for the specified
-// asset and owner or creates one (with a 0 value) if it does not exist.
-func LoadOrCreateBalanceByAssetOwner(
+// LoadOrCreateBalanceByAssetHolder loads an existing balance for the specified
+// asset and holder or creates one (with a 0 value) if it does not exist.
+func LoadOrCreateBalanceByAssetHolder(
 	ctx context.Context,
 	asset string,
-	owner string,
+	holder string,
 ) (*Balance, error) {
-	balance, err := LoadBalanceByAssetOwner(ctx, asset, owner)
+	balance, err := LoadBalanceByAssetOwner(ctx, asset, holder)
 	if err != nil {
 		return nil, errors.Trace(err)
 	} else if balance == nil {
-		balance, err = CreateBalance(ctx, asset, owner, Amount{})
+		balance, err = CreateBalance(ctx, asset, holder, Amount{})
 		if err != nil {
 			return nil, errors.Trace(err)
 		}

@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS users(
   password_hash VARCHAR(256) NOT NULL,
 
   PRIMARY KEY(token),
-  CONSTRAINT users_usernameu UNIQUE (username)
+  CONSTRAINT users_username_u UNIQUE (username)
 );
 `
 )
