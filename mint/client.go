@@ -71,7 +71,7 @@ var IDRegexp = regexp.MustCompile(
 )
 
 // AssetResourceFromName parses an asset fully qualified name into an
-// AssetResource object (without id or created date).
+// AssetResource object (without id or created date, owner is normalized).
 func AssetResourceFromName(
 	ctx context.Context,
 	name string,
@@ -86,10 +86,10 @@ func AssetResourceFromName(
 	}
 
 	return &AssetResource{
-		Name:   name,
-		Issuer: fmt.Sprintf("%s@%s", m[1], m[3]),
-		Code:   m[5],
-		Scale:  int8(s),
+		Owner: fmt.Sprintf("%s@%s", m[1], m[3]),
+		Name:  name,
+		Code:  m[5],
+		Scale: int8(s),
 	}, nil
 }
 
@@ -142,9 +142,9 @@ func NormalizedAddress(
 	return fmt.Sprintf("%s@%s", m[1], m[3]), nil
 }
 
-// NormalizedAddressAndTokenFromID returns a normalized address and token from
+// NormalizedOwnerAndTokenFromID returns a normalized address and token from
 // an id.
-func NormalizedAddressAndTokenFromID(
+func NormalizedOwnerAndTokenFromID(
 	ctx context.Context,
 	id string,
 ) (string, string, error) {
@@ -152,11 +152,11 @@ func NormalizedAddressAndTokenFromID(
 	if len(m) == 0 {
 		return "", "", errors.Trace(errors.Newf("Invalid id: %s", id))
 	}
-	address, err := NormalizedAddress(ctx, m[1])
+	owner, err := NormalizedAddress(ctx, m[1])
 	if err != nil {
 		return "", "", errors.Trace(err)
 	}
-	return address, m[2], nil
+	return owner, m[2], nil
 }
 
 // FullMintURL constructs a fully qualified URL to contact a mint defaulting to
@@ -183,11 +183,11 @@ func (c *Client) RetrieveOffer(
 	ctx context.Context,
 	id string,
 ) (*OfferResource, error) {
-	address, _, err := NormalizedAddressAndTokenFromID(ctx, id)
+	owner, _, err := NormalizedOwnerAndTokenFromID(ctx, id)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
-	_, host, err := UsernameAndMintHostFromAddress(ctx, address)
+	_, host, err := UsernameAndMintHostFromAddress(ctx, owner)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}

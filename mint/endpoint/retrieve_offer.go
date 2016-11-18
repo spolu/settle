@@ -26,9 +26,9 @@ func init() {
 // RetrieveOffer retrieves an offer based on its id. It is not authenticated
 // and is used to verify offers when they get propagated.
 type RetrieveOffer struct {
-	ID      string
-	Token   string
-	Address string
+	ID    string
+	Token string
+	Owner string
 }
 
 // NewRetrieveOffer constructs and initialiezes the endpoint.
@@ -48,7 +48,7 @@ func (e *RetrieveOffer) Validate(
 	id := pat.Param(r, "offer")
 
 	// Validate id.
-	address, token, err := mint.NormalizedAddressAndTokenFromID(ctx, id)
+	owner, token, err := mint.NormalizedOwnerAndTokenFromID(ctx, id)
 	if err != nil {
 		return errors.Trace(errors.NewUserErrorf(err,
 			400, "id_invalid",
@@ -60,7 +60,7 @@ func (e *RetrieveOffer) Validate(
 
 	e.ID = id
 	e.Token = token
-	e.Address = address
+	e.Owner = owner
 
 	return nil
 }
@@ -74,18 +74,10 @@ func (e *RetrieveOffer) Execute(
 	ctx = db.Begin(ctx)
 	defer db.LoggedRollback(ctx)
 
-	offer, err := model.LoadOfferByToken(ctx, e.Token)
+	offer, err := model.LoadCanonicalOfferByOwnerToken(ctx, e.Owner, e.Token)
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
 	} else if offer == nil {
-		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-			404, "offer_not_found",
-			"The offer you are trying to retrieve does not exist: %s.",
-			e.ID,
-		))
-	}
-
-	if offer.Owner != e.Address {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
 			404, "offer_not_found",
 			"The offer you are trying to retrieve does not exist: %s.",

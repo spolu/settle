@@ -1,6 +1,7 @@
 package endpoint
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -26,6 +27,7 @@ func init() {
 
 // CreateAsset controls the creation of new assets.
 type CreateAsset struct {
+	Owner string
 	Code  string
 	Scale int8
 }
@@ -41,6 +43,12 @@ func NewCreateAsset(
 func (e *CreateAsset) Validate(
 	r *http.Request,
 ) error {
+	ctx := r.Context()
+
+	e.Owner = fmt.Sprintf("%s@%s",
+		authentication.Get(ctx).User.Username,
+		env.Get(ctx).Config[mint.EnvCfgMintHost])
+
 	code := r.PostFormValue("code")
 	if !model.AssetCodeRegexp.MatchString(code) {
 		return errors.Trace(errors.NewUserErrorf(nil,
@@ -78,7 +86,9 @@ func (e *CreateAsset) Execute(
 	defer db.LoggedRollback(ctx)
 
 	asset, err := model.CreateAsset(ctx,
-		authentication.Get(ctx).User.Token, e.Code, e.Scale)
+		authentication.Get(ctx).User.Token,
+		e.Owner,
+		e.Code, e.Scale)
 	if err != nil {
 		switch err := errors.Cause(err).(type) {
 		case model.ErrUniqueConstraintViolation:
@@ -95,8 +105,6 @@ func (e *CreateAsset) Execute(
 	db.Commit(ctx)
 
 	return ptr.Int(http.StatusCreated), &svc.Resp{
-		"asset": format.JSONPtr(mint.NewAssetResource(ctx,
-			asset, authentication.Get(ctx).User,
-			env.Get(ctx).Config[mint.EnvCfgMintHost])),
+		"asset": format.JSONPtr(mint.NewAssetResource(ctx, asset)),
 	}, nil
 }

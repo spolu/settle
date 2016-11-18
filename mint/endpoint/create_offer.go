@@ -147,7 +147,9 @@ func (e *CreateOffer) Execute(
 
 	// Create canonical offer locally.
 	offer, err := model.CreateCanonicalOffer(ctx,
-		e.Owner, e.Pair[0].Name, e.Pair[1].Name,
+		authentication.Get(ctx).User.Token,
+		e.Owner,
+		e.Pair[0].Name, e.Pair[1].Name,
 		model.Amount(e.BasePrice), model.Amount(e.QuotePrice),
 		model.Amount(e.Amount), model.OfStActive)
 	if err != nil {

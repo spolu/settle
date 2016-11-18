@@ -4,7 +4,6 @@ package model
 
 import (
 	"context"
-	"fmt"
 	"regexp"
 	"time"
 
@@ -14,8 +13,6 @@ import (
 	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/token"
-	"github.com/spolu/settle/mint/lib/authentication"
-	"github.com/spolu/settle/mint/lib/env"
 )
 
 const (
@@ -42,15 +39,14 @@ type Asset struct {
 // CreateAsset creates and stores a new Asset object.
 func CreateAsset(
 	ctx context.Context,
+	user string,
 	owner string,
 	code string,
 	scale int8,
 ) (*Asset, error) {
 	asset := Asset{
-		User: authentication.Get(ctx).User.Token,
-		Owner: fmt.Sprintf("%s@%s",
-			authentication.Get(ctx).User.Username,
-			env.GetMintHost(ctx)),
+		User:    user,
+		Owner:   owner,
 		Token:   token.New("asset"),
 		Created: time.Now(),
 

@@ -4,7 +4,6 @@ package model
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -13,8 +12,6 @@ import (
 	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/token"
-	"github.com/spolu/settle/mint/lib/authentication"
-	"github.com/spolu/settle/mint/lib/env"
 )
 
 // Offer represents an offer for an asset pair.
@@ -44,6 +41,8 @@ type Offer struct {
 // CreateCanonicalOffer creates and stores a new canonical Offer object.
 func CreateCanonicalOffer(
 	ctx context.Context,
+	user string,
+	owner string,
 	baseAsset string,
 	quoteAsset string,
 	basePrice Amount,
@@ -52,15 +51,12 @@ func CreateCanonicalOffer(
 	status OfStatus,
 ) (*Offer, error) {
 	offer := Offer{
-		User: authentication.Get(ctx).User.Token,
-		Owner: fmt.Sprintf("%s@%s",
-			authentication.Get(ctx).User.Username,
-			env.GetMintHost(ctx)),
+		User:    user,
+		Owner:   owner,
 		Token:   token.New("offer"),
 		Created: time.Now(),
 		Type:    PgTpCanonical,
 
-		Owner:      owner,
 		BaseAsset:  baseAsset,
 		QuoteAsset: quoteAsset,
 		BasePrice:  basePrice,
@@ -97,6 +93,7 @@ VALUES
 // CreatePropagatedOffer creates and stores a new propagated Offer object.
 func CreatePropagatedOffer(
 	ctx context.Context,
+	user string,
 	owner string,
 	token string,
 	created time.Time,
@@ -108,11 +105,11 @@ func CreatePropagatedOffer(
 	status OfStatus,
 ) (*Offer, error) {
 	offer := Offer{
-		User:    authentication.Get(ctx).User.Token,
+		User:    user,
 		Owner:   owner,
 		Token:   token,
 		Created: created,
-		Type:    OfTpPropagated,
+		Type:    PgTpPropagated,
 
 		BaseAsset:  baseAsset,
 		QuoteAsset: quoteAsset,
@@ -170,6 +167,7 @@ WHERE user = :user
 // given owner and token.
 func LoadCanonicalOfferByOwnerToken(
 	ctx context.Context,
+	owner string,
 	token string,
 ) (*Offer, error) {
 	offer := Offer{

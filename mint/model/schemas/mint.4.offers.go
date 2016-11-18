@@ -12,7 +12,6 @@ CREATE TABLE IF NOT EXISTS offers(
 
   type   VARCHAR(32) NOT NULL,  -- type (canonical, propagated)
 
-  owner VARCHAR(256) NOT NULL,       -- owner address
   base_asset VARCHAR(256) NOT NULL,  -- base asset name
   quote_asset VARCHAR(256) NOT NULL, -- quote asset name
 

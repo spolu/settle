@@ -4,7 +4,6 @@ package model
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -13,8 +12,6 @@ import (
 	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/token"
-	"github.com/spolu/settle/mint/lib/authentication"
-	"github.com/spolu/settle/mint/lib/env"
 )
 
 // Balance represents a user balance for a given asset. Balances are updated as
@@ -35,15 +32,15 @@ type Balance struct {
 // balance should be retrieved and updated instead.
 func CreateBalance(
 	ctx context.Context,
+	user string,
+	owner string,
 	asset string,
 	holder string,
 	value Amount,
 ) (*Balance, error) {
 	balance := Balance{
-		User: authentication.Get(ctx).User.Token,
-		Owner: fmt.Sprintf("%s@%s",
-			authentication.Get(ctx).User.Username,
-			env.GetMintHost(ctx)),
+		User:    user,
+		Owner:   owner,
 		Token:   token.New("balance"),
 		Created: time.Now(),
 
@@ -130,14 +127,16 @@ WHERE asset = :asset
 // asset and holder or creates one (with a 0 value) if it does not exist.
 func LoadOrCreateBalanceByAssetHolder(
 	ctx context.Context,
+	user string,
+	owner string,
 	asset string,
 	holder string,
 ) (*Balance, error) {
-	balance, err := LoadBalanceByAssetOwner(ctx, asset, holder)
+	balance, err := LoadBalanceByAssetHolder(ctx, asset, holder)
 	if err != nil {
 		return nil, errors.Trace(err)
 	} else if balance == nil {
-		balance, err = CreateBalance(ctx, asset, holder, Amount{})
+		balance, err = CreateBalance(ctx, user, owner, asset, holder, Amount{})
 		if err != nil {
 			return nil, errors.Trace(err)
 		}

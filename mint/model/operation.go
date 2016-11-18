@@ -4,7 +4,6 @@ package model
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 	"time"
 
@@ -14,8 +13,6 @@ import (
 	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/token"
-	"github.com/spolu/settle/mint/lib/authentication"
-	"github.com/spolu/settle/mint/lib/env"
 )
 
 // MaxAssetAmount is the maximum amount for an asset (2^128).
@@ -46,16 +43,16 @@ type Operation struct {
 // CreateCanonicalOperation creates and stores a new canonical Operation.
 func CreateCanonicalOperation(
 	ctx context.Context,
+	user string,
+	owner string,
 	asset string,
 	source *string,
 	destination *string,
 	amount Amount,
 ) (*Operation, error) {
 	operation := Operation{
-		User: authentication.Get(ctx).User.Token,
-		Owner: fmt.Sprintf("%s@%s",
-			authentication.Get(ctx).User.Username,
-			env.GetMintHost(ctx)),
+		User:    user,
+		Owner:   owner,
 		Token:   token.New("operation"),
 		Created: time.Now(),
 		Type:    PgTpCanonical,
@@ -72,7 +69,7 @@ INSERT INTO operations
   (user, owner, token, created, type, asset, source, destination,
    amount)
 VALUES
-  (:user, :owner: :token, :created, :type, :asset, :source, :destination,
+  (:user, :owner, :token, :created, :type, :asset, :source, :destination,
    :amount)
 `, operation); err != nil {
 		switch err := err.(type) {
@@ -94,6 +91,7 @@ VALUES
 // CreatePropagatedOperation creates and stores a new propagated Operation.
 func CreatePropagatedOperation(
 	ctx context.Context,
+	user string,
 	owner string,
 	token string,
 	created time.Time,
@@ -103,7 +101,7 @@ func CreatePropagatedOperation(
 	amount Amount,
 ) (*Operation, error) {
 	operation := Operation{
-		User:    authentication.Get(ctx).User.Token,
+		User:    user,
 		Owner:   owner,
 		Token:   token,
 		Created: created,
@@ -121,7 +119,7 @@ INSERT INTO operations
   (user, owner, token, created, type, asset, source, destination,
    amount)
 VALUES
-  (:user, :owner: :token, :created, :type, :asset, :source, :destination,
+  (:user, :owner, :token, :created, :type, :asset, :source, :destination,
    :amount)
 `, operation); err != nil {
 		switch err := err.(type) {
@@ -144,6 +142,7 @@ VALUES
 // for the given owner and token.
 func LoadCanonicalOperationByOwnerToken(
 	ctx context.Context,
+	owner string,
 	token string,
 ) (*Operation, error) {
 	operation := Operation{

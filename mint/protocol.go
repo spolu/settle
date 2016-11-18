@@ -30,7 +30,7 @@ func NewAssetResource(
 		Created: asset.Created.UnixNano() / (1000 * 1000),
 		Owner:   asset.Owner,
 		Name: fmt.Sprintf(
-			"%s@%s[%s.%d]",
+			"%s[%s.%d]",
 			asset.Owner, asset.Code, asset.Scale,
 		),
 		Code:  asset.Code,

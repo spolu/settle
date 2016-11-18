@@ -2,6 +2,7 @@
 
  [ ] propagation protocol for both operations and offers
  [ ] pass DSN for DB, support Postgres
+ [x] rename Normalized something Address to Owner
  [x] split controller into endpoint.CreateXXX object with Execute and Validate
  [x] move mint host to context
 
