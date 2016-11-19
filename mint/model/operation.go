@@ -171,21 +171,3 @@ WHERE owner = :owner
 
 	return &operation, nil
 }
-
-// ExecuteCanonicalOperationUpdate attempts to propagate the operation to
-// another mint.
-func ExecuteCanonicalOperationUpdate(
-	ctx context.Context,
-	update *Update,
-) error {
-	return nil
-}
-
-// ExecutePropagatedOperationUpdate attempts to retrieve an operation from
-// another mint.
-func ExecutePropagatedOperationUpdate(
-	ctx context.Context,
-	update *Update,
-) error {
-	return nil
-}

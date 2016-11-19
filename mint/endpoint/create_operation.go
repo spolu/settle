@@ -35,6 +35,8 @@ func init() {
 // Only the asset creator can create operation on an asset. To transfer money,
 // users owning an asset whould use transactions.
 type CreateOperation struct {
+	Client *mint.Client
+
 	Owner      string
 	Asset      mint.AssetResource
 	Amount     big.Int
@@ -46,7 +48,17 @@ type CreateOperation struct {
 func NewCreateOperation(
 	r *http.Request,
 ) (Endpoint, error) {
-	return &CreateOperation{}, nil
+	ctx := r.Context()
+
+	client := &mint.Client{}
+	err := client.Init(ctx)
+	if err != nil {
+		return nil, errors.Trace(err) // 500
+	}
+
+	return &CreateOperation{
+		Client: client,
+	}, nil
 }
 
 // Validate validates the input parameters.
@@ -260,21 +272,25 @@ func (e *CreateOperation) Execute(
 		}
 	}
 
-	// Create updates if required.
-	updates := []*model.Update{}
+	// TODO(stan): make the operation temporarily available on the API.
+
+	// Perform propagations.
 	for _, balance := range balances {
 		_, host, err := mint.UsernameAndMintHostFromAddress(ctx, balance.Holder)
 		if err != nil {
 			return nil, nil, errors.Trace(err) // 500
 		}
 		if host != env.Get(ctx).Config[mint.EnvCfgMintHost] {
-			update, err := model.CreateCanonicalUpdate(ctx,
-				operation.Owner, operation.Token,
-				env.Get(ctx).Config[mint.EnvCfgMintHost], host)
+			err := e.Client.PropagateOperation(ctx, operation, host)
 			if err != nil {
-				return nil, nil, errors.Trace(err) // 500
+				return nil, nil, errors.Trace(errors.NewUserError(err,
+					402, "mint_unreachable",
+					fmt.Sprintf("The mint of %s is currently unreachable, "+
+						"preventing the operation from being properly "+
+						"propagated to the network. Please try again later or "+
+						"contact them if the problem persists.",
+						balance.Holder)))
 			}
-			updates = append(updates, update)
 		}
 	}
 

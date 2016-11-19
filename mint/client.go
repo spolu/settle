@@ -13,6 +13,7 @@ import (
 	"github.com/spolu/settle/lib/env"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/svc"
+	"github.com/spolu/settle/mint/model"
 )
 
 var defaultHTTPClient = (*http.Client)(nil)
@@ -175,6 +176,24 @@ func FullMintURL(
 		Path:   path,
 	}
 	return &url
+}
+
+// PropagateOperation propagates an operation to the `destination` mint.
+func (c *Client) PropagateOperation(
+	ctx context.Context,
+	operation *model.Operation,
+	destination string,
+) error {
+	return nil
+}
+
+// PropagateOffer propagates an offer to the `destination` mint.
+func (c *Client) PropagateOffer(
+	ctx context.Context,
+	operation *model.Offer,
+	destination string,
+) error {
+	return nil
 }
 
 // RetrieveOffer retrieves an offer given its ID by extracting the mint and
