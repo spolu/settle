@@ -13,6 +13,7 @@ import (
 	"github.com/spolu/settle/lib/requestlogger"
 	"github.com/spolu/settle/mint"
 	"github.com/spolu/settle/mint/lib/authentication"
+	"github.com/spolu/settle/mint/lib/worker"
 	"github.com/spolu/settle/mint/model"
 
 	// force initialization of schemas
@@ -66,16 +67,23 @@ func Build(
 		)
 	}
 
+	ctx = worker.With(ctx, &worker.Worker{
+		Ctx: ctx,
+		In:  make(chan string),
+	})
+
 	mux := goji.NewMux()
 	mux.Use(requestlogger.Middleware)
 	mux.Use(recoverer.Middleware)
 	mux.Use(db.Middleware(db.GetDB(ctx)))
 	mux.Use(env.Middleware(env.Get(ctx)))
+	mux.Use(worker.Middleware(worker.Get(ctx)))
 	mux.Use(authentication.Middleware)
 
 	logging.Logf(ctx, "Initializing: environment=%s mint_host=%s",
 		env.Get(ctx).Environment, env.Get(ctx).Config[mint.EnvCfgMintHost])
 
+	worker.Get(ctx).Run()
 	(&Controller{}).Bind(mux)
 
 	return mux, nil

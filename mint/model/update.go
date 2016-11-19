@@ -4,6 +4,7 @@ package model
 
 import (
 	"context"
+	"regexp"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -131,9 +132,72 @@ VALUES
 	return &update, nil
 }
 
-// Execute executes an update
+// Save updates the object database representation with the in-memory values.
+func (u *Update) Save(
+	ctx context.Context,
+) error {
+	ext := db.Ext(ctx)
+	_, err := sqlx.NamedExec(ext, `
+UPDATE updatess
+SET status = :status
+AND attempts = :attempts
+WHERE token = :token
+`, u)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	return nil
+}
+
+// LoadUpdateByToken attempts to load a user with the given user token.
+func LoadUpdateByToken(
+	ctx context.Context,
+	token string,
+) (*Update, error) {
+	update := Update{
+		Token: token,
+	}
+
+	ext := db.Ext(ctx)
+	if rows, err := sqlx.NamedQuery(ext, `
+SELECT *
+FROM updates
+WHERE token = :token
+`, update); err != nil {
+		return nil, errors.Trace(err)
+	} else if !rows.Next() {
+		return nil, nil
+	} else if err := rows.StructScan(&update); err != nil {
+		defer rows.Close()
+		return nil, errors.Trace(err)
+	} else if err := rows.Close(); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &update, nil
+}
+
+var offerTokenRegexp = regexp.MustCompile("^offer_[a-zA-Z0-9]+$")
+var operationTokenRegexp = regexp.MustCompile("^operation_[a-zA-Z0-9]+$")
+
+// Execute executes an update.
 func (u *Update) Execute(
 	ctx context.Context,
 ) error {
-	return nil
+	switch {
+	case offerTokenRegexp.MatchString(u.SubjectToken):
+		switch u.Type {
+		case PgTpCanonical:
+		case PgTpPropagated:
+		}
+	case operationTokenRegexp.MatchString(u.SubjectToken):
+		switch u.Type {
+		case PgTpCanonical:
+			return ExecutePropagatedOperationUpdate(ctx, u)
+		case PgTpPropagated:
+			return ExecutePropagatedOperationUpdate(ctx, u)
+		}
+	}
+	return errors.Newf("Unknown update type or token")
 }
