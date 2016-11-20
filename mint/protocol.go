@@ -12,30 +12,26 @@ import (
 type AssetResource struct {
 	ID      string `json:"id"`
 	Created int64  `json:"created"`
+	Owner   string `json:"owner"`
 
-	Name   string `json:"name"`
-	Issuer string `json:"issuer"`
-	Code   string `json:"code"`
-	Scale  int8   `json:"scale"`
+	Name  string `json:"name"`
+	Code  string `json:"code"`
+	Scale int8   `json:"scale"`
 }
 
 // NewAssetResource generates a new resource.
 func NewAssetResource(
 	ctx context.Context,
 	asset *model.Asset,
-	issuer *model.User,
-	host string,
 ) AssetResource {
 	return AssetResource{
 		ID: fmt.Sprintf(
-			"%s@%s[%s]", issuer.Username, host, asset.Token),
+			"%s[%s]", asset.Owner, asset.Token),
 		Created: asset.Created.UnixNano() / (1000 * 1000),
+		Owner:   asset.Owner,
 		Name: fmt.Sprintf(
-			"%s@%s[%s.%d]",
-			issuer.Username, host, asset.Code, asset.Scale,
-		),
-		Issuer: fmt.Sprintf(
-			"%s@%s", issuer.Username, host,
+			"%s[%s.%d]",
+			asset.Owner, asset.Code, asset.Scale,
 		),
 		Code:  asset.Code,
 		Scale: asset.Scale,
@@ -46,6 +42,7 @@ func NewAssetResource(
 type OperationResource struct {
 	ID      string `json:"id"`
 	Created int64  `json:"created"`
+	Owner   string `json:"owner"`
 
 	Asset       AssetResource `json:"asset"`
 	Source      *string       `json:"source"`
@@ -57,13 +54,14 @@ type OperationResource struct {
 func NewOperationResource(
 	ctx context.Context,
 	operation *model.Operation,
-	assetResource AssetResource,
+	asset *model.Asset,
 ) OperationResource {
 	return OperationResource{
 		ID: fmt.Sprintf(
-			"%s[%s]", assetResource.Issuer, operation.Token),
+			"%s[%s]", operation.Owner, operation.Token),
 		Created:     operation.Created.UnixNano() / (1000 * 1000),
-		Asset:       assetResource,
+		Owner:       operation.Owner,
+		Asset:       NewAssetResource(ctx, asset),
 		Source:      operation.Source,
 		Destination: operation.Destination,
 		Amount:      (*big.Int)(&operation.Amount),
@@ -74,6 +72,7 @@ func NewOperationResource(
 type OfferResource struct {
 	ID      string `json:"id"`
 	Created int64  `json:"created"`
+	Owner   string `json:"owner"`
 
 	Pair   string   `json:"pair"`
 	Price  string   `json:"price"`
@@ -90,8 +89,8 @@ func NewOfferResource(
 		ID: fmt.Sprintf(
 			"%s[%s]", offer.Owner, offer.Token),
 		Created: offer.Created.UnixNano() / (1000 * 1000),
-
-		Pair: fmt.Sprintf("%s/%s", offer.BaseAsset, offer.QuoteAsset),
+		Owner:   offer.Owner,
+		Pair:    fmt.Sprintf("%s/%s", offer.BaseAsset, offer.QuoteAsset),
 		Price: fmt.Sprintf(
 			"%s/%s",
 			(*big.Int)(&offer.BasePrice).String(),

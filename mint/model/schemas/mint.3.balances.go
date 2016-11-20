@@ -1,3 +1,5 @@
+// OWNER: stan
+
 package schemas
 
 import "github.com/spolu/settle/mint/model"
@@ -5,16 +7,18 @@ import "github.com/spolu/settle/mint/model"
 const (
 	balancesSQL = `
 CREATE TABLE IF NOT EXISTS balances(
-  token VARCHAR(256) NOT NULL,
+  user VARCHAR(256) NOT NULL,   -- user token
+  owner VARCHAR(256) NOT NULL,  -- owner address
+  token VARCHAR(256) NOT NULL,  -- token
   created TIMESTAMP NOT NULL,
 
-  asset VARCHAR(256) NOT NULL,  -- the balance's asset token
-  owner VARCHAR(256) NOT NULL,  -- the balance's owner's address
-  value VARCHAR(64) NOT NULL,   -- the balance's value
+  asset VARCHAR(256) NOT NULL,  -- asset name
+  holder VARCHAR(256) NOT NULL, -- balance holder address
+  value VARCHAR(64) NOT NULL,   -- balance value
 
-  PRIMARY KEY(token),
-  CONSTRAINT balances_asset_fk FOREIGN KEY (asset) REFERENCES assets(token),
-  CONSTRAINT balances_asset_owner_u UNIQUE (asset, owner)
+  PRIMARY KEY(user, owner, token),
+  CONSTRAINT balances_user_fk FOREIGN KEY (user) REFERENCES users(token),
+  CONSTRAINT balances_asset_holder_u UNIQUE (asset, holder) -- not propagated
 );
 `
 )

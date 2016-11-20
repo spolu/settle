@@ -58,7 +58,7 @@ func TestCreateIssuingOperation(
 		time.Unix(0, op.Created*1000*1000), 2*time.Millisecond)
 
 	assert.Regexp(t, mint.IDRegexp, op.Asset.ID)
-	assert.Equal(t, user.Address, op.Asset.Issuer)
+	assert.Equal(t, user.Address, op.Asset.Owner)
 	assert.Regexp(t, mint.AssetNameRegexp, op.Asset.Name)
 	assert.Equal(t, fmt.Sprintf("%s[USD.2]", user.Address), op.Asset.Name)
 	assert.Equal(t, "USD", op.Asset.Code)

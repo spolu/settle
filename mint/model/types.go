@@ -1,3 +1,5 @@
+// OWNER: stan
+
 package model
 
 import (
@@ -9,6 +11,31 @@ import (
 
 // Amount extends big.Int to implement sql.Scanner and driver.Valuer.
 type Amount big.Int
+
+// PgType is the propagation type of an object.
+type PgType string
+
+const (
+	//PgTpCanonical is an offer owned by this mint.
+	PgTpCanonical PgType = "canonical"
+	//PgTpPropagated is an offer propagated to this mint.
+	PgTpPropagated PgType = "propagated"
+)
+
+// OfStatus is the status of an offer.
+type OfStatus string
+
+const (
+	//OfStActive is used to mark an offer as active.
+	OfStActive OfStatus = "active"
+	//OfStClosed is used to mark an offer as closed.
+	OfStClosed OfStatus = "closed"
+)
+
+// Value implements driver.Valuer.
+func (b Amount) Value() (value driver.Value, err error) {
+	return (*big.Int)(&b).String(), nil
+}
 
 // Scan implements sql.Scanner.
 func (b *Amount) Scan(src interface{}) error {
@@ -31,51 +58,26 @@ func (b *Amount) Scan(src interface{}) error {
 }
 
 // Value implements driver.Valuer
-func (b Amount) Value() (value driver.Value, err error) {
-	return (*big.Int)(&b).String(), nil
-}
-
-// OfType is the type of an offer.
-type OfType string
-
-const (
-	//OfTpCanonical is an offer owned by this mint.
-	OfTpCanonical OfType = "canonical"
-	//OfTpPropagated is an offer propagated to this mint.
-	OfTpPropagated OfType = "propagated"
-)
-
-// Value implements driver.Valuer
-func (s OfType) Value() (value driver.Value, err error) {
+func (s PgType) Value() (value driver.Value, err error) {
 	return string(s), nil
 }
 
 // Scan implements sql.Scanner.
-func (s *OfType) Scan(src interface{}) error {
+func (s *PgType) Scan(src interface{}) error {
 	switch src := src.(type) {
 	case []byte:
-		*s = OfType(src)
+		*s = PgType(src)
 	case string:
-		*s = OfType(src)
+		*s = PgType(src)
 	default:
 		return errors.Newf(
-			"Incompatible type for OfType with value: %q", src)
+			"Incompatible type for PgType with value: %q", src)
 	}
 
 	return nil
 }
 
-// OfStatus is the status of an offer.
-type OfStatus string
-
-const (
-	//OfStActive is used to mark an offer as active.
-	OfStActive OfStatus = "active"
-	//OfStClosed is used to mark an offer as closed.
-	OfStClosed OfStatus = "closed"
-)
-
-// Value implements driver.Valuer
+// Value implements driver.Valuer.
 func (s OfStatus) Value() (value driver.Value, err error) {
 	return string(s), nil
 }

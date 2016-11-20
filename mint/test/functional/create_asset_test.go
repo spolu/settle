@@ -44,7 +44,7 @@ func TestCreateAsset(
 		time.Now(),
 		time.Unix(0, asset.Created*1000*1000), 2*time.Millisecond)
 
-	assert.Equal(t, user.Address, asset.Issuer)
+	assert.Equal(t, user.Address, asset.Owner)
 	assert.Regexp(t, mint.AssetNameRegexp, asset.Name)
 	assert.Equal(t, fmt.Sprintf("%s[USD.2]", user.Address), asset.Name)
 	assert.Equal(t, "USD", asset.Code)

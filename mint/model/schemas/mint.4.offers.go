@@ -1,3 +1,5 @@
+// OWNER: stan
+
 package schemas
 
 import "github.com/spolu/settle/mint/model"
@@ -5,21 +7,24 @@ import "github.com/spolu/settle/mint/model"
 const (
 	offersSQL = `
 CREATE TABLE IF NOT EXISTS offers(
-  token VARCHAR(256) NOT NULL,
+  user VARCHAR(256) NOT NULL,   -- user token
+  owner VARCHAR(256) NOT NULL,  -- owner address
+  token VARCHAR(256) NOT NULL,  -- token
   created TIMESTAMP NOT NULL,
 
-  owner VARCHAR(256) NOT NULL,       -- the offer's owner's address
-  base_asset VARCHAR(256) NOT NULL,  -- the base asset
-  quote_asset VARCHAR(256) NOT NULL, -- the quote asset
+  propagation VARCHAR(32) NOT NULL,  -- propagation type (canonical, propagated)
 
-  base_price VARCHAR(64) NOT NULL,   -- the base asset price
-  quote_price VARCHAR(64) NOT NULL,  -- the quote asset price
-  amount VARCHAR(64) NOT NULL,       -- the amount of quote asset asked
+  base_asset VARCHAR(256) NOT NULL,  -- base asset name
+  quote_asset VARCHAR(256) NOT NULL, -- quote asset name
 
-  type   VARCHAR(32) NOT NULL,       -- the type (canonical, propagated)
-  status VARCHAR(32) NOT NULL,       -- the status (active, closed)
+  base_price VARCHAR(64) NOT NULL,   --  base asset price
+  quote_price VARCHAR(64) NOT NULL,  -- quote asset price
+  amount VARCHAR(64) NOT NULL,       -- amount of quote asset asked
 
-  PRIMARY KEY(token)
+  status VARCHAR(32) NOT NULL,       -- status (active, closed)
+
+  PRIMARY KEY(user, owner, token),
+  CONSTRAINT offers_user_fk FOREIGN KEY (user) REFERENCES users(token)
 );
 `
 )

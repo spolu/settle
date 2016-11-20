@@ -22,27 +22,39 @@ var MaxAssetAmount = new(big.Int).Exp(
 // Operation represents a movement of an asset, either from an account to
 // another, or to an account only in the case of issuance. Amount is
 // represented as a Amount and store in database as a NUMERIC(39).
+// - Canonical operations are stored on the mint of the operation's owner
+//   (which acts as source of truth on its state).
+// - Propagated operations are stored on the mints of the operation's source or
+//   destination, for retrieval by impacted users.
 type Operation struct {
-	Token   string
-	Created time.Time
+	User        string
+	Owner       string // Owner address.
+	Token       string
+	Created     time.Time
+	Propagation PgType
 
-	Asset       string  // Asset token.
-	Source      *string // Source user address (if nil issuance).
-	Destination *string // Destination user addres (if nil annihilation).
+	Asset       string  // Asset name.
+	Source      *string // Source address (if nil issuance).
+	Destination *string // Destination addres (if nil annihilation).
 	Amount      Amount
 }
 
-// CreateOperation creates and stores a new Operation object.
-func CreateOperation(
+// CreateCanonicalOperation creates and stores a new Operation.
+func CreateCanonicalOperation(
 	ctx context.Context,
+	user string,
+	owner string,
 	asset string,
 	source *string,
 	destination *string,
 	amount Amount,
 ) (*Operation, error) {
 	operation := Operation{
-		Token:   token.New("operation"),
-		Created: time.Now(),
+		User:        user,
+		Owner:       owner,
+		Token:       token.New("operation"),
+		Created:     time.Now(),
+		Propagation: PgTpCanonical,
 
 		Asset:       asset,
 		Source:      source,
@@ -53,9 +65,11 @@ func CreateOperation(
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO operations
-  (token, created, asset, source, destination, amount)
+  (user, owner, token, created, propagation, asset, source, destination,
+   amount)
 VALUES
-  (:token, :created, :asset, :source, :destination, :amount)
+  (:user, :owner, :token, :created, :propagation, :asset, :source, :destination,
+   :amount)
 `, operation); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:
@@ -67,6 +81,90 @@ VALUES
 				return nil, errors.Trace(ErrUniqueConstraintViolation{err})
 			}
 		}
+		return nil, errors.Trace(err)
+	}
+
+	return &operation, nil
+}
+
+// CreatePropagatedOperation creates and stores a new Operation.
+func CreatePropagatedOperation(
+	ctx context.Context,
+	user string,
+	token string,
+	created time.Time,
+	owner string,
+	asset string,
+	source *string,
+	destination *string,
+	amount Amount,
+) (*Operation, error) {
+	operation := Operation{
+		User:        user,
+		Owner:       owner,
+		Token:       token,
+		Created:     created,
+		Propagation: PgTpPropagated,
+
+		Asset:       asset,
+		Source:      source,
+		Destination: destination,
+		Amount:      amount,
+	}
+
+	ext := db.Ext(ctx)
+	if _, err := sqlx.NamedExec(ext, `
+INSERT INTO operations
+  (user, owner, token, created, propagation, asset, source, destination,
+   amount)
+VALUES
+  (:user, :owner, :token, :created, :propagation, :asset, :source, :destination,
+   :amount)
+`, operation); err != nil {
+		switch err := err.(type) {
+		case *pq.Error:
+			if err.Code.Name() == "unique_violation" {
+				return nil, errors.Trace(ErrUniqueConstraintViolation{err})
+			}
+		case sqlite3.Error:
+			if err.ExtendedCode == sqlite3.ErrConstraintUnique {
+				return nil, errors.Trace(ErrUniqueConstraintViolation{err})
+			}
+		}
+		return nil, errors.Trace(err)
+	}
+
+	return &operation, nil
+}
+
+// LoadCanonicalOperationByOwnerToken attempts to load the canonical operation
+// for the given owner and token.
+func LoadCanonicalOperationByOwnerToken(
+	ctx context.Context,
+	owner string,
+	token string,
+) (*Operation, error) {
+	operation := Operation{
+		Owner:       owner,
+		Token:       token,
+		Propagation: PgTpCanonical,
+	}
+
+	ext := db.Ext(ctx)
+	if rows, err := sqlx.NamedQuery(ext, `
+SELECT *
+FROM operations
+WHERE owner = :owner
+  AND token = :token
+  AND propagation = :propagation
+`, operation); err != nil {
+		return nil, errors.Trace(err)
+	} else if !rows.Next() {
+		return nil, nil
+	} else if err := rows.StructScan(&operation); err != nil {
+		defer rows.Close()
+		return nil, errors.Trace(err)
+	} else if err := rows.Close(); err != nil {
 		return nil, errors.Trace(err)
 	}
 

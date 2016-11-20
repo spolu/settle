@@ -147,20 +147,18 @@ func (e *CreateOffer) Execute(
 
 	// Create canonical offer locally.
 	offer, err := model.CreateCanonicalOffer(ctx,
-		e.Owner, e.Pair[0].Name, e.Pair[1].Name,
+		authentication.Get(ctx).User.Token,
+		e.Owner,
+		e.Pair[0].Name, e.Pair[1].Name,
 		model.Amount(e.BasePrice), model.Amount(e.QuotePrice),
 		model.Amount(e.Amount), model.OfStActive)
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
 	}
 
-	// We commit first so that the offer is visible to subsequent requests
-	// hitting the mint (from other mint to validate the offer after
-	// propagation).
 	db.Commit(ctx)
 
-	// TODO: propagate offer to assets' mints, failing silently if
-	// unsuccessful.
+	// TODO(stan): propagation
 
 	return ptr.Int(http.StatusCreated), &svc.Resp{
 		"offer": format.JSONPtr(mint.NewOfferResource(ctx, offer)),

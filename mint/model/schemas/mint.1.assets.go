@@ -1,3 +1,5 @@
+// OWNER: stan
+
 package schemas
 
 import "github.com/spolu/settle/mint/model"
@@ -5,16 +7,17 @@ import "github.com/spolu/settle/mint/model"
 const (
 	assetsSQL = `
 CREATE TABLE IF NOT EXISTS assets(
-  token VARCHAR(256) NOT NULL,
+  user VARCHAR(256) NOT NULL,   -- user token
+  owner VARCHAR(256) NOT NULL,  -- owner address
+  token VARCHAR(256) NOT NULL,  -- token
   created TIMESTAMP NOT NULL,
 
-  issuer VARCHAR(256) NOT NULL, -- the asset's issuer's user token
-  code VARCHAR(64) NOT NULL,    -- the name of the asset
+  code VARCHAR(64) NOT NULL,    -- the code of the asset
   scale SMALLINT,               -- factor by which the asset native is scaled
 
-  PRIMARY KEY(token),
-  CONSTRAINT assets_issuer_code_u UNIQUE (issuer, code),
-  CONSTRAINT assets_issuer_fk FOREIGN KEY (issuer) REFERENCES users(token)
+  PRIMARY KEY(user, owner, token),
+  CONSTRAINT assets_user_fk FOREIGN KEY (user) REFERENCES users(token),
+  CONSTRAINT assets_owner_code_u UNIQUE (owner, code) -- not propagated
 );
 `
 )

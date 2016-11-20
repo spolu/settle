@@ -22,24 +22,26 @@ import (
 // - Propagated offers are indicatively stored on the mints of the offers's
 //   assets, to compute order books.
 type Offer struct {
-	Token   string
-	Created time.Time
+	User        string
+	Owner       string
+	Token       string
+	Created     time.Time
+	Propagation PgType
 
-	Owner      string // Owner user address.
-	BaseAsset  string `db:"base_asset"`
-	QuoteAsset string `db:"quote_asset"`
+	Status OfStatus
+
+	BaseAsset  string `db:"base_asset"`  // BaseAsset name.
+	QuoteAsset string `db:"quote_asset"` // QuoteAsset name.
 
 	BasePrice  Amount `db:"base_price"`
 	QuotePrice Amount `db:"quote_price"`
 	Amount     Amount
-
-	Type   OfType
-	Status OfStatus
 }
 
 // CreateCanonicalOffer creates and stores a new canonical Offer object.
 func CreateCanonicalOffer(
 	ctx context.Context,
+	user string,
 	owner string,
 	baseAsset string,
 	quoteAsset string,
@@ -49,27 +51,28 @@ func CreateCanonicalOffer(
 	status OfStatus,
 ) (*Offer, error) {
 	offer := Offer{
-		Token:   token.New("offer"),
-		Created: time.Now(),
+		User:        user,
+		Owner:       owner,
+		Token:       token.New("offer"),
+		Created:     time.Now(),
+		Propagation: PgTpCanonical,
 
-		Owner:      owner,
 		BaseAsset:  baseAsset,
 		QuoteAsset: quoteAsset,
 		BasePrice:  basePrice,
 		QuotePrice: quotePrice,
 		Amount:     amount,
-		Type:       OfTpCanonical,
 		Status:     status,
 	}
 
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO offers
-  (token, created, owner, base_asset, quote_asset, base_price,
-   quote_price, amount, type, status)
+  (user, owner, token, created, propagation, base_asset, quote_asset,
+   base_price, quote_price, amount, status)
 VALUES
-  (:token, :created, :owner, :base_asset, :quote_asset, :base_price, 
-   :quote_price, :amount, :type, :status)
+  (:user, :owner, :token, :created, :propagation, :base_asset, :quote_asset,
+   :base_price, :quote_price, :amount, :status)
 `, offer); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:
@@ -87,12 +90,13 @@ VALUES
 	return &offer, nil
 }
 
-// CreatePropagatedOffer creates and stores a new canonical Offer object.
+// CreatePropagatedOffer creates and stores a new propagated Offer object.
 func CreatePropagatedOffer(
 	ctx context.Context,
+	user string,
+	owner string,
 	token string,
 	created time.Time,
-	owner string,
 	baseAsset string,
 	quoteAsset string,
 	basePrice Amount,
@@ -101,27 +105,28 @@ func CreatePropagatedOffer(
 	status OfStatus,
 ) (*Offer, error) {
 	offer := Offer{
-		Token:   token,
-		Created: created,
+		User:        user,
+		Owner:       owner,
+		Token:       token,
+		Created:     created,
+		Propagation: PgTpPropagated,
 
-		Owner:      owner,
 		BaseAsset:  baseAsset,
 		QuoteAsset: quoteAsset,
 		BasePrice:  basePrice,
 		QuotePrice: quotePrice,
 		Amount:     amount,
-		Type:       OfTpPropagated,
 		Status:     status,
 	}
 
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO offers
-  (token, created, owner, base_asset, quote_asset, base_price,
-   quote_price, amount, type, status)
+  (user, owner, token, created, propagation, base_asset, quote_asset,
+   base_price, quote_price, amount, status)
 VALUES
-  (:token, :created, :owner, :base_asset, :quote_asset, :base_price, 
-   :quote_price, :amount, :type, :status)
+  (:user, :owner, :token, :created, :propagation, :base_asset, :quote_asset,
+   :base_price, :quote_price, :amount, :status)
 `, offer); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:
@@ -146,11 +151,10 @@ func (o *Offer) Save(
 	ext := db.Ext(ctx)
 	_, err := sqlx.NamedExec(ext, `
 UPDATE offers
-SET owner = :owner, base_asset = :base_asset, quote_asset = :quote_asset,
-    quote_asset = :quote_asset, base_price = :base_price,
-	quote_price = :quote_price, amount = :amount, type = :type,
-	status = :status
-WHERE token = :token
+SET status = :status
+WHERE user = :user
+  AND owner = :owner
+  AND token = :token
 `, o)
 	if err != nil {
 		return errors.Trace(err)
@@ -159,20 +163,26 @@ WHERE token = :token
 	return nil
 }
 
-// LoadOfferByToken attempts to load an offer for the given token.
-func LoadOfferByToken(
+// LoadCanonicalOfferByOwnerToken attempts to load the canonical offer for the
+// given owner and token.
+func LoadCanonicalOfferByOwnerToken(
 	ctx context.Context,
+	owner string,
 	token string,
 ) (*Offer, error) {
 	offer := Offer{
-		Token: token,
+		Owner:       owner,
+		Token:       token,
+		Propagation: PgTpCanonical,
 	}
 
 	ext := db.Ext(ctx)
 	if rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM offers
-WHERE token = :token
+WHERE owner = :owner
+  AND token = :token
+  AND propagation = :propagation
 `, offer); err != nil {
 		return nil, errors.Trace(err)
 	} else if !rows.Next() {

@@ -1,3 +1,5 @@
+// OWNER: stan
+
 package schemas
 
 import "github.com/spolu/settle/mint/model"
@@ -5,16 +7,20 @@ import "github.com/spolu/settle/mint/model"
 const (
 	operationsSQL = `
 CREATE TABLE IF NOT EXISTS operations(
-  token VARCHAR(256) NOT NULL,
+  user VARCHAR(256) NOT NULL,   -- user token
+  owner VARCHAR(256) NOT NULL,  -- owner address
+  token VARCHAR(256) NOT NULL,  -- token
   created TIMESTAMP NOT NULL,
 
-  asset VARCHAR(256) NOT NULL,                     -- asset token
-  source VARCHAR(512),                             -- source user address
-  destination VARCHAR(512),                        -- destination user address
+  propagation VARCHAR(32) NOT NULL,  -- propagation type (canonical, propagated)
+
+  asset VARCHAR(256) NOT NULL,                     -- asset name
+  source VARCHAR(512),                             -- source address
+  destination VARCHAR(512),                        -- destination address
   amount VARCHAR(64) NOT NULL CHECK (amount > 0),  -- operation amount
 
-  PRIMARY KEY(token),
-  CONSTRAINT operations_asset_fk FOREIGN KEY (asset) REFERENCES assets(token)
+  PRIMARY KEY(user, owner, token),
+  CONSTRAINT operations_user_fk FOREIGN KEY (user) REFERENCES users(token)
 );
 `
 )

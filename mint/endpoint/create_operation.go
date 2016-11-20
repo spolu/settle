@@ -1,6 +1,7 @@
 package endpoint
 
 import (
+	"fmt"
 	"math/big"
 	"net/http"
 
@@ -34,6 +35,9 @@ func init() {
 // Only the asset creator can create operation on an asset. To transfer money,
 // users owning an asset whould use transactions.
 type CreateOperation struct {
+	Client *mint.Client
+
+	Owner      string
 	Asset      mint.AssetResource
 	Amount     big.Int
 	SrcAddress *string
@@ -44,7 +48,17 @@ type CreateOperation struct {
 func NewCreateOperation(
 	r *http.Request,
 ) (Endpoint, error) {
-	return &CreateOperation{}, nil
+	ctx := r.Context()
+
+	client := &mint.Client{}
+	err := client.Init(ctx)
+	if err != nil {
+		return nil, errors.Trace(err) // 500
+	}
+
+	return &CreateOperation{
+		Client: client,
+	}, nil
 }
 
 // Validate validates the input parameters.
@@ -52,6 +66,10 @@ func (e *CreateOperation) Validate(
 	r *http.Request,
 ) error {
 	ctx := r.Context()
+
+	e.Owner = fmt.Sprintf("%s@%s",
+		authentication.Get(ctx).User.Username,
+		env.Get(ctx).Config[mint.EnvCfgMintHost])
 
 	// Validate asset.
 	a, err := mint.AssetResourceFromName(ctx, pat.Param(r, "asset"))
@@ -62,13 +80,12 @@ func (e *CreateOperation) Validate(
 			pat.Param(r, "asset"),
 		))
 	}
-	username, host, err := mint.UsernameAndMintHostFromAddress(
-		ctx, a.Issuer)
+	username, host, err := mint.UsernameAndMintHostFromAddress(ctx, a.Owner)
 	if err != nil {
 		return errors.Trace(errors.NewUserErrorf(err,
 			400, "asset_invalid",
 			"The asset name you provided has an invalid issuer address: %s.",
-			a.Issuer,
+			a.Owner,
 		))
 	}
 	e.Asset = *a
@@ -156,8 +173,8 @@ func (e *CreateOperation) Execute(
 	ctx = db.Begin(ctx)
 	defer db.LoggedRollback(ctx)
 
-	asset, err := model.LoadAssetByIssuerCodeScale(ctx,
-		authentication.Get(ctx).User.Token, e.Asset.Code, e.Asset.Scale)
+	asset, err := model.LoadAssetByOwnerCodeScale(ctx,
+		e.Owner, e.Asset.Code, e.Asset.Scale)
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
 	} else if asset == nil {
@@ -168,11 +185,16 @@ func (e *CreateOperation) Execute(
 			e.Asset.Name,
 		))
 	}
+	assetName := fmt.Sprintf(
+		"%s[%s.%d]",
+		asset.Owner, asset.Code, asset.Scale)
+
+	balances := []*model.Balance{}
 
 	var srcBalance *model.Balance
 	if e.SrcAddress != nil {
-		srcBalance, err = model.LoadBalanceByAssetOwner(ctx,
-			asset.Token, *e.SrcAddress)
+		srcBalance, err = model.LoadBalanceByAssetHolder(ctx,
+			assetName, *e.SrcAddress)
 		if err != nil {
 			return nil, nil, errors.Trace(err) // 500
 		} else if srcBalance == nil {
@@ -182,19 +204,26 @@ func (e *CreateOperation) Execute(
 				*e.SrcAddress,
 			))
 		}
+		balances = append(balances, srcBalance)
 	}
 
 	var dstBalance *model.Balance
 	if e.DstAddress != nil {
-		dstBalance, err = model.LoadOrCreateBalanceByAssetOwner(ctx,
-			asset.Token, *e.DstAddress)
+		dstBalance, err = model.LoadOrCreateBalanceByAssetHolder(ctx,
+			authentication.Get(ctx).User.Token,
+			e.Owner,
+			assetName, *e.DstAddress)
 		if err != nil {
 			return nil, nil, errors.Trace(err) // 500
 		}
+
+		balances = append(balances, dstBalance)
 	}
 
-	operation, err := model.CreateOperation(ctx,
-		asset.Token, e.SrcAddress, e.DstAddress, model.Amount(e.Amount))
+	operation, err := model.CreateCanonicalOperation(ctx,
+		authentication.Get(ctx).User.Token,
+		e.Owner,
+		assetName, e.SrcAddress, e.DstAddress, model.Amount(e.Amount))
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
 	}
@@ -245,11 +274,10 @@ func (e *CreateOperation) Execute(
 
 	db.Commit(ctx)
 
+	// TODO(stan): propagation
+
 	return ptr.Int(http.StatusCreated), &svc.Resp{
 		"operation": format.JSONPtr(mint.NewOperationResource(ctx,
-			operation,
-			mint.NewAssetResource(ctx,
-				asset, authentication.Get(ctx).User,
-				env.Get(ctx).Config[mint.EnvCfgMintHost]))),
+			operation, asset)),
 	}, nil
 }
