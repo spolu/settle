@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS operations(
   token VARCHAR(256) NOT NULL,  -- token
   created TIMESTAMP NOT NULL,
 
-  type VARCHAR(32) NOT NULL,    -- type (canonical, propagated)
+  propagation VARCHAR(32) NOT NULL,  -- propagation type (canonical, propagated)
 
   asset VARCHAR(256) NOT NULL,                     -- asset name
   source VARCHAR(512),                             -- source address

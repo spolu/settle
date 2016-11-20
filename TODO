@@ -1,6 +1,7 @@
 # mint
 
- [ ] propagation protocol for both operations and offers
+ [ ] transaction protocol
+ [ ] propagation protocol for both operations and offers (need to learn more)
  [ ] pass DSN for DB, support Postgres
  [x] rename Normalized something Address to Owner
  [x] split controller into endpoint.CreateXXX object with Execute and Validate
@@ -15,3 +16,25 @@
 # site
 
   [ ] have the get started guide on github, to generate stars?
+
+# notes
+
+  # offers and operations
+
+  - the canonical mint has the truth so no need for a 2 step commit or blocking
+    on other mints, just rely on best effort propagation
+  - mints are eventually consistent on operations and offers
+  - propagation happens asynchronously and is retried
+
+  # transactions
+
+  - the chain of calls include
+    - operation
+    - offer
+    - operation
+    - offer
+    - operation
+
+  - each element of the chain commit to performing the operation if provided
+    with the lock. The operation/offer updates are propagated (best-effort)
+    only once they are committed

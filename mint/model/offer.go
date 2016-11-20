@@ -22,11 +22,11 @@ import (
 // - Propagated offers are indicatively stored on the mints of the offers's
 //   assets, to compute order books.
 type Offer struct {
-	User    string
-	Owner   string
-	Token   string
-	Created time.Time
-	Type    PgType
+	User        string
+	Owner       string
+	Token       string
+	Created     time.Time
+	Propagation PgType
 
 	Status OfStatus
 
@@ -51,11 +51,11 @@ func CreateCanonicalOffer(
 	status OfStatus,
 ) (*Offer, error) {
 	offer := Offer{
-		User:    user,
-		Owner:   owner,
-		Token:   token.New("offer"),
-		Created: time.Now(),
-		Type:    PgTpCanonical,
+		User:        user,
+		Owner:       owner,
+		Token:       token.New("offer"),
+		Created:     time.Now(),
+		Propagation: PgTpCanonical,
 
 		BaseAsset:  baseAsset,
 		QuoteAsset: quoteAsset,
@@ -68,10 +68,10 @@ func CreateCanonicalOffer(
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO offers
-  (user, owner, token, created, type, base_asset, quote_asset,
+  (user, owner, token, created, propagation, base_asset, quote_asset,
    base_price, quote_price, amount, status)
 VALUES
-  (:user, :owner, :token, :created, :type, :base_asset, :quote_asset,
+  (:user, :owner, :token, :created, :propagation, :base_asset, :quote_asset,
    :base_price, :quote_price, :amount, :status)
 `, offer); err != nil {
 		switch err := err.(type) {
@@ -105,11 +105,11 @@ func CreatePropagatedOffer(
 	status OfStatus,
 ) (*Offer, error) {
 	offer := Offer{
-		User:    user,
-		Owner:   owner,
-		Token:   token,
-		Created: created,
-		Type:    PgTpPropagated,
+		User:        user,
+		Owner:       owner,
+		Token:       token,
+		Created:     created,
+		Propagation: PgTpPropagated,
 
 		BaseAsset:  baseAsset,
 		QuoteAsset: quoteAsset,
@@ -122,10 +122,10 @@ func CreatePropagatedOffer(
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO offers
-  (user, owner, token, created, type, base_asset, quote_asset,
+  (user, owner, token, created, propagation, base_asset, quote_asset,
    base_price, quote_price, amount, status)
 VALUES
-  (:user, :owner, :token, :created, :type, :base_asset, :quote_asset,
+  (:user, :owner, :token, :created, :propagation, :base_asset, :quote_asset,
    :base_price, :quote_price, :amount, :status)
 `, offer); err != nil {
 		switch err := err.(type) {
@@ -171,9 +171,9 @@ func LoadCanonicalOfferByOwnerToken(
 	token string,
 ) (*Offer, error) {
 	offer := Offer{
-		Owner: owner,
-		Token: token,
-		Type:  PgTpCanonical,
+		Owner:       owner,
+		Token:       token,
+		Propagation: PgTpCanonical,
 	}
 
 	ext := db.Ext(ctx)
@@ -182,7 +182,7 @@ SELECT *
 FROM offers
 WHERE owner = :owner
   AND token = :token
-  AND type = :type
+  AND propagation = :propagation
 `, offer); err != nil {
 		return nil, errors.Trace(err)
 	} else if !rows.Next() {

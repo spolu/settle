@@ -22,11 +22,17 @@ func (c *Controller) Bind(
 	// mux.HandleFunc(pat.Get("/assets/:asset/balances/:address"), c.controller.RetrieveBalance)
 
 	// Public.
-	mux.HandleFunc(pat.Get("/offers/:offer"), endpoint.HandlerFor(endpoint.EndPtRetrieveOffer))
+	//mux.HandleFunc(pat.Post("/propagations"), endpoint.HandlerFor(endpoint.EndPtCreatePropagation))
 
-	//mux.HandleFunc(pat.Post("/offers/:offer/updates"), endpoint.HandlerFor(endpoint.EndPtCreateOfferUpdate))
-	//mux.HandleFunc(pat.Post("/operations/:operation/updates"), endpoint.HandlerFor(endpoint.EndPtCreateOperationUpdate))
+	mux.HandleFunc(pat.Get("/offers/:offer"), endpoint.HandlerFor(endpoint.EndPtRetrieveOffer))
+	//mux.HandleFunc(pat.Get("/operations/:operation"), endpoint.HandlerFor(endpoint.EndPtRetrieveOperation))
 
 	//mux.HandleFunc(pat.Post("/assets/:asset/transactions"), c.controller.CreateTransaction)
 	//mux.HandleFunc(pat.Post("/assets/:asset/transactions/:transaction/settle"), c.controller.SettleOperation)
 }
+
+// /operations > best-effort propagation
+// /offers > best-effort propagation
+
+// /transactions
+// /transactions/:transaction/settle

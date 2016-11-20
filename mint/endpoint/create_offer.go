@@ -156,29 +156,9 @@ func (e *CreateOffer) Execute(
 		return nil, nil, errors.Trace(err) // 500
 	}
 
-	// TODO(stan): make the operation temporarily available on the API.
-
-	// Perform propagations.
-	for _, asset := range e.Pair {
-		_, host, err := mint.UsernameAndMintHostFromAddress(ctx, asset.Owner)
-		if err != nil {
-			return nil, nil, errors.Trace(err) // 500
-		}
-		if host != env.Get(ctx).Config[mint.EnvCfgMintHost] {
-			err := e.Client.PropagateOffer(ctx, offer, host)
-			if err != nil {
-				return nil, nil, errors.Trace(errors.NewUserError(err,
-					402, "mint_unreachable",
-					fmt.Sprintf("The mint of %s is currently unreachable, "+
-						"preventing the operation from being properly "+
-						"propagated to the network. Please try again later or "+
-						"contact them if the problem persists.",
-						asset.Owner)))
-			}
-		}
-	}
-
 	db.Commit(ctx)
+
+	// TODO(stan): propagation
 
 	return ptr.Int(http.StatusCreated), &svc.Resp{
 		"offer": format.JSONPtr(mint.NewOfferResource(ctx, offer)),

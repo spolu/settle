@@ -272,29 +272,9 @@ func (e *CreateOperation) Execute(
 		}
 	}
 
-	// TODO(stan): make the operation temporarily available on the API.
-
-	// Perform propagations.
-	for _, balance := range balances {
-		_, host, err := mint.UsernameAndMintHostFromAddress(ctx, balance.Holder)
-		if err != nil {
-			return nil, nil, errors.Trace(err) // 500
-		}
-		if host != env.Get(ctx).Config[mint.EnvCfgMintHost] {
-			err := e.Client.PropagateOperation(ctx, operation, host)
-			if err != nil {
-				return nil, nil, errors.Trace(errors.NewUserError(err,
-					402, "mint_unreachable",
-					fmt.Sprintf("The mint of %s is currently unreachable, "+
-						"preventing the operation from being properly "+
-						"propagated to the network. Please try again later or "+
-						"contact them if the problem persists.",
-						balance.Holder)))
-			}
-		}
-	}
-
 	db.Commit(ctx)
+
+	// TODO(stan): propagation
 
 	return ptr.Int(http.StatusCreated), &svc.Resp{
 		"operation": format.JSONPtr(mint.NewOperationResource(ctx,

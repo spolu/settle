@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS offers(
   token VARCHAR(256) NOT NULL,  -- token
   created TIMESTAMP NOT NULL,
 
-  type   VARCHAR(32) NOT NULL,  -- type (canonical, propagated)
+  propagation VARCHAR(32) NOT NULL,  -- propagation type (canonical, propagated)
 
   base_asset VARCHAR(256) NOT NULL,  -- base asset name
   quote_asset VARCHAR(256) NOT NULL, -- quote asset name

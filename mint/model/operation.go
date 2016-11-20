@@ -24,15 +24,14 @@ var MaxAssetAmount = new(big.Int).Exp(
 // represented as a Amount and store in database as a NUMERIC(39).
 // - Canonical operations are stored on the mint of the operation's owner
 //   (which acts as source of truth on its state).
-// - Propagated operations are indicatively stored on the mints of the
-//   operation's source or destination, for retrieval by impacted users.
-// - Operations are immutable.
+// - Propagated operations are stored on the mints of the operation's source or
+//   destination, for retrieval by impacted users.
 type Operation struct {
-	User    string
-	Owner   string // Owner address.
-	Token   string
-	Created time.Time
-	Type    PgType
+	User        string
+	Owner       string // Owner address.
+	Token       string
+	Created     time.Time
+	Propagation PgType
 
 	Asset       string  // Asset name.
 	Source      *string // Source address (if nil issuance).
@@ -40,7 +39,7 @@ type Operation struct {
 	Amount      Amount
 }
 
-// CreateCanonicalOperation creates and stores a new canonical Operation.
+// CreateCanonicalOperation creates and stores a new Operation.
 func CreateCanonicalOperation(
 	ctx context.Context,
 	user string,
@@ -51,11 +50,11 @@ func CreateCanonicalOperation(
 	amount Amount,
 ) (*Operation, error) {
 	operation := Operation{
-		User:    user,
-		Owner:   owner,
-		Token:   token.New("operation"),
-		Created: time.Now(),
-		Type:    PgTpCanonical,
+		User:        user,
+		Owner:       owner,
+		Token:       token.New("operation"),
+		Created:     time.Now(),
+		Propagation: PgTpCanonical,
 
 		Asset:       asset,
 		Source:      source,
@@ -66,10 +65,10 @@ func CreateCanonicalOperation(
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO operations
-  (user, owner, token, created, type, asset, source, destination,
+  (user, owner, token, created, propagation, asset, source, destination,
    amount)
 VALUES
-  (:user, :owner, :token, :created, :type, :asset, :source, :destination,
+  (:user, :owner, :token, :created, :propagation, :asset, :source, :destination,
    :amount)
 `, operation); err != nil {
 		switch err := err.(type) {
@@ -88,24 +87,24 @@ VALUES
 	return &operation, nil
 }
 
-// CreatePropagatedOperation creates and stores a new propagated Operation.
+// CreatePropagatedOperation creates and stores a new Operation.
 func CreatePropagatedOperation(
 	ctx context.Context,
 	user string,
-	owner string,
 	token string,
 	created time.Time,
+	owner string,
 	asset string,
 	source *string,
 	destination *string,
 	amount Amount,
 ) (*Operation, error) {
 	operation := Operation{
-		User:    user,
-		Owner:   owner,
-		Token:   token,
-		Created: created,
-		Type:    PgTpPropagated,
+		User:        user,
+		Owner:       owner,
+		Token:       token,
+		Created:     created,
+		Propagation: PgTpPropagated,
 
 		Asset:       asset,
 		Source:      source,
@@ -116,10 +115,10 @@ func CreatePropagatedOperation(
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO operations
-  (user, owner, token, created, type, asset, source, destination,
+  (user, owner, token, created, propagation, asset, source, destination,
    amount)
 VALUES
-  (:user, :owner, :token, :created, :type, :asset, :source, :destination,
+  (:user, :owner, :token, :created, :propagation, :asset, :source, :destination,
    :amount)
 `, operation); err != nil {
 		switch err := err.(type) {
@@ -146,9 +145,9 @@ func LoadCanonicalOperationByOwnerToken(
 	token string,
 ) (*Operation, error) {
 	operation := Operation{
-		Owner: owner,
-		Token: token,
-		Type:  PgTpCanonical,
+		Owner:       owner,
+		Token:       token,
+		Propagation: PgTpCanonical,
 	}
 
 	ext := db.Ext(ctx)
@@ -157,7 +156,7 @@ SELECT *
 FROM operations
 WHERE owner = :owner
   AND token = :token
-  AND type = :type
+  AND propagation = :propagation
 `, operation); err != nil {
 		return nil, errors.Trace(err)
 	} else if !rows.Next() {
