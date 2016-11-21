@@ -22,7 +22,8 @@
   # offers and operations
 
   - the canonical mint has the truth so no need for a 2 step commit or blocking
-    on other mints, just rely on best effort propagation
+    on other mints, just rely on best effort propagation (hence protocol
+    necessarily different from transactions)
   - mints are eventually consistent on operations and offers
   - propagation happens asynchronously and is retried
 
@@ -30,11 +31,11 @@
 
   - the chain of calls include
     - operation
-    - offer
+    - crossing
     - operation
-    - offer
+    - crossing
     - operation
 
-  - each element of the chain commit to performing the operation if provided
-    with the lock. The operation/offer updates are propagated (best-effort)
-    only once they are committed
+  - each element of the chain commit to performing the operation/crossing if
+    provided with the lock. The operation/offer updates are propagated
+    (best-effort) only once they are committed

@@ -1,10 +1,11 @@
+// OWNER: stan
+
 package endpoint
 
 import (
 	"fmt"
 	"math/big"
 	"net/http"
-	"regexp"
 
 	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/env"
@@ -18,7 +19,7 @@ import (
 )
 
 const (
-	// EndPtCreateOffer creates a new assset.
+	// EndPtCreateOffer creates a new offer.
 	EndPtCreateOffer EndPtName = "CreateOffer"
 )
 
@@ -54,10 +55,6 @@ func NewCreateOffer(
 	}, nil
 }
 
-// OfferPriceRegexp is used to validate and parse an offer price.
-var OfferPriceRegexp = regexp.MustCompile(
-	"^([0-9]+)\\/([0-9]+)$")
-
 // Validate validates the input parameters.
 func (e *CreateOffer) Validate(
 	r *http.Request,
@@ -80,58 +77,19 @@ func (e *CreateOffer) Validate(
 	e.Pair = pair
 
 	// Validate price.
-	m := OfferPriceRegexp.FindStringSubmatch(r.PostFormValue("price"))
-	if len(m) == 0 {
-		return errors.Trace(errors.NewUserErrorf(err,
-			400, "price_invalid",
-			"The offer price you provided is invalid: %s. Prices must have "+
-				"the form 'pB/pQ' where pB is the base asset price and pQ "+
-				"is the quote asset price.",
-			r.PostFormValue("price"),
-		))
+	basePrice, quotePrice, err := ValidatePrice(r)
+	if err != nil {
+		return errors.Trace(err) // 400
 	}
-	var basePrice big.Int
-	_, success := basePrice.SetString(m[1], 10)
-	if !success ||
-		basePrice.Cmp(new(big.Int)) < 0 ||
-		basePrice.Cmp(model.MaxAssetAmount) >= 0 {
-		return errors.Trace(errors.NewUserErrorf(err,
-			400, "price_invalid",
-			"The base asset price you provided is invalid: %s. Asset prices "+
-				"must be integers between 0 and 2^128.",
-			m[1],
-		))
-	}
-	e.BasePrice = basePrice
-
-	var quotePrice big.Int
-	_, success = quotePrice.SetString(m[2], 10)
-	if !success ||
-		quotePrice.Cmp(new(big.Int)) < 0 ||
-		quotePrice.Cmp(model.MaxAssetAmount) >= 0 {
-		return errors.Trace(errors.NewUserErrorf(err,
-			400, "price_invalid",
-			"The quote asset price you provided is invalid: %s. Asset prices "+
-				"must be integers between 0 and 2^128.",
-			m[2],
-		))
-	}
-	e.QuotePrice = quotePrice
+	e.BasePrice = *basePrice
+	e.QuotePrice = *quotePrice
 
 	// Validate amount.
-	var amount big.Int
-	_, success = amount.SetString(r.PostFormValue("amount"), 10)
-	if !success ||
-		amount.Cmp(new(big.Int)) < 0 ||
-		amount.Cmp(model.MaxAssetAmount) >= 0 {
-		return errors.Trace(errors.NewUserErrorf(err,
-			400, "amount_invalid",
-			"The amount you provided is invalid: %s. Amounts must be "+
-				"integers between 0 and 2^128.",
-			r.PostFormValue("amount"),
-		))
+	amount, err := ValidateAmount(r)
+	if err != nil {
+		return errors.Trace(err) // 400
 	}
-	e.Amount = amount
+	e.Amount = *amount
 
 	return nil
 }
