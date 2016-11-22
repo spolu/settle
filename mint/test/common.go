@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math/big"
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
@@ -145,4 +146,55 @@ func (m *Mint) Post(
 	}
 
 	return r.StatusCode, raw
+}
+
+// Post posts to a specified endpoint on the mint.
+func (u *MintUser) Post(
+	t *testing.T,
+	path string,
+	params url.Values,
+) (int, svc.Resp) {
+	return u.Mint.Post(t, u, path, params)
+}
+
+// CreateAsset creates a new assset for this test user
+func (u *MintUser) CreateAsset(
+	t *testing.T,
+	code string,
+	scale int8,
+) mint.AssetResource {
+	_, raw := u.Post(t,
+		"/assets",
+		url.Values{
+			"code":  {code},
+			"scale": {fmt.Sprintf("%d", scale)},
+		})
+	var asset mint.AssetResource
+	if err := raw.Extract("asset", &asset); err != nil {
+		t.Fatal(err)
+	}
+
+	return asset
+}
+
+// CreateOffer creates a new ofer for this test user
+func (u *MintUser) CreateOffer(
+	t *testing.T,
+	pair string,
+	price string,
+	amount *big.Int,
+) mint.OfferResource {
+	_, raw := u.Post(t,
+		"/offers",
+		url.Values{
+			"pair":   {pair},
+			"price":  {price},
+			"amount": {amount.String()},
+		})
+	var offer mint.OfferResource
+	if err := raw.Extract("offer", &offer); err != nil {
+		t.Fatal(err)
+	}
+
+	return offer
 }

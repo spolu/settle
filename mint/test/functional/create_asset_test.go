@@ -12,21 +12,26 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func setupWithMintUser(
+func setupCreateAsset(
 	t *testing.T,
-) (*test.Mint, *test.MintUser) {
-	m := test.CreateMint(t)
-	user := m.CreateUser(t)
+) ([]*test.Mint, []*test.MintUser) {
+	m := []*test.Mint{
+		test.CreateMint(t),
+	}
 
-	return m, user
+	u := []*test.MintUser{
+		m[0].CreateUser(t),
+	}
+
+	return m, u
 }
 
 func TestCreateAsset(
 	t *testing.T,
 ) {
-	m, user := setupWithMintUser(t)
+	_, u := setupCreateAsset(t)
 
-	status, raw := m.Post(t, user,
+	status, raw := u[0].Post(t,
 		"/assets",
 		url.Values{
 			"code":  {"USD"},
@@ -43,10 +48,10 @@ func TestCreateAsset(
 	assert.WithinDuration(t,
 		time.Now(),
 		time.Unix(0, asset.Created*1000*1000), 2*time.Millisecond)
+	assert.Equal(t, u[0].Address, asset.Owner)
 
-	assert.Equal(t, user.Address, asset.Owner)
 	assert.Regexp(t, mint.AssetNameRegexp, asset.Name)
-	assert.Equal(t, fmt.Sprintf("%s[USD.2]", user.Address), asset.Name)
+	assert.Equal(t, fmt.Sprintf("%s[USD.2]", u[0].Address), asset.Name)
 	assert.Equal(t, "USD", asset.Code)
 	assert.Equal(t, int8(2), asset.Scale)
 }
@@ -54,9 +59,9 @@ func TestCreateAsset(
 func TestCreateAssetWithInvalidCode(
 	t *testing.T,
 ) {
-	m, user := setupWithMintUser(t)
+	_, u := setupCreateAsset(t)
 
-	status, raw := m.Post(t, user,
+	status, raw := u[0].Post(t,
 		"/assets",
 		url.Values{
 			"code":  {"U/S[D"},
@@ -75,9 +80,9 @@ func TestCreateAssetWithInvalidCode(
 func TestCreateAssetWithInvalidScale(
 	t *testing.T,
 ) {
-	m, user := setupWithMintUser(t)
+	_, u := setupCreateAsset(t)
 
-	status, raw := m.Post(t, user,
+	status, raw := u[0].Post(t,
 		"/assets",
 		url.Values{
 			"code":  {"USD"},
@@ -96,9 +101,9 @@ func TestCreateAssetWithInvalidScale(
 func TestCreateAssetThatAlreadyExists(
 	t *testing.T,
 ) {
-	m, user := setupWithMintUser(t)
+	_, u := setupCreateAsset(t)
 
-	status, _ := m.Post(t, user,
+	status, _ := u[0].Post(t,
 		"/assets",
 		url.Values{
 			"code":  {"USD"},
@@ -106,7 +111,7 @@ func TestCreateAssetThatAlreadyExists(
 		})
 	assert.Equal(t, 201, status)
 
-	status, raw := m.Post(t, user,
+	status, raw := u[0].Post(t,
 		"/assets",
 		url.Values{
 			"code":  {"USD"},
