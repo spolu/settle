@@ -99,3 +99,36 @@ func NewOfferResource(
 		Status: string(offer.Status),
 	}
 }
+
+// TransactionResource is the representation of a transaction in the mint API.
+type TransactionResource struct {
+	ID      string `json:"id"`
+	Created int64  `json:"created"`
+	Owner   string `json:"owner"`
+
+	Pair   string   `json:"pair"`
+	Price  string   `json:"price"`
+	Amount *big.Int `json:"amount"`
+	Path   []string `json:"path"`
+}
+
+// NewTransactionResource generates a new resource.
+func NewTransactionResource(
+	ctx context.Context,
+	transaction *model.Transaction,
+) TransactionResource {
+	return TransactionResource{
+		ID: fmt.Sprintf(
+			"%s[%s]", transaction.Owner, transaction.Token),
+		Created: transaction.Created.UnixNano() / (1000 * 1000),
+		Owner:   transaction.Owner,
+		Pair: fmt.Sprintf("%s/%s",
+			transaction.BaseAsset, transaction.QuoteAsset),
+		Price: fmt.Sprintf(
+			"%s/%s",
+			(*big.Int)(&transaction.BasePrice).String(),
+			(*big.Int)(&transaction.QuotePrice).String()),
+		Amount: (*big.Int)(&transaction.Amount),
+		Path:   []string(transaction.Path),
+	}
+}

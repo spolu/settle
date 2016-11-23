@@ -32,6 +32,7 @@ func setupCreateOperation(
 func TestCreateIssuingOperation(
 	t *testing.T,
 ) {
+	t.Parallel()
 	_, u, a := setupCreateOperation(t)
 
 	status, raw := u[0].Post(t,
@@ -50,7 +51,7 @@ func TestCreateIssuingOperation(
 	assert.Regexp(t, mint.IDRegexp, op.ID)
 	assert.WithinDuration(t,
 		time.Now(),
-		time.Unix(0, op.Created*1000*1000), 2*time.Millisecond)
+		time.Unix(0, op.Created*1000*1000), test.PostLatency)
 	assert.Equal(t, u[0].Address, op.Owner)
 
 	assert.Regexp(t, mint.IDRegexp, op.Asset.ID)
@@ -69,6 +70,7 @@ func TestCreateIssuingOperation(
 func TestCreateOperation(
 	t *testing.T,
 ) {
+	t.Parallel()
 	_, u, a := setupCreateOperation(t)
 
 	status, _ := u[0].Post(t,
@@ -97,7 +99,7 @@ func TestCreateOperation(
 	assert.Regexp(t, mint.IDRegexp, op.ID)
 	assert.WithinDuration(t,
 		time.Now(),
-		time.Unix(0, op.Created*1000*1000), 2*time.Millisecond)
+		time.Unix(0, op.Created*1000*1000), test.PostLatency)
 	assert.Equal(t, u[0].Address, op.Owner)
 
 	assert.NotNil(t, op.Source)
@@ -111,6 +113,7 @@ func TestCreateOperation(
 func TestCreateAnnihilatingOperation(
 	t *testing.T,
 ) {
+	t.Parallel()
 	_, u, a := setupCreateOperation(t)
 
 	status, _ := u[0].Post(t,
@@ -138,7 +141,7 @@ func TestCreateAnnihilatingOperation(
 	assert.Regexp(t, mint.IDRegexp, op.ID)
 	assert.WithinDuration(t,
 		time.Now(),
-		time.Unix(0, op.Created*1000*1000), 2*time.Millisecond)
+		time.Unix(0, op.Created*1000*1000), test.PostLatency)
 	assert.Equal(t, u[0].Address, op.Owner)
 
 	assert.NotNil(t, op.Source)
@@ -151,6 +154,7 @@ func TestCreateAnnihilatingOperation(
 func TestCreateOperationWithNegativeAmount(
 	t *testing.T,
 ) {
+	t.Parallel()
 	_, u, a := setupCreateOperation(t)
 
 	status, raw := u[0].Post(t,
@@ -172,6 +176,7 @@ func TestCreateOperationWithNegativeAmount(
 func TestCreateOperationWithInvalidAsset(
 	t *testing.T,
 ) {
+	t.Parallel()
 	_, u, _ := setupCreateOperation(t)
 
 	invalidAsset := "foo"
@@ -194,6 +199,7 @@ func TestCreateOperationWithInvalidAsset(
 func TestCreateOperationWithInvalidAssetHostname(
 	t *testing.T,
 ) {
+	t.Parallel()
 	_, u, _ := setupCreateOperation(t)
 
 	invalidAsset := "foo@bar.com[USD.2]"
@@ -216,6 +222,7 @@ func TestCreateOperationWithInvalidAssetHostname(
 func TestCreateOperationWithInvalidAssetUsername(
 	t *testing.T,
 ) {
+	t.Parallel()
 	m, u, _ := setupCreateOperation(t)
 
 	invalidAsset := fmt.Sprintf(
@@ -239,6 +246,7 @@ func TestCreateOperationWithInvalidAssetUsername(
 func TestCreateOperationWithUnknownAsset(
 	t *testing.T,
 ) {
+	t.Parallel()
 	m, u, _ := setupCreateOperation(t)
 
 	invalidAsset := fmt.Sprintf(
@@ -262,6 +270,7 @@ func TestCreateOperationWithUnknownAsset(
 func TestCreateOperationWithNoSourceOrDestination(
 	t *testing.T,
 ) {
+	t.Parallel()
 	_, u, a := setupCreateOperation(t)
 
 	status, raw := u[0].Post(t,
@@ -282,6 +291,7 @@ func TestCreateOperationWithNoSourceOrDestination(
 func TestCreateOperationWithInsufficientBalance(
 	t *testing.T,
 ) {
+	t.Parallel()
 	_, u, a := setupCreateOperation(t)
 
 	status, _ := u[0].Post(t,

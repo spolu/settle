@@ -28,7 +28,9 @@ func init() {
 }
 
 // CreateOffer creates a new canonical offer and triggers its propagation to
-// all the mints involved.
+// all the mints involved. Offer are represented as asks: base asset (left) is
+// offered in exchange for quote asset (right) for specified amount (of quote
+// asset) at specified price.
 type CreateOffer struct {
 	Client *mint.Client
 
@@ -66,18 +68,14 @@ func (e *CreateOffer) Validate(
 		env.Get(ctx).Config[mint.EnvCfgMintHost])
 
 	// Validate asset pair.
-	pair, err := mint.AssetResourcesFromPair(ctx, r.PostFormValue("pair"))
+	pair, err := ValidateAssetPair(r, r.PostFormValue("pair"))
 	if err != nil {
-		return errors.Trace(errors.NewUserErrorf(err,
-			400, "pair_invalid",
-			"The asset pair you provided is invalid: %s.",
-			r.PostFormValue("pair"),
-		))
+		return errors.Trace(err) // 400
 	}
 	e.Pair = pair
 
 	// Validate price.
-	basePrice, quotePrice, err := ValidatePrice(r)
+	basePrice, quotePrice, err := ValidatePrice(r, r.PostFormValue("price"))
 	if err != nil {
 		return errors.Trace(err) // 400
 	}
@@ -85,7 +83,7 @@ func (e *CreateOffer) Validate(
 	e.QuotePrice = *quotePrice
 
 	// Validate amount.
-	amount, err := ValidateAmount(r)
+	amount, err := ValidateAmount(r, r.PostFormValue("amount"))
 	if err != nil {
 		return errors.Trace(err) // 400
 	}

@@ -8,6 +8,10 @@ import (
 	"github.com/spolu/settle/lib/svc"
 )
 
+const (
+	defaultMaxMemory = 32 << 20 // 32 MB
+)
+
 // EndPtName reprensents an endpoint name.
 type EndPtName string
 

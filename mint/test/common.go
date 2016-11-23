@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/spolu/settle/lib/db"
@@ -25,6 +26,12 @@ import (
 	"github.com/spolu/settle/mint/lib/authentication"
 	"github.com/spolu/settle/mint/model"
 	goji "goji.io"
+)
+
+const (
+	// PostLatency is the expected latency between a test running an the created
+	// stamp of an object we created within a test.
+	PostLatency time.Duration = 100 * time.Millisecond
 )
 
 func init() {

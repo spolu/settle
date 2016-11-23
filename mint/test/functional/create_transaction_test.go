@@ -48,6 +48,7 @@ func setupCreateTransaction(
 func TestCreateTransaction(
 	t *testing.T,
 ) {
+	t.Parallel()
 	_, u, _, o := setupCreateTransaction(t)
 
 	status, _ := u[0].Post(t,

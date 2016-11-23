@@ -32,7 +32,6 @@ type Offer struct {
 
 	BaseAsset  string `db:"base_asset"`  // BaseAsset name.
 	QuoteAsset string `db:"quote_asset"` // QuoteAsset name.
-
 	BasePrice  Amount `db:"base_price"`
 	QuotePrice Amount `db:"quote_price"`
 	Amount     Amount

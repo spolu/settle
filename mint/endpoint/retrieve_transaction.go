@@ -3,8 +3,6 @@ package endpoint
 import (
 	"net/http"
 
-	"goji.io/pat"
-
 	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/format"
@@ -12,39 +10,40 @@ import (
 	"github.com/spolu/settle/lib/svc"
 	"github.com/spolu/settle/mint"
 	"github.com/spolu/settle/mint/model"
+	"goji.io/pat"
 )
 
 const (
-	// EndPtRetrieveOffer creates a new assset.
-	EndPtRetrieveOffer EndPtName = "RetrieveOffer"
+	// EndPtRetrieveTransaction creates a new assset.
+	EndPtRetrieveTransaction EndPtName = "RetrieveTransaction"
 )
 
 func init() {
-	registrar[EndPtRetrieveOffer] = NewRetrieveOffer
+	registrar[EndPtRetrieveTransaction] = NewRetrieveTransaction
 }
 
-// RetrieveOffer retrieves an offer based on its id. It is not authenticated
-// and is used to verify offers when they get propagated.
-type RetrieveOffer struct {
+// RetrieveTransaction retrieves a transaction based on its id. It is not
+// authenticated and is used to propagate transactions.
+type RetrieveTransaction struct {
 	ID    string
 	Token string
 	Owner string
 }
 
-// NewRetrieveOffer constructs and initialiezes the endpoint.
-func NewRetrieveOffer(
+// NewRetrieveTransaction constructs and initialiezes the endpoint.
+func NewRetrieveTransaction(
 	r *http.Request,
 ) (Endpoint, error) {
-	return &RetrieveOffer{}, nil
+	return &RetrieveTransaction{}, nil
 
 }
 
 // Validate validates the input parameters.
-func (e *RetrieveOffer) Validate(
+func (e *RetrieveTransaction) Validate(
 	r *http.Request,
 ) error {
 	// Validate id.
-	id, owner, token, err := ValidateID(r, pat.Param(r, "offer"))
+	id, owner, token, err := ValidateID(r, pat.Param(r, "transaction"))
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -56,7 +55,7 @@ func (e *RetrieveOffer) Validate(
 }
 
 // Execute executes the endpoint.
-func (e *RetrieveOffer) Execute(
+func (e *RetrieveTransaction) Execute(
 	r *http.Request,
 ) (*int, *svc.Resp, error) {
 	ctx := r.Context()
@@ -64,13 +63,14 @@ func (e *RetrieveOffer) Execute(
 	ctx = db.Begin(ctx)
 	defer db.LoggedRollback(ctx)
 
-	offer, err := model.LoadCanonicalOfferByOwnerToken(ctx, e.Owner, e.Token)
+	offer, err := model.LoadCanonicalTransactionByOwnerToken(ctx,
+		e.Owner, e.Token)
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
 	} else if offer == nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-			404, "offer_not_found",
-			"The offer you are trying to retrieve does not exist: %s.",
+			404, "transaction_not_found",
+			"The transaction you are trying to retrieve does not exist: %s.",
 			e.ID,
 		))
 	}
@@ -78,6 +78,6 @@ func (e *RetrieveOffer) Execute(
 	db.Commit(ctx)
 
 	return ptr.Int(http.StatusOK), &svc.Resp{
-		"offer": format.JSONPtr(mint.NewOfferResource(ctx, offer)),
+		"offer": format.JSONPtr(mint.NewTransactionResource(ctx, offer)),
 	}, nil
 }

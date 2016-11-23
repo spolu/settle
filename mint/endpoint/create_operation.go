@@ -80,17 +80,17 @@ func (e *CreateOperation) Validate(
 			pat.Param(r, "asset"),
 		))
 	}
+	e.Asset = *a
+
+	// Validate that the issuer is attempting to create the operation.
 	username, host, err := mint.UsernameAndMintHostFromAddress(ctx, a.Owner)
 	if err != nil {
 		return errors.Trace(errors.NewUserErrorf(err,
 			400, "asset_invalid",
-			"The asset name you provided has an invalid issuer address: %s.",
+			"The asset name you provided has an invalid owner address: %s.",
 			a.Owner,
 		))
 	}
-	e.Asset = *a
-
-	// Validate that the issuer is attempting to create the operation.
 	if host != env.Get(ctx).Config[mint.EnvCfgMintHost] ||
 		username != authentication.Get(ctx).User.Username {
 		return errors.Trace(errors.NewUserErrorf(nil,
@@ -107,19 +107,11 @@ func (e *CreateOperation) Validate(
 	}
 
 	// Validate amount.
-	var amount big.Int
-	_, success := amount.SetString(r.PostFormValue("amount"), 10)
-	if !success ||
-		amount.Cmp(new(big.Int)) < 0 ||
-		amount.Cmp(model.MaxAssetAmount) >= 0 {
-		return errors.Trace(errors.NewUserErrorf(err,
-			400, "amount_invalid",
-			"The amount you provided is invalid: %s. Amounts must be "+
-				"integers between 0 and 2^128.",
-			r.PostFormValue("amount"),
-		))
+	amount, err := ValidateAmount(r, r.PostFormValue("amount"))
+	if err != nil {
+		return errors.Trace(err)
 	}
-	e.Amount = amount
+	e.Amount = *amount
 
 	// Validate source
 	var srcAddress *string

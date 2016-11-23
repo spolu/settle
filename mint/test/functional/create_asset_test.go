@@ -29,6 +29,7 @@ func setupCreateAsset(
 func TestCreateAsset(
 	t *testing.T,
 ) {
+	t.Parallel()
 	_, u := setupCreateAsset(t)
 
 	status, raw := u[0].Post(t,
@@ -47,7 +48,7 @@ func TestCreateAsset(
 	assert.Regexp(t, mint.IDRegexp, asset.ID)
 	assert.WithinDuration(t,
 		time.Now(),
-		time.Unix(0, asset.Created*1000*1000), 2*time.Millisecond)
+		time.Unix(0, asset.Created*1000*1000), test.PostLatency)
 	assert.Equal(t, u[0].Address, asset.Owner)
 
 	assert.Regexp(t, mint.AssetNameRegexp, asset.Name)
@@ -59,6 +60,7 @@ func TestCreateAsset(
 func TestCreateAssetWithInvalidCode(
 	t *testing.T,
 ) {
+	t.Parallel()
 	_, u := setupCreateAsset(t)
 
 	status, raw := u[0].Post(t,
@@ -80,6 +82,7 @@ func TestCreateAssetWithInvalidCode(
 func TestCreateAssetWithInvalidScale(
 	t *testing.T,
 ) {
+	t.Parallel()
 	_, u := setupCreateAsset(t)
 
 	status, raw := u[0].Post(t,
@@ -101,6 +104,7 @@ func TestCreateAssetWithInvalidScale(
 func TestCreateAssetThatAlreadyExists(
 	t *testing.T,
 ) {
+	t.Parallel()
 	_, u := setupCreateAsset(t)
 
 	status, _ := u[0].Post(t,

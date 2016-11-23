@@ -37,6 +37,7 @@ func setupCreateOffer(
 func TestCreateOffer(
 	t *testing.T,
 ) {
+	t.Parallel()
 	_, u, _ := setupCreateOffer(t)
 
 	status, raw := u[0].Post(t,
@@ -56,7 +57,7 @@ func TestCreateOffer(
 	assert.Regexp(t, mint.IDRegexp, offer.ID)
 	assert.WithinDuration(t,
 		time.Now(),
-		time.Unix(0, offer.Created*1000*1000), 2*time.Millisecond)
+		time.Unix(0, offer.Created*1000*1000), test.PostLatency)
 	assert.Equal(t, u[0].Address, offer.Owner)
 
 	assert.Equal(t,

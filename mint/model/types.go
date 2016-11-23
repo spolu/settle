@@ -5,6 +5,7 @@ package model
 import (
 	"database/sql/driver"
 	"math/big"
+	"strings"
 
 	"github.com/spolu/settle/lib/errors"
 )
@@ -32,6 +33,9 @@ const (
 	OfStClosed OfStatus = "closed"
 )
 
+// OfPath is an offer path
+type OfPath []string
+
 // Value implements driver.Valuer.
 func (b Amount) Value() (value driver.Value, err error) {
 	return (*big.Int)(&b).String(), nil
@@ -58,17 +62,17 @@ func (b *Amount) Scan(src interface{}) error {
 }
 
 // Value implements driver.Valuer
-func (s PgType) Value() (value driver.Value, err error) {
-	return string(s), nil
+func (t PgType) Value() (value driver.Value, err error) {
+	return string(t), nil
 }
 
 // Scan implements sql.Scanner.
-func (s *PgType) Scan(src interface{}) error {
+func (t *PgType) Scan(src interface{}) error {
 	switch src := src.(type) {
 	case []byte:
-		*s = PgType(src)
+		*t = PgType(src)
 	case string:
-		*s = PgType(src)
+		*t = PgType(src)
 	default:
 		return errors.Newf(
 			"Incompatible type for PgType with value: %q", src)
@@ -92,6 +96,25 @@ func (s *OfStatus) Scan(src interface{}) error {
 	default:
 		return errors.Newf(
 			"Incompatible status for OfStatus with value: %q", src)
+	}
+
+	return nil
+}
+
+// Value implements driver.Valuer.
+func (p OfPath) Value() (value driver.Value, err error) {
+	return strings.Join([]string(p), "/"), nil
+}
+
+// Scan implements sql.Scanner.
+func (p *OfPath) Scan(src interface{}) error {
+	switch src := src.(type) {
+	case []byte:
+		*p = strings.Split(string(src), "/")
+	case string:
+		*p = strings.Split(src, "/")
+	default:
+		return errors.Newf("Incompatible type for OfPath with value: %q", src)
 	}
 
 	return nil
