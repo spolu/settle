@@ -8,6 +8,10 @@ import (
 	"github.com/spolu/settle/mint/model"
 )
 
+const (
+	Version string = "0"
+)
+
 // AssetResource is the representation of an asset in the mint API.
 type AssetResource struct {
 	ID      string `json:"id"`
@@ -106,10 +110,10 @@ type TransactionResource struct {
 	Created int64  `json:"created"`
 	Owner   string `json:"owner"`
 
-	Pair   string   `json:"pair"`
-	Price  string   `json:"price"`
-	Amount *big.Int `json:"amount"`
-	Path   []string `json:"path"`
+	Pair        string   `json:"pair"`
+	Amount      *big.Int `json:"amount"`
+	Destination string   `json:"destination"`
+	Path        []string `json:"path"`
 }
 
 // NewTransactionResource generates a new resource.
@@ -124,11 +128,8 @@ func NewTransactionResource(
 		Owner:   transaction.Owner,
 		Pair: fmt.Sprintf("%s/%s",
 			transaction.BaseAsset, transaction.QuoteAsset),
-		Price: fmt.Sprintf(
-			"%s/%s",
-			(*big.Int)(&transaction.BasePrice).String(),
-			(*big.Int)(&transaction.QuotePrice).String()),
-		Amount: (*big.Int)(&transaction.Amount),
-		Path:   []string(transaction.Path),
+		Amount:      (*big.Int)(&transaction.Amount),
+		Destination: transaction.Destination,
+		Path:        []string(transaction.Path),
 	}
 }

@@ -68,14 +68,25 @@ func (e *CreateOffer) Validate(
 		env.Get(ctx).Config[mint.EnvCfgMintHost])
 
 	// Validate asset pair.
-	pair, err := ValidateAssetPair(r, r.PostFormValue("pair"))
+	pair, err := ValidateAssetPair(ctx, r.PostFormValue("pair"))
 	if err != nil {
 		return errors.Trace(err) // 400
 	}
 	e.Pair = pair
 
+	// Validate that the base asset's owner matches the offer owner
+	if e.Pair[0].Owner != e.Owner {
+		return errors.Trace(errors.NewUserErrorf(nil,
+			400, "offer_not_authorized",
+			"You can only create offers whose base asset were created by the "+
+				"account you are currently authenticated with: %s. This "+
+				"offer base asset was created by: %s.",
+			e.Owner, e.Pair[0].Owner,
+		))
+	}
+
 	// Validate price.
-	basePrice, quotePrice, err := ValidatePrice(r, r.PostFormValue("price"))
+	basePrice, quotePrice, err := ValidatePrice(ctx, r.PostFormValue("price"))
 	if err != nil {
 		return errors.Trace(err) // 400
 	}
@@ -83,7 +94,7 @@ func (e *CreateOffer) Validate(
 	e.QuotePrice = *quotePrice
 
 	// Validate amount.
-	amount, err := ValidateAmount(r, r.PostFormValue("amount"))
+	amount, err := ValidateAmount(ctx, r.PostFormValue("amount"))
 	if err != nil {
 		return errors.Trace(err) // 400
 	}

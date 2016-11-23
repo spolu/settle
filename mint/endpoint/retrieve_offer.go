@@ -43,8 +43,10 @@ func NewRetrieveOffer(
 func (e *RetrieveOffer) Validate(
 	r *http.Request,
 ) error {
+	ctx := r.Context()
+
 	// Validate id.
-	id, owner, token, err := ValidateID(r, pat.Param(r, "offer"))
+	id, owner, token, err := ValidateID(ctx, pat.Param(r, "offer"))
 	if err != nil {
 		return errors.Trace(err)
 	}

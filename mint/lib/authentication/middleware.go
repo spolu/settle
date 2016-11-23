@@ -81,7 +81,7 @@ func (m middleware) ServeHTTP(
 	username, password, _ := r.BasicAuth()
 	skip := false
 	for _, s := range SkipList {
-		if s.Method == r.Method && s.Pattern.MatchString(r.URL.EscapedPath()) {
+		if s.Method == r.Method && s.Pattern.MatchString(r.URL.Path) {
 			skip = true
 		}
 	}

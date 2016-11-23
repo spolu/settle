@@ -54,9 +54,10 @@ func TestCreateTransaction(
 	status, _ := u[0].Post(t,
 		fmt.Sprintf("/transactions"),
 		url.Values{
-			"pair":   {fmt.Sprintf("%s[USD.2]/%s[USD.2]", u[0].Address, u[2].Address)},
-			"price":  {"1/1"},
-			"amount": {"10"},
+			"pair":        {fmt.Sprintf("%s[USD.2]/%s[USD.2]", u[0].Address, u[2].Address)},
+			"price":       {"1/1"},
+			"amount":      {"10"},
+			"destination": {u[2].Address},
 			"path[]": {
 				o[1].ID,
 				o[2].ID,

@@ -22,12 +22,11 @@ type Transaction struct {
 	Created     time.Time
 	Propagation PgType
 
-	BaseAsset  string `db:"base_asset"`  // BaseAsset name.
-	QuoteAsset string `db:"quote_asset"` // QuoteAsset name.
-	BasePrice  Amount `db:"base_price"`
-	QuotePrice Amount `db:"quote_price"`
-	Amount     Amount
-	Path       OfPath
+	BaseAsset   string `db:"base_asset"`  // BaseAsset name.
+	QuoteAsset  string `db:"quote_asset"` // QuoteAsset name.
+	Amount      Amount
+	Destination string
+	Path        OfPath
 }
 
 // CreateCanonicalTransaction creates and stores a new canonical Transaction
@@ -38,9 +37,8 @@ func CreateCanonicalTransaction(
 	owner string,
 	baseAsset string,
 	quoteAsset string,
-	basePrice Amount,
-	quotePrice Amount,
 	amount Amount,
+	destination string,
 	path []string,
 ) (*Transaction, error) {
 	transaction := Transaction{
@@ -50,22 +48,21 @@ func CreateCanonicalTransaction(
 		Created:     time.Now(),
 		Propagation: PgTpCanonical,
 
-		BaseAsset:  baseAsset,
-		QuoteAsset: quoteAsset,
-		BasePrice:  basePrice,
-		QuotePrice: quotePrice,
-		Amount:     amount,
-		Path:       OfPath(path),
+		BaseAsset:   baseAsset,
+		QuoteAsset:  quoteAsset,
+		Amount:      amount,
+		Destination: destination,
+		Path:        OfPath(path),
 	}
 
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO transactions
   (user, owner, token, created, propagation, base_asset, quote_asset,
-   base_price, quote_price, amount, path)
+   amount, destination, path)
 VALUES
   (:user, :owner, :token, :created, :propagation, :base_asset, :quote_asset,
-   :base_price, :quote_price, :amount, :path)
+   :amount, :destination, :path)
 `, transaction); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:

@@ -3,16 +3,23 @@
 package endpoint
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 	"net/http"
+	"strconv"
 
+	"golang.org/x/sync/errgroup"
+
+	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/env"
 	"github.com/spolu/settle/lib/errors"
+	"github.com/spolu/settle/lib/logging"
 	"github.com/spolu/settle/lib/ptr"
 	"github.com/spolu/settle/lib/svc"
 	"github.com/spolu/settle/mint"
 	"github.com/spolu/settle/mint/lib/authentication"
+	"github.com/spolu/settle/mint/model"
 )
 
 const (
@@ -24,18 +31,53 @@ func init() {
 	registrar[EndPtCreateTransaction] = NewCreateTransaction
 }
 
+// TxActionType is the type of the action of a TxPlan
+type TxActionType string
+
+const (
+	// TxActTpOperation is the action type for an operation creation.
+	TxActTpOperation TxActionType = "operation"
+	// TxActTpCrossing is the action type for a crossing creation.
+	TxActTpCrossing TxActionType = "crossing"
+)
+
+// TxAction represents the action on each mint that makes up a transaction
+// plan.
+type TxAction struct {
+	Mint   string
+	Owner  string
+	Type   TxActionType
+	Amount *big.Int
+
+	CrossingOffer *string
+
+	OperationAsset       *string
+	OperationSource      *string
+	OperationDestination *string
+}
+
+// TxPlan is the plan associated with the transaction. It is constructed by
+// each mint involved in the transaction.
+type TxPlan []TxAction
+
 // CreateTransaction creates a new transaction.
 type CreateTransaction struct {
 	Client *mint.Client
 
-	ID         string               // if propagated
-	Token      string               // if propagated
-	Owner      string               // both
-	Pair       []mint.AssetResource // if canonical
-	BasePrice  big.Int              // if canonical
-	QuotePrice big.Int              // if canonical
-	Amount     big.Int              // if canonical
-	Path       []string             // if canonical
+	// Parameters
+	Hop         int8                 // propagated
+	ID          string               // propagated
+	Token       string               // propagated
+	Owner       string               // canonical, propagated
+	Pair        []mint.AssetResource // canonical
+	Amount      big.Int              // canonical
+	Destination string               // canonical
+	Path        []string             // canonical
+
+	// State
+	Transaction *model.Transaction
+	Plan        TxPlan
+	Offers      []mint.OfferResource
 }
 
 // NewCreateTransaction constructs and initialiezes the endpoint.
@@ -62,7 +104,7 @@ func (e *CreateTransaction) Validate(
 
 	if authentication.Get(ctx).Status != authentication.AutStSucceeded {
 		// Validate id.
-		id, owner, token, err := ValidateID(r, r.PostFormValue("id"))
+		id, owner, token, err := ValidateID(ctx, r.PostFormValue("id"))
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -70,34 +112,49 @@ func (e *CreateTransaction) Validate(
 		e.Token = *token
 		e.Owner = *owner
 
+		hop, err := strconv.ParseInt(r.PostFormValue("hop"), 10, 8)
+		if err != nil {
+			return errors.Trace(errors.NewUserErrorf(err,
+				400, "hop_invalid",
+				"The transaction hop provided is invalid: %s. Transaction "+
+					"hops must be 8bits integers.",
+				r.PostFormValue("hop"),
+			))
+		}
+		e.Hop = int8(hop)
+
 		return nil
 	}
 
 	e.Owner = fmt.Sprintf("%s@%s",
 		authentication.Get(ctx).User.Username,
 		env.Get(ctx).Config[mint.EnvCfgMintHost])
+	e.Hop = int8(0)
 
 	// Validate asset pair.
-	pair, err := ValidateAssetPair(r, r.PostFormValue("pair"))
+	pair, err := ValidateAssetPair(ctx, r.PostFormValue("pair"))
 	if err != nil {
 		return errors.Trace(err) // 400
 	}
 	e.Pair = pair
 
-	// Validate price.
-	basePrice, quotePrice, err := ValidatePrice(r, r.PostFormValue("price"))
-	if err != nil {
-		return errors.Trace(err)
-	}
-	e.BasePrice = *basePrice
-	e.QuotePrice = *quotePrice
-
 	// Validate amount.
-	amount, err := ValidateAmount(r, r.PostFormValue("amount"))
+	amount, err := ValidateAmount(ctx, r.PostFormValue("amount"))
 	if err != nil {
 		return errors.Trace(err)
 	}
 	e.Amount = *amount
+
+	// Validate destination.
+	dstAddress, err := mint.NormalizedAddress(ctx, r.PostFormValue("destination"))
+	if err != nil {
+		return errors.Trace(errors.NewUserErrorf(err,
+			400, "destination_invalid",
+			"The destination address you provided is invalid: %s.",
+			dstAddress,
+		))
+	}
+	e.Destination = dstAddress
 
 	// Validate path.
 	if r.PostForm == nil {
@@ -106,7 +163,7 @@ func (e *CreateTransaction) Validate(
 			return errors.Trace(err) // 500
 		}
 	}
-	path, err := ValidatePath(r, r.PostForm["path[]"])
+	path, err := ValidatePath(ctx, r.PostForm["path[]"])
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -132,9 +189,57 @@ func (e *CreateTransaction) Execute(
 func (e *CreateTransaction) ExecuteCanonical(
 	r *http.Request,
 ) (*int, *svc.Resp, error) {
-	//ctx := r.Context()
+	ctx := r.Context()
 
-	// TODO(stan): create offer, store in memory cache
+	ctx = db.Begin(ctx)
+	defer db.LoggedRollback(ctx)
+
+	// Create canonical transaction locally.
+	tx, err := model.CreateCanonicalTransaction(ctx,
+		authentication.Get(ctx).User.Token,
+		e.Owner,
+		e.Pair[0].Name, e.Pair[1].Name,
+		model.Amount(e.Amount),
+		e.Destination, model.OfPath(e.Path))
+	if err != nil {
+		return nil, nil, errors.Trace(err) // 500
+	}
+	e.Transaction = tx
+	e.ID = fmt.Sprintf("%s[%s]", tx.Owner, tx.Token)
+
+	// Store the transcation in memory so that it's available through API
+	// before we commit.
+	txStore.Put(ctx, e.ID, tx)
+	defer txStore.Clear(ctx, e.ID)
+
+	err = e.ComputePlan(ctx)
+	if err != nil {
+		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
+			402, "transaction_failed",
+			"The plan computation for the transaction failed: %s", e.ID,
+		))
+	}
+
+	err = e.ExecutePlan(ctx)
+	if err != nil {
+		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
+			402, "transaction_failed",
+			"The plan execution for the transaction failed: %s", e.ID,
+		))
+	}
+
+	err = e.Propagate(ctx)
+	if err != nil {
+		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
+			402, "transaction_failed",
+			"The transaction failed to propagate to all required mints: %s.",
+			e.ID,
+		))
+	}
+
+	// TODO(stan): reserve operation or crossing
+
+	db.Commit(ctx)
 
 	return ptr.Int(http.StatusCreated), &svc.Resp{}, nil
 }
@@ -144,10 +249,336 @@ func (e *CreateTransaction) ExecuteCanonical(
 func (e *CreateTransaction) ExecutePropagated(
 	r *http.Request,
 ) (*int, *svc.Resp, error) {
-	//ctx := r.Context()
+	ctx := r.Context()
 
 	// TODO(stan): retrieve transaction from ID
-	// TODO(stan): forward API call
+
+	// Store the transcation in memory so that it's available through API
+	// before we commit.
+	//txStore.Put(ctx, e.ID, tx)
+	//defer txStore.Clear(e.ID)
+
+	err := e.ComputePlan(ctx)
+	if err != nil {
+		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
+			402, "transaction_failed",
+			"The plan computation for the transaction failed.",
+		))
+	}
+
+	err = e.Propagate(ctx)
+	if err != nil {
+		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
+			402, "transaction_failed",
+			"The transaction failed to propagate to all required mints: %s.",
+			e.ID,
+		))
+	}
+
+	// TODO(stan): reserve operation or crossing
 
 	return ptr.Int(http.StatusCreated), &svc.Resp{}, nil
+}
+
+// ComputePlan retrieves the offers of the path and compute the transaction
+// plan.
+func (e *CreateTransaction) ComputePlan(
+	ctx context.Context,
+) error {
+	g, ctx := errgroup.WithContext(ctx)
+
+	e.Offers = make([]mint.OfferResource, len(e.Transaction.Path))
+
+	for i, id := range e.Transaction.Path {
+		i, id := i, id
+		g.Go(func() error {
+			offer, err := e.Client.RetrieveOffer(ctx, id)
+			if err != nil {
+				return errors.Trace(err)
+			}
+			// TODO(stan): validate that the offer owner owns the base asset.
+			e.Offers[i] = *offer
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return errors.Trace(err)
+	}
+
+	// As offers are asks (base asset offered in exchange for quote asset), the
+	// transaction A/D requires offers:
+	// B/A
+	// C/B
+	// D/C
+
+	e.Plan = TxPlan{}
+
+	// FIRST PASS: consists in computing the actions for all operations,
+	// leaving the amounts empty.
+
+	// Generate first action.
+	_, host, err := mint.UsernameAndMintHostFromAddress(ctx, e.Owner)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	e.Plan = append(e.Plan, TxAction{
+		Mint:                 host,
+		Owner:                e.Transaction.Owner,
+		Type:                 TxActTpOperation,
+		OperationAsset:       &e.Transaction.BaseAsset,
+		Amount:               nil, // computed on second pass
+		OperationDestination: nil, // computed by next offer
+		OperationSource:      &e.Transaction.Owner,
+	})
+	// Generate actions from path of offers.
+	for i, offer := range e.Offers {
+		offer := offer
+		pair, err := mint.AssetResourcesFromPair(ctx, offer.Pair)
+		if err != nil {
+			return errors.Trace(err)
+		}
+		// Compare the previous operation asset with the offer quote asset.
+		if pair[1].Name != *e.Plan[2*i].OperationAsset {
+			return errors.Trace(errors.Newf(
+				"Operation/Offer asset mismatch at offer %s: %s expected %s.",
+				offer.ID, pair[0].Name, *e.Plan[2*i].OperationAsset))
+		}
+		// Fill the previous operation destination.
+		e.Plan[2*i].OperationDestination = &offer.Owner
+		// Add the crossing action.
+		_, host, err := mint.UsernameAndMintHostFromAddress(ctx, offer.Owner)
+		if err != nil {
+			return errors.Trace(err)
+		}
+		e.Plan = append(e.Plan, TxAction{
+			Mint:          host,
+			Owner:         offer.Owner,
+			Type:          TxActTpCrossing,
+			CrossingOffer: &offer.ID,
+			Amount:        nil, // computed on second pass
+		})
+		// Add the next operation action.
+		_, host, err = mint.UsernameAndMintHostFromAddress(ctx, pair[0].Owner)
+		if err != nil {
+			return errors.Trace(err)
+		}
+		if offer.Owner != pair[0].Owner {
+			return errors.Trace(errors.Newf(
+				"Offer owner (%s) is not the offer base asset owner (%s).",
+				offer.Owner, pair[0].Owner))
+		}
+		e.Plan = append(e.Plan, TxAction{
+			Mint:                 host,
+			Owner:                pair[0].Owner,
+			Type:                 TxActTpOperation,
+			OperationAsset:       &pair[0].Name,
+			Amount:               nil, // computed on second pass
+			OperationDestination: nil, // computed by next offer
+			OperationSource:      nil, // issuing operation
+		})
+	}
+	// Compare the last operation asset to the transaction quote asset.
+	if e.Transaction.QuoteAsset != *e.Plan[len(e.Plan)-1].OperationAsset {
+		return errors.Trace(errors.Newf(
+			"Operation/Transaction asset mismatchs: %s expected %s.",
+			e.Transaction.QuoteAsset, *e.Plan[len(e.Plan)-1].OperationAsset))
+	}
+	// Compute the last operation destination.
+	e.Plan[len(e.Plan)-1].OperationDestination = &e.Transaction.Destination
+
+	// SECOND PASS: consists in computing the amounts for each operations.
+
+	// Compute the last amount, this is the transaction amount.
+	e.Plan[len(e.Plan)-1].Amount = (*big.Int)(&e.Transaction.Amount)
+
+	// Compute amounts for each action.
+	for i := len(e.Offers) - 1; i >= 0; i-- {
+		// Offer amounts are expressed in quote asset
+		basePrice, quotePrice, err := ValidatePrice(ctx, e.Offers[i].Price)
+		if err != nil {
+			return errors.Trace(err)
+		}
+		amount := new(big.Int).Mul(e.Plan[2*(i+1)].Amount, quotePrice)
+		amount, remainder := new(big.Int).QuoRem(
+			amount, basePrice, new(big.Int))
+
+		// Transactions do cross offers on non congruent prices, costing one
+		// base unit of quote asset. If the difference of scale between assets
+		// is high, this can cost a lot to the owner of the transaction (but if
+		// they issued it, they know).
+		if remainder.Cmp(big.NewInt(0)) > 0 {
+			amount = new(big.Int).Add(amount, big.NewInt(1))
+		}
+
+		e.Plan[2*i].Amount = amount
+		e.Plan[2*i+1].Amount = amount
+	}
+
+	logLine := fmt.Sprintf("Transaction plan for %s:", e.ID)
+	for i, a := range e.Plan {
+		switch a.Type {
+		case TxActTpOperation:
+			source := "<nil>"
+			if a.OperationSource != nil {
+				source = *a.OperationSource
+			}
+			logLine += fmt.Sprintf(
+				"\n  [%d:%s] mint=%s amount=%s "+
+					"asset=%s source=%s destination=%s ",
+				i, a.Type, a.Mint, a.Amount.String(),
+				*a.OperationAsset, source, *a.OperationDestination)
+		case TxActTpCrossing:
+			logLine += fmt.Sprintf(
+				"\n  [%d:%s] mint=%s amount=%s "+
+					"offer=%s pair=%s price=%s",
+				i, a.Type, a.Mint, a.Amount.String(),
+				*a.CrossingOffer, e.Offers[i/2].Pair, e.Offers[i/2].Price)
+		}
+	}
+	logging.Logf(ctx, logLine)
+
+	return nil
+}
+
+// ExecutePlan executes the action locally at the current hop.
+func (e *CreateTransaction) ExecutePlan(
+	ctx context.Context,
+) error {
+	if int(e.Hop) >= len(e.Plan) {
+		return errors.Trace(errors.Newf(
+			"Hop (%d) is higher than the transaction plan length (%d)",
+			e.Hop, len(e.Plan)))
+	}
+
+	owner := fmt.Sprintf("%s@%s",
+		authentication.Get(ctx).User.Username,
+		env.Get(ctx).Config[mint.EnvCfgMintHost])
+
+	a := e.Plan[e.Hop]
+	if a.Owner != owner {
+		return errors.Trace(errors.Newf(
+			"Action owner mismatch at current hop (%d): %s expected %s.",
+			e.Hop, a.Owner, owner))
+	}
+
+	switch a.Type {
+	case TxActTpOperation:
+
+		//status, resp, err := CreateOperation{
+		//	Client:      e.Client,
+		//	Owner:       a.Owner,
+		//	Asset:       a.OperationAsset,
+		//	Amount:      a.Amount,
+		//	Source:      a.OperationSource,
+		//	Destination: a.OperationDestination,
+		//}.Execute(ctx)
+
+		//asset, err := model.LoadAssetByOwnerCodeScale(ctx,
+		//	a.Owner, e.Asset.Code, e.Asset.Scale)
+
+		//if err != nil {
+		//	return errors.Trace(err)
+		//} else if asset == nil {
+		//	return errors.Trace(errors.Newf(
+		//		"Asset not found: %s", *a.OperationAsset))
+		//}
+		//assetName := fmt.Sprintf(
+		//	"%s[%s.%d]",
+		//	asset.Owner, asset.Code, asset.Scale)
+
+		//balances := []*model.Balance{}
+
+		//var srcBalance *model.Balance
+		//if e.Source != nil {
+		//	srcBalance, err = model.LoadBalanceByAssetHolder(ctx,
+		//		assetName, *e.Source)
+		//	if err != nil {
+		//		return nil, nil, errors.Trace(err) // 500
+		//	} else if srcBalance == nil {
+		//		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
+		//			400, "source_invalid",
+		//			"The source address you provided has no existing balance: %s.",
+		//			*e.Source,
+		//		))
+		//	}
+		//	balances = append(balances, srcBalance)
+		//}
+
+		//var dstBalance *model.Balance
+		//if e.Destination != nil {
+		//	dstBalance, err = model.LoadOrCreateBalanceByAssetHolder(ctx,
+		//		authentication.Get(ctx).User.Token,
+		//		e.Owner,
+		//		assetName, *e.Destination)
+		//	if err != nil {
+		//		return nil, nil, errors.Trace(err) // 500
+		//	}
+
+		//	balances = append(balances, dstBalance)
+		//}
+
+		//operation, err := model.CreateCanonicalOperation(ctx,
+		//	authentication.Get(ctx).User.Token,
+		//	e.Owner,
+		//	assetName, e.Source, e.Destination, model.Amount(e.Amount))
+		//if err != nil {
+		//	return nil, nil, errors.Trace(err) // 500
+		//}
+
+		//if dstBalance != nil {
+		//	(*big.Int)(&dstBalance.Value).Add(
+		//		(*big.Int)(&dstBalance.Value), (*big.Int)(&operation.Amount))
+
+		//	// Checks if the dstBalance is positive and not overflown.
+		//	b := (*big.Int)(&dstBalance.Value)
+		//	if new(big.Int).Abs(b).Cmp(model.MaxAssetAmount) >= 0 ||
+		//		b.Cmp(new(big.Int)) < 0 {
+		//		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
+		//			400, "amount_invalid",
+		//			"The resulting destination balance is invalid: %s. The "+
+		//				"balance must be an integer between 0 and 2^128.",
+		//			b.String(),
+		//		))
+		//	}
+
+		//	err = dstBalance.Save(ctx)
+		//	if err != nil {
+		//		return nil, nil, errors.Trace(err) // 500
+		//	}
+		//}
+
+		//if srcBalance != nil {
+		//	(*big.Int)(&srcBalance.Value).Sub(
+		//		(*big.Int)(&srcBalance.Value), (*big.Int)(&operation.Amount))
+
+		//	// Checks if the srcBalance is positive and not overflown.
+		//	b := (*big.Int)(&srcBalance.Value)
+		//	if new(big.Int).Abs(b).Cmp(model.MaxAssetAmount) >= 0 ||
+		//		b.Cmp(new(big.Int)) < 0 {
+		//		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
+		//			400, "amount_invalid",
+		//			"The resulting source balance is invalid: %s. The "+
+		//				"balance must be an integer between 0 and 2^128.",
+		//			b.String(),
+		//		))
+		//	}
+
+		//	err = srcBalance.Save(ctx)
+		//	if err != nil {
+		//		return nil, nil, errors.Trace(err) // 500
+		//	}
+		//}
+
+	case TxActTpCrossing:
+	}
+
+	return nil
+}
+
+// Propagate recursively propagates to the next mint in the chain of mint
+// involved in a transaction.
+func (e *CreateTransaction) Propagate(
+	ctx context.Context,
+) error {
+	return nil
 }

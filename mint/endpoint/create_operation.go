@@ -37,11 +37,11 @@ func init() {
 type CreateOperation struct {
 	Client *mint.Client
 
-	Owner      string
-	Asset      mint.AssetResource
-	Amount     big.Int
-	SrcAddress *string
-	DstAddress *string
+	Owner       string
+	Asset       mint.AssetResource
+	Amount      big.Int
+	Source      *string
+	Destination *string
 }
 
 // NewCreateOperation constructs and initialiezes the endpoint.
@@ -83,37 +83,26 @@ func (e *CreateOperation) Validate(
 	e.Asset = *a
 
 	// Validate that the issuer is attempting to create the operation.
-	username, host, err := mint.UsernameAndMintHostFromAddress(ctx, a.Owner)
-	if err != nil {
-		return errors.Trace(errors.NewUserErrorf(err,
-			400, "asset_invalid",
-			"The asset name you provided has an invalid owner address: %s.",
-			a.Owner,
-		))
-	}
-	if host != env.Get(ctx).Config[mint.EnvCfgMintHost] ||
-		username != authentication.Get(ctx).User.Username {
+	if e.Owner != a.Owner {
 		return errors.Trace(errors.NewUserErrorf(nil,
 			400, "operation_not_authorized",
 			"You can only create operations for assets created by the "+
-				"account you are currently authenticated with: %s@%s. This "+
-				"operation's asset was created by: %s@%s. If you own %s, "+
+				"account you are currently authenticated with: %s. This "+
+				"operation's asset was created by: %s. If you own %s, "+
 				"and wish to transfer some of it, you should create a "+
-				"transaction directly from your mint instead.",
-			authentication.Get(ctx).User.Username,
-			env.Get(ctx).Config[mint.EnvCfgMintHost],
-			username, host, a.Name,
+				"transaction from your mint instead.",
+			e.Owner, a.Owner, a.Name,
 		))
 	}
 
 	// Validate amount.
-	amount, err := ValidateAmount(r, r.PostFormValue("amount"))
+	amount, err := ValidateAmount(ctx, r.PostFormValue("amount"))
 	if err != nil {
 		return errors.Trace(err)
 	}
 	e.Amount = *amount
 
-	// Validate source
+	// Validate source.
 	var srcAddress *string
 	if r.PostFormValue("source") != "" {
 		addr, err := mint.NormalizedAddress(ctx, r.PostFormValue("source"))
@@ -126,9 +115,9 @@ func (e *CreateOperation) Validate(
 		}
 		srcAddress = &addr
 	}
-	e.SrcAddress = srcAddress
+	e.Source = srcAddress
 
-	// Validate destination
+	// Validate destination.
 	var dstAddress *string
 	if r.PostFormValue("destination") != "" {
 		addr, err := mint.NormalizedAddress(ctx, r.PostFormValue("destination"))
@@ -141,7 +130,7 @@ func (e *CreateOperation) Validate(
 		}
 		dstAddress = &addr
 	}
-	e.DstAddress = dstAddress
+	e.Destination = dstAddress
 
 	if srcAddress == nil && dstAddress == nil {
 		return errors.Trace(errors.NewUserErrorf(err,
@@ -184,27 +173,27 @@ func (e *CreateOperation) Execute(
 	balances := []*model.Balance{}
 
 	var srcBalance *model.Balance
-	if e.SrcAddress != nil {
+	if e.Source != nil {
 		srcBalance, err = model.LoadBalanceByAssetHolder(ctx,
-			assetName, *e.SrcAddress)
+			assetName, *e.Source)
 		if err != nil {
 			return nil, nil, errors.Trace(err) // 500
 		} else if srcBalance == nil {
 			return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
 				400, "source_invalid",
 				"The source address you provided has no existing balance: %s.",
-				*e.SrcAddress,
+				*e.Source,
 			))
 		}
 		balances = append(balances, srcBalance)
 	}
 
 	var dstBalance *model.Balance
-	if e.DstAddress != nil {
+	if e.Destination != nil {
 		dstBalance, err = model.LoadOrCreateBalanceByAssetHolder(ctx,
 			authentication.Get(ctx).User.Token,
 			e.Owner,
-			assetName, *e.DstAddress)
+			assetName, *e.Destination)
 		if err != nil {
 			return nil, nil, errors.Trace(err) // 500
 		}
@@ -215,7 +204,7 @@ func (e *CreateOperation) Execute(
 	operation, err := model.CreateCanonicalOperation(ctx,
 		authentication.Get(ctx).User.Token,
 		e.Owner,
-		assetName, e.SrcAddress, e.DstAddress, model.Amount(e.Amount))
+		assetName, e.Source, e.Destination, model.Amount(e.Amount))
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
 	}

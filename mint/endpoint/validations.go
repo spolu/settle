@@ -1,8 +1,8 @@
 package endpoint
 
 import (
+	"context"
 	"math/big"
-	"net/http"
 	"regexp"
 
 	"github.com/spolu/settle/lib/errors"
@@ -16,7 +16,7 @@ var PriceRegexp = regexp.MustCompile(
 
 // ValidatePrice validates a price (pB/pQ).
 func ValidatePrice(
-	r *http.Request,
+	ctx context.Context,
 	price string,
 ) (*big.Int, *big.Int, error) {
 	m := PriceRegexp.FindStringSubmatch(price)
@@ -60,7 +60,7 @@ func ValidatePrice(
 
 // ValidateAmount validates the amount of an asset.
 func ValidateAmount(
-	r *http.Request,
+	ctx context.Context,
 	amount string,
 ) (*big.Int, error) {
 	var a big.Int
@@ -81,17 +81,15 @@ func ValidateAmount(
 
 // ValidateAssetPair validates an asset pair.
 func ValidateAssetPair(
-	r *http.Request,
+	ctx context.Context,
 	pair string,
 ) ([]mint.AssetResource, error) {
-	ctx := r.Context()
-
 	p, err := mint.AssetResourcesFromPair(ctx, pair)
 	if err != nil {
 		return nil, errors.Trace(errors.NewUserErrorf(err,
 			400, "pair_invalid",
 			"The asset pair you provided is invalid: %s.",
-			r.PostFormValue("pair"),
+			pair,
 		))
 	}
 
@@ -100,11 +98,9 @@ func ValidateAssetPair(
 
 // ValidatePath validates a path of offers.
 func ValidatePath(
-	r *http.Request,
+	ctx context.Context,
 	path []string,
 ) ([]string, error) {
-	ctx := r.Context()
-
 	for _, offer := range path {
 		_, _, err := mint.NormalizedOwnerAndTokenFromID(ctx, offer)
 		if err != nil {
@@ -117,16 +113,14 @@ func ValidatePath(
 		}
 	}
 
-	return r.PostForm["path[]"], nil
+	return path, nil
 }
 
 // ValidateID validates the ID of an object
 func ValidateID(
-	r *http.Request,
+	ctx context.Context,
 	id string,
 ) (*string, *string, *string, error) {
-	ctx := r.Context()
-
 	owner, token, err := mint.NormalizedOwnerAndTokenFromID(ctx, id)
 	if err != nil {
 		return nil, nil, nil, errors.Trace(errors.NewUserErrorf(nil,

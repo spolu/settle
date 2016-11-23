@@ -15,8 +15,8 @@ CREATE TABLE IF NOT EXISTS operations(
   propagation VARCHAR(32) NOT NULL,  -- propagation type (canonical, propagated)
 
   asset VARCHAR(256) NOT NULL,                     -- asset name
-  source VARCHAR(512),                             -- source address
-  destination VARCHAR(512),                        -- destination address
+  source VARCHAR(256),                             -- source address
+  destination VARCHAR(256),                        -- destination address
   amount VARCHAR(64) NOT NULL CHECK (amount > 0),  -- operation amount
 
   PRIMARY KEY(user, owner, token),

@@ -42,8 +42,10 @@ func NewRetrieveTransaction(
 func (e *RetrieveTransaction) Validate(
 	r *http.Request,
 ) error {
+	ctx := r.Context()
+
 	// Validate id.
-	id, owner, token, err := ValidateID(r, pat.Param(r, "transaction"))
+	id, owner, token, err := ValidateID(ctx, pat.Param(r, "transaction"))
 	if err != nil {
 		return errors.Trace(err)
 	}

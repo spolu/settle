@@ -16,11 +16,8 @@ CREATE TABLE IF NOT EXISTS transactions(
 
   base_asset VARCHAR(256) NOT NULL,  -- base asset name
   quote_asset VARCHAR(256) NOT NULL, -- quote asset name
-
-  base_price VARCHAR(64) NOT NULL,   --  base asset price
-  quote_price VARCHAR(64) NOT NULL,  -- quote asset price
   amount VARCHAR(64) NOT NULL,       -- amount of quote asset asked
-
+  destination VARCHAR(256) NOT NULL, -- the recipient address
   path VARCHAR(2048) NOT NULL,       -- join of offer ids
 
   PRIMARY KEY(user, owner, token),
