@@ -1,6 +1,7 @@
 package endpoint
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/spolu/settle/lib/db"
@@ -58,10 +59,8 @@ func (e *RetrieveTransaction) Validate(
 
 // Execute executes the endpoint.
 func (e *RetrieveTransaction) Execute(
-	r *http.Request,
+	ctx context.Context,
 ) (*int, *svc.Resp, error) {
-	ctx := r.Context()
-
 	ctx = db.Begin(ctx)
 	defer db.LoggedRollback(ctx)
 

@@ -1,6 +1,7 @@
 package endpoint
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/spolu/settle/lib/errors"
@@ -25,7 +26,7 @@ type Endpoint interface {
 	) error
 
 	Execute(
-		r *http.Request,
+		ctx context.Context,
 	) (*int, *svc.Resp, error)
 }
 
@@ -54,7 +55,7 @@ func HandlerFor(
 			return
 		}
 
-		status, resp, err := endpt.Execute(r)
+		status, resp, err := endpt.Execute(r.Context())
 		if err != nil {
 			respond.Error(ctx, w, errors.Trace(err))
 			return

@@ -1,10 +1,10 @@
 # mint
 
  [ ] move status values to protocol
- [ ] move Execute to ctx
  [ ] transaction protocol
  [ ] propagation protocol for both operations and offers (need to learn more)
  [ ] pass DSN for DB, support Postgres
+ [x] move Execute to ctx
  [x] remove nil from creation operation, prevent issuer from owning balance
  [x] rename Normalized something Address to Owner
  [x] split controller into endpoint.CreateXXX object with Execute and Validate

@@ -1,6 +1,7 @@
 package endpoint
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 	"net/http"
@@ -130,10 +131,8 @@ func (e *CreateOperation) Validate(
 
 // Execute executes the endpoint.
 func (e *CreateOperation) Execute(
-	r *http.Request,
+	ctx context.Context,
 ) (*int, *svc.Resp, error) {
-	ctx := r.Context()
-
 	ctx = db.Begin(ctx)
 	defer db.LoggedRollback(ctx)
 

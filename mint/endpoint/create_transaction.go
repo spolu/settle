@@ -174,23 +174,19 @@ func (e *CreateTransaction) Validate(
 
 // Execute executes the endpoint.
 func (e *CreateTransaction) Execute(
-	r *http.Request,
+	ctx context.Context,
 ) (*int, *svc.Resp, error) {
-	ctx := r.Context()
-
 	if authentication.Get(ctx).Status == authentication.AutStSucceeded {
-		return e.ExecuteCanonical(r)
+		return e.ExecuteCanonical(ctx)
 	}
-	return e.ExecutePropagated(r)
+	return e.ExecutePropagated(ctx)
 }
 
 // ExecuteCanonical executes the creation of a canonical transaction (owner
 // mint).
 func (e *CreateTransaction) ExecuteCanonical(
-	r *http.Request,
+	ctx context.Context,
 ) (*int, *svc.Resp, error) {
-	ctx := r.Context()
-
 	ctx = db.Begin(ctx)
 	defer db.LoggedRollback(ctx)
 
@@ -248,10 +244,8 @@ func (e *CreateTransaction) ExecuteCanonical(
 // ExecutePropagated executes the creation of a propagated transaction
 // (involved mint).
 func (e *CreateTransaction) ExecutePropagated(
-	r *http.Request,
+	ctx context.Context,
 ) (*int, *svc.Resp, error) {
-	ctx := r.Context()
-
 	// TODO(stan): retrieve transaction from ID
 
 	// Store the transcation in memory so that it's available through API

@@ -1,6 +1,7 @@
 package endpoint
 
 import (
+	"context"
 	"net/http"
 
 	"goji.io/pat"
@@ -59,10 +60,8 @@ func (e *RetrieveOffer) Validate(
 
 // Execute executes the endpoint.
 func (e *RetrieveOffer) Execute(
-	r *http.Request,
+	ctx context.Context,
 ) (*int, *svc.Resp, error) {
-	ctx := r.Context()
-
 	ctx = db.Begin(ctx)
 	defer db.LoggedRollback(ctx)
 
