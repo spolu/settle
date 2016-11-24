@@ -1,9 +1,11 @@
 # mint
 
- [ ] remove nil from creation operation, prevent issuer from owning balance
+ [ ] move status values to protocol
+ [ ] move Execute to ctx
  [ ] transaction protocol
  [ ] propagation protocol for both operations and offers (need to learn more)
  [ ] pass DSN for DB, support Postgres
+ [x] remove nil from creation operation, prevent issuer from owning balance
  [x] rename Normalized something Address to Owner
  [x] split controller into endpoint.CreateXXX object with Execute and Validate
  [x] move mint host to context
@@ -26,7 +28,7 @@
     on other mints, just rely on best effort propagation (hence protocol
     necessarily different from transactions)
   - mints are eventually consistent on operations and offers
-  - propagation happens asynchronously and is retried
+  - propagation happens asynchronously and can be (is?) triggered by clients
 
   # transactions
 

@@ -118,7 +118,8 @@ func (e *CreateOffer) Execute(
 		e.Owner,
 		e.Pair[0].Name, e.Pair[1].Name,
 		model.Amount(e.BasePrice), model.Amount(e.QuotePrice),
-		model.Amount(e.Amount), model.OfStActive)
+		model.Amount(e.Amount),
+		model.OfStActive, model.Amount(e.Amount))
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
 	}

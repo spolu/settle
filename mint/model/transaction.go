@@ -27,6 +27,8 @@ type Transaction struct {
 	Amount      Amount
 	Destination string
 	Path        OfPath
+
+	Status TxStatus
 }
 
 // CreateCanonicalTransaction creates and stores a new canonical Transaction
@@ -40,6 +42,7 @@ func CreateCanonicalTransaction(
 	amount Amount,
 	destination string,
 	path []string,
+	status TxStatus,
 ) (*Transaction, error) {
 	transaction := Transaction{
 		User:        user,
@@ -59,10 +62,10 @@ func CreateCanonicalTransaction(
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO transactions
   (user, owner, token, created, propagation, base_asset, quote_asset,
-   amount, destination, path)
+   amount, destination, path, status)
 VALUES
   (:user, :owner, :token, :created, :propagation, :base_asset, :quote_asset,
-   :amount, :destination, :path)
+   :amount, :destination, :path, :status)
 `, transaction); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:

@@ -16,7 +16,8 @@ import (
 
 // Offer represents an offer for an asset pair.
 // - Offers are always represented as asks
-//   (ask on pair A/B offer to sell A for B).
+//   (ask on pair A/B offer to sell A (base asset) for B (quote asset)).
+//   Amounts are expressed in quote asset.
 // - Canonical offers are stored on the mint of the offer's owner (which acts
 //   as source of truth on its state).
 // - Propagated offers are indicatively stored on the mints of the offers's
@@ -28,13 +29,14 @@ type Offer struct {
 	Created     time.Time
 	Propagation PgType
 
-	Status OfStatus
-
 	BaseAsset  string `db:"base_asset"`  // BaseAsset name.
 	QuoteAsset string `db:"quote_asset"` // QuoteAsset name.
 	BasePrice  Amount `db:"base_price"`
 	QuotePrice Amount `db:"quote_price"`
 	Amount     Amount
+
+	Status    OfStatus
+	Remainder Amount
 }
 
 // CreateCanonicalOffer creates and stores a new canonical Offer object.
@@ -48,6 +50,7 @@ func CreateCanonicalOffer(
 	quotePrice Amount,
 	amount Amount,
 	status OfStatus,
+	remainder Amount,
 ) (*Offer, error) {
 	offer := Offer{
 		User:        user,
@@ -61,17 +64,19 @@ func CreateCanonicalOffer(
 		BasePrice:  basePrice,
 		QuotePrice: quotePrice,
 		Amount:     amount,
-		Status:     status,
+
+		Status:    status,
+		Remainder: remainder,
 	}
 
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO offers
   (user, owner, token, created, propagation, base_asset, quote_asset,
-   base_price, quote_price, amount, status)
+   base_price, quote_price, amount, status, remainder)
 VALUES
   (:user, :owner, :token, :created, :propagation, :base_asset, :quote_asset,
-   :base_price, :quote_price, :amount, :status)
+   :base_price, :quote_price, :amount, :status, :remainder)
 `, offer); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:
@@ -102,6 +107,7 @@ func CreatePropagatedOffer(
 	quotePrice Amount,
 	amount Amount,
 	status OfStatus,
+	remainder Amount,
 ) (*Offer, error) {
 	offer := Offer{
 		User:        user,
@@ -115,7 +121,9 @@ func CreatePropagatedOffer(
 		BasePrice:  basePrice,
 		QuotePrice: quotePrice,
 		Amount:     amount,
-		Status:     status,
+
+		Status:    status,
+		Remainder: remainder,
 	}
 
 	ext := db.Ext(ctx)
@@ -125,7 +133,7 @@ INSERT INTO offers
    base_price, quote_price, amount, status)
 VALUES
   (:user, :owner, :token, :created, :propagation, :base_asset, :quote_asset,
-   :base_price, :quote_price, :amount, :status)
+   :base_price, :quote_price, :amount, :status, :remainder)
 `, offer); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:

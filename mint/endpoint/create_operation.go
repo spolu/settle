@@ -11,6 +11,7 @@ import (
 	"github.com/spolu/settle/lib/env"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/format"
+	"github.com/spolu/settle/lib/logging"
 	"github.com/spolu/settle/lib/ptr"
 	"github.com/spolu/settle/lib/svc"
 	"github.com/spolu/settle/mint"
@@ -175,17 +176,18 @@ func (e *CreateOperation) Execute(
 		}
 	}
 
-	operation, err := model.CreateCanonicalOperation(ctx,
+	op, err := model.CreateCanonicalOperation(ctx,
 		authentication.Get(ctx).User.Token,
 		e.Owner,
-		e.Asset.Name, e.Source, e.Destination, model.Amount(e.Amount))
+		e.Asset.Name, e.Source, e.Destination, model.Amount(e.Amount),
+		model.TxStSettled, nil)
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
 	}
 
 	if dstBalance != nil {
 		(*big.Int)(&dstBalance.Value).Add(
-			(*big.Int)(&dstBalance.Value), (*big.Int)(&operation.Amount))
+			(*big.Int)(&dstBalance.Value), (*big.Int)(&op.Amount))
 
 		// Checks if the dstBalance is positive and not overflown.
 		b := (*big.Int)(&dstBalance.Value)
@@ -207,7 +209,7 @@ func (e *CreateOperation) Execute(
 
 	if srcBalance != nil {
 		(*big.Int)(&srcBalance.Value).Sub(
-			(*big.Int)(&srcBalance.Value), (*big.Int)(&operation.Amount))
+			(*big.Int)(&srcBalance.Value), (*big.Int)(&op.Amount))
 
 		// Checks if the srcBalance is positive and not overflown.
 		b := (*big.Int)(&srcBalance.Value)
@@ -227,12 +229,19 @@ func (e *CreateOperation) Execute(
 		}
 	}
 
+	logging.Logf(ctx,
+		"Settled operation: user=%s id=%s[%s] created=%q propagation=%s "+
+			"asset=%s source=%s destination=%s amount=%s status=%s",
+		op.User, op.Owner, op.Token, op.Owner, op.Created, op.Propagation,
+		op.Asset, op.Source, op.Destination, op.Amount,
+		(*big.Int)(&op.Amount).String(), op.Status)
+
 	db.Commit(ctx)
 
 	// TODO(stan): propagation
 
 	return ptr.Int(http.StatusCreated), &svc.Resp{
 		"operation": format.JSONPtr(mint.NewOperationResource(ctx,
-			operation, asset)),
+			op, asset)),
 	}, nil
 }

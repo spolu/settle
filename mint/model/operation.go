@@ -20,12 +20,15 @@ var MaxAssetAmount = new(big.Int).Exp(
 	new(big.Int).SetInt64(2), new(big.Int).SetInt64(128), nil)
 
 // Operation represents a movement of an asset, either from an account to
-// another, or to an account only in the case of issuance. Amount is
-// represented as a Amount and store in database as a NUMERIC(39).
+// another. Asset owners can hold a balance in their own assets so operations
+// referring to the asset owner are either issuing or annihilating the asset.
 // - Canonical operations are stored on the mint of the operation's owner
 //   (which acts as source of truth on its state).
 // - Propagated operations are stored on the mints of the operation's source or
 //   destination, for retrieval by impacted users.
+// - When part of a transaction, an operation refers the transaction. Operation
+//   created out of a transaction are created `settled`.
+// - Only settled operation are propagated.
 type Operation struct {
 	User        string
 	Owner       string // Owner address.
@@ -37,6 +40,9 @@ type Operation struct {
 	Source      string // Source address (if owner, issuance).
 	Destination string // Destination addres (if owner, annihilation).
 	Amount      Amount
+
+	Status      TxStatus
+	Transaction *string `db:"txn"`
 }
 
 // CreateCanonicalOperation creates and stores a new Operation.
@@ -48,6 +54,8 @@ func CreateCanonicalOperation(
 	source string,
 	destination string,
 	amount Amount,
+	status TxStatus,
+	transaction *string,
 ) (*Operation, error) {
 	operation := Operation{
 		User:        user,
@@ -60,16 +68,19 @@ func CreateCanonicalOperation(
 		Source:      source,
 		Destination: destination,
 		Amount:      amount,
+
+		Status:      status,
+		Transaction: transaction,
 	}
 
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO operations
   (user, owner, token, created, propagation, asset, source, destination,
-   amount)
+   amount, status, txn)
 VALUES
   (:user, :owner, :token, :created, :propagation, :asset, :source, :destination,
-   :amount)
+   :amount, :status, :txn)
 `, operation); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:
@@ -116,10 +127,10 @@ func CreatePropagatedOperation(
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO operations
   (user, owner, token, created, propagation, asset, source, destination,
-   amount)
+   amount, status, txn)
 VALUES
   (:user, :owner, :token, :created, :propagation, :asset, :source, :destination,
-   :amount)
+   :amount, :status, :txn)
 `, operation); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:

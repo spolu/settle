@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS transactions(
   destination VARCHAR(256) NOT NULL, -- the recipient address
   path VARCHAR(2048) NOT NULL,       -- join of offer ids
 
+  status VARCHAR(32) NOT NULL,       -- status (reserved, settled, canceled)
+
   PRIMARY KEY(user, owner, token),
   CONSTRAINT transactions_user_fk FOREIGN KEY (user) REFERENCES users(token)
 );

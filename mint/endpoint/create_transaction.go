@@ -75,9 +75,9 @@ type CreateTransaction struct {
 	Path        []string             // canonical
 
 	// State
-	Transaction *model.Transaction
-	Plan        TxPlan
-	Offers      []mint.OfferResource
+	Tx     *model.Transaction
+	Plan   TxPlan
+	Offers []mint.OfferResource
 }
 
 // NewCreateTransaction constructs and initialiezes the endpoint.
@@ -200,11 +200,12 @@ func (e *CreateTransaction) ExecuteCanonical(
 		e.Owner,
 		e.Pair[0].Name, e.Pair[1].Name,
 		model.Amount(e.Amount),
-		e.Destination, model.OfPath(e.Path))
+		e.Destination, model.OfPath(e.Path),
+		model.TxStReserved)
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
 	}
-	e.Transaction = tx
+	e.Tx = tx
 	e.ID = fmt.Sprintf("%s[%s]", tx.Owner, tx.Token)
 
 	// Store the transcation in memory so that it's available through API
@@ -287,9 +288,9 @@ func (e *CreateTransaction) ComputePlan(
 ) error {
 	g, ctx := errgroup.WithContext(ctx)
 
-	e.Offers = make([]mint.OfferResource, len(e.Transaction.Path))
+	e.Offers = make([]mint.OfferResource, len(e.Tx.Path))
 
-	for i, id := range e.Transaction.Path {
+	for i, id := range e.Tx.Path {
 		i, id := i, id
 		g.Go(func() error {
 			offer, err := e.Client.RetrieveOffer(ctx, id)
@@ -323,12 +324,12 @@ func (e *CreateTransaction) ComputePlan(
 	}
 	e.Plan = append(e.Plan, TxAction{
 		Mint:                 host,
-		Owner:                e.Transaction.Owner,
+		Owner:                e.Tx.Owner,
 		Type:                 TxActTpOperation,
-		OperationAsset:       &e.Transaction.BaseAsset,
+		OperationAsset:       &e.Tx.BaseAsset,
 		Amount:               nil, // computed on second pass
 		OperationDestination: nil, // computed by next offer
-		OperationSource:      &e.Transaction.Owner,
+		OperationSource:      &e.Tx.Owner,
 	})
 
 	// Generate actions from path of offers.
@@ -379,18 +380,18 @@ func (e *CreateTransaction) ComputePlan(
 		})
 	}
 	// Compare the last operation asset to the transaction quote asset.
-	if e.Transaction.QuoteAsset != *e.Plan[len(e.Plan)-1].OperationAsset {
+	if e.Tx.QuoteAsset != *e.Plan[len(e.Plan)-1].OperationAsset {
 		return errors.Trace(errors.Newf(
 			"Operation/Transaction asset mismatchs: %s expected %s.",
-			e.Transaction.QuoteAsset, *e.Plan[len(e.Plan)-1].OperationAsset))
+			e.Tx.QuoteAsset, *e.Plan[len(e.Plan)-1].OperationAsset))
 	}
 	// Compute the last operation destination.
-	e.Plan[len(e.Plan)-1].OperationDestination = &e.Transaction.Destination
+	e.Plan[len(e.Plan)-1].OperationDestination = &e.Tx.Destination
 
 	// SECOND PASS: consists in computing the amounts for each operations.
 
 	// Compute the last amount, this is the transaction amount.
-	e.Plan[len(e.Plan)-1].Amount = (*big.Int)(&e.Transaction.Amount)
+	e.Plan[len(e.Plan)-1].Amount = (*big.Int)(&e.Tx.Amount)
 
 	// Compute amounts for each action.
 	for i := len(e.Offers) - 1; i >= 0; i-- {
@@ -499,19 +500,25 @@ func (e *CreateTransaction) ExecutePlan(
 			}
 		}
 
-		operation, err := model.CreateCanonicalOperation(ctx,
+		op, err := model.CreateCanonicalOperation(ctx,
 			asset.User,
 			asset.Owner,
 			*a.OperationAsset,
 			*a.OperationSource, *a.OperationDestination,
-			model.Amount(*a.Amount))
+			model.Amount(*a.Amount),
+			model.TxStReserved,
+			ptr.Str(fmt.Sprintf("%s[%s]", e.Tx.Owner, e.Tx.Token)))
 		if err != nil {
 			return errors.Trace(err)
 		}
 
+		// Check the balances but only update the source balance. The
+		// destination balance will get updated when the operation is confirmed
+		// and the source balance will get reverted if it cancels.
+
 		if dstBalance != nil {
 			(*big.Int)(&dstBalance.Value).Add(
-				(*big.Int)(&dstBalance.Value), (*big.Int)(&operation.Amount))
+				(*big.Int)(&dstBalance.Value), (*big.Int)(&op.Amount))
 			// Checks if the dstBalance is positive and not overflown.
 			b := (*big.Int)(&dstBalance.Value)
 			if new(big.Int).Abs(b).Cmp(model.MaxAssetAmount) >= 0 ||
@@ -519,15 +526,11 @@ func (e *CreateTransaction) ExecutePlan(
 				return errors.Trace(errors.Newf(
 					"Invalid resulting balance: %s", b.String()))
 			}
-			err = dstBalance.Save(ctx)
-			if err != nil {
-				return errors.Trace(err)
-			}
 		}
 
 		if srcBalance != nil {
 			(*big.Int)(&srcBalance.Value).Sub(
-				(*big.Int)(&srcBalance.Value), (*big.Int)(&operation.Amount))
+				(*big.Int)(&srcBalance.Value), (*big.Int)(&op.Amount))
 
 			// Checks if the srcBalance is positive and not overflown.
 			b := (*big.Int)(&srcBalance.Value)
@@ -542,9 +545,47 @@ func (e *CreateTransaction) ExecutePlan(
 			}
 		}
 
-		logging.Logf(ctx, ">> %+v %s %s", operation, *a.OperationSource, r.Owner)
+		logging.Logf(ctx,
+			"Reserved operation: user=%s id=%s[%s] created=%q propagation=%s "+
+				"asset=%s source=%s destination=%s amount=%s "+
+				"status=%s transaction=%s",
+			op.User, op.Owner, op.Token, op.Created, op.Propagation,
+			op.Asset, op.Source, op.Destination,
+			(*big.Int)(&op.Amount).String(), op.Status, *op.Transaction)
 
 	case TxActTpCrossing:
+
+		owner, token, err := mint.NormalizedOwnerAndTokenFromID(ctx,
+			*a.CrossingOffer)
+
+		offer, err := model.LoadCanonicalOfferByOwnerToken(ctx,
+			owner, token)
+		if err != nil {
+			return errors.Trace(err)
+		} else if offer == nil {
+			return errors.Trace(errors.Newf(
+				"Offer not found: %s", *a.CrossingOffer))
+		}
+
+		cr, err := model.CreateCrossing(ctx,
+			offer.User,
+			offer.Owner,
+			*a.CrossingOffer,
+			model.Amount(*a.Amount),
+			model.TxStReserved,
+			fmt.Sprintf("%s[%s]", e.Tx.Owner, e.Tx.Token))
+		if err != nil {
+			return errors.Trace(err)
+		}
+
+		logging.Logf(ctx,
+			"Reserved crossing: user=%s id=%s[%s] created=%q "+
+				"offer=%s amount=%s status=%s transaction=%s",
+			cr.User, cr.Owner, cr.Token, cr.Created,
+			cr.Offer, (*big.Int)(&cr.Amount).String(),
+			cr.Status, cr.Transaction)
+
+		// TODO(stan) decrease offer remainder
 	}
 
 	return nil

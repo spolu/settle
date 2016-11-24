@@ -17,9 +17,9 @@ type Amount big.Int
 type PgType string
 
 const (
-	//PgTpCanonical is an offer owned by this mint.
+	// PgTpCanonical is an offer owned by this mint.
 	PgTpCanonical PgType = "canonical"
-	//PgTpPropagated is an offer propagated to this mint.
+	// PgTpPropagated is an offer propagated to this mint.
 	PgTpPropagated PgType = "propagated"
 )
 
@@ -27,14 +27,31 @@ const (
 type OfStatus string
 
 const (
-	//OfStActive is used to mark an offer as active.
+	// OfStActive is used to mark an offer as active.
 	OfStActive OfStatus = "active"
-	//OfStClosed is used to mark an offer as closed.
+	// OfStClosed is used to mark an offer as closed.
 	OfStClosed OfStatus = "closed"
+	// OfStConsumed is used to mark an offer as consumed.
+	OfStConsumed OfStatus = "consumed"
 )
 
 // OfPath is an offer path
 type OfPath []string
+
+// TxStatus is the status of a transaction, operation or crossing.
+type TxStatus string
+
+const (
+	// TxStReserved is used to mark an action (operation or crossing) as
+	// reserved.
+	TxStReserved TxStatus = "reserved"
+	// TxStSettled is used to mark an action (operation or crossing) as
+	// settled.
+	TxStSettled TxStatus = "settled"
+	// TxStCanceled is used to mark an action (operation or crossing) as
+	// canceled.
+	TxStCanceled TxStatus = "canceled"
+)
 
 // Value implements driver.Valuer.
 func (b Amount) Value() (value driver.Value, err error) {
@@ -115,6 +132,26 @@ func (p *OfPath) Scan(src interface{}) error {
 		*p = strings.Split(src, "/")
 	default:
 		return errors.Newf("Incompatible type for OfPath with value: %q", src)
+	}
+
+	return nil
+}
+
+// Value implements driver.Valuer.
+func (s TxStatus) Value() (value driver.Value, err error) {
+	return string(s), nil
+}
+
+// Scan implements sql.Scanner.
+func (s *TxStatus) Scan(src interface{}) error {
+	switch src := src.(type) {
+	case []byte:
+		*s = TxStatus(src)
+	case string:
+		*s = TxStatus(src)
+	default:
+		return errors.Newf(
+			"Incompatible status for TxStatus with value: %q", src)
 	}
 
 	return nil

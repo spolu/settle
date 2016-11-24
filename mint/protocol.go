@@ -53,6 +53,9 @@ type OperationResource struct {
 	Source      string        `json:"source"`
 	Destination string        `json:"destination"`
 	Amount      *big.Int      `json:"amount"`
+
+	Status      string  `json:"status"`
+	Transaction *string `json:"transaction"`
 }
 
 // NewOperationResource generates a new resource.
@@ -70,6 +73,8 @@ func NewOperationResource(
 		Source:      operation.Source,
 		Destination: operation.Destination,
 		Amount:      (*big.Int)(&operation.Amount),
+		Status:      string(operation.Status),
+		Transaction: operation.Transaction,
 	}
 }
 
@@ -82,7 +87,9 @@ type OfferResource struct {
 	Pair   string   `json:"pair"`
 	Price  string   `json:"price"`
 	Amount *big.Int `json:"amount"`
-	Status string   `json:"status"`
+
+	Status    string   `json:"status"`
+	Remainder *big.Int `json:"remainder"`
 }
 
 // NewOfferResource generates a new resource.
@@ -100,8 +107,9 @@ func NewOfferResource(
 			"%s/%s",
 			(*big.Int)(&offer.BasePrice).String(),
 			(*big.Int)(&offer.QuotePrice).String()),
-		Amount: (*big.Int)(&offer.Amount),
-		Status: string(offer.Status),
+		Amount:    (*big.Int)(&offer.Amount),
+		Status:    string(offer.Status),
+		Remainder: (*big.Int)(&offer.Remainder),
 	}
 }
 
@@ -115,6 +123,8 @@ type TransactionResource struct {
 	Amount      *big.Int `json:"amount"`
 	Destination string   `json:"destination"`
 	Path        []string `json:"path"`
+
+	Status string `json:"status"`
 }
 
 // NewTransactionResource generates a new resource.
@@ -132,5 +142,6 @@ func NewTransactionResource(
 		Amount:      (*big.Int)(&transaction.Amount),
 		Destination: transaction.Destination,
 		Path:        []string(transaction.Path),
+		Status:      string(transaction.Status),
 	}
 }
