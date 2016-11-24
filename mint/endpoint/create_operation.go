@@ -173,7 +173,7 @@ func (e *CreateOperation) Execute(
 	balances := []*model.Balance{}
 
 	var srcBalance *model.Balance
-	if e.Source != nil {
+	if e.Source != nil && e.Asset.Owner != *e.Source {
 		srcBalance, err = model.LoadBalanceByAssetHolder(ctx,
 			assetName, *e.Source)
 		if err != nil {
@@ -189,7 +189,7 @@ func (e *CreateOperation) Execute(
 	}
 
 	var dstBalance *model.Balance
-	if e.Destination != nil {
+	if e.Destination != nil && e.Asset.Owner != *e.Destination {
 		dstBalance, err = model.LoadOrCreateBalanceByAssetHolder(ctx,
 			authentication.Get(ctx).User.Token,
 			e.Owner,
@@ -239,7 +239,7 @@ func (e *CreateOperation) Execute(
 		b := (*big.Int)(&srcBalance.Value)
 		if new(big.Int).Abs(b).Cmp(model.MaxAssetAmount) >= 0 ||
 			b.Cmp(new(big.Int)) < 0 {
-			return nil, nil, errors.Trace(errors.NewUserErrorf(err,
+			return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
 				400, "amount_invalid",
 				"The resulting source balance is invalid: %s. The "+
 					"balance must be an integer between 0 and 2^128.",

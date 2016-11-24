@@ -330,6 +330,7 @@ func (e *CreateTransaction) ComputePlan(
 		OperationDestination: nil, // computed by next offer
 		OperationSource:      &e.Transaction.Owner,
 	})
+
 	// Generate actions from path of offers.
 	for i, offer := range e.Offers {
 		offer := offer
@@ -372,9 +373,9 @@ func (e *CreateTransaction) ComputePlan(
 			Owner:                pair[0].Owner,
 			Type:                 TxActTpOperation,
 			OperationAsset:       &pair[0].Name,
-			Amount:               nil, // computed on second pass
-			OperationDestination: nil, // computed by next offer
-			OperationSource:      nil, // issuing operation
+			Amount:               nil,            // computed on second pass
+			OperationDestination: nil,            // computed by next offer
+			OperationSource:      &pair[0].Owner, // issuing operation
 		})
 	}
 	// Compare the last operation asset to the transaction quote asset.
@@ -418,15 +419,11 @@ func (e *CreateTransaction) ComputePlan(
 	for i, a := range e.Plan {
 		switch a.Type {
 		case TxActTpOperation:
-			source := "<nil>"
-			if a.OperationSource != nil {
-				source = *a.OperationSource
-			}
 			logLine += fmt.Sprintf(
 				"\n  [%d:%s] mint=%s amount=%s "+
 					"asset=%s source=%s destination=%s ",
 				i, a.Type, a.Mint, a.Amount.String(),
-				*a.OperationAsset, source, *a.OperationDestination)
+				*a.OperationAsset, *a.OperationSource, *a.OperationDestination)
 		case TxActTpCrossing:
 			logLine += fmt.Sprintf(
 				"\n  [%d:%s] mint=%s amount=%s "+
@@ -464,110 +461,88 @@ func (e *CreateTransaction) ExecutePlan(
 	switch a.Type {
 	case TxActTpOperation:
 
-		//status, resp, err := CreateOperation{
-		//	Client:      e.Client,
-		//	Owner:       a.Owner,
-		//	Asset:       a.OperationAsset,
-		//	Amount:      a.Amount,
-		//	Source:      a.OperationSource,
-		//	Destination: a.OperationDestination,
-		//}.Execute(ctx)
+		r, err := mint.AssetResourceFromName(ctx, *a.OperationAsset)
+		if err != nil {
+			return errors.Trace(err)
+		}
 
-		//asset, err := model.LoadAssetByOwnerCodeScale(ctx,
-		//	a.Owner, e.Asset.Code, e.Asset.Scale)
+		asset, err := model.LoadAssetByOwnerCodeScale(ctx,
+			a.Owner, r.Code, r.Scale)
+		if err != nil {
+			return errors.Trace(err)
+		} else if asset == nil {
+			return errors.Trace(errors.Newf(
+				"Asset not found: %s", *a.OperationAsset))
+		}
 
-		//if err != nil {
-		//	return errors.Trace(err)
-		//} else if asset == nil {
-		//	return errors.Trace(errors.Newf(
-		//		"Asset not found: %s", *a.OperationAsset))
-		//}
-		//assetName := fmt.Sprintf(
-		//	"%s[%s.%d]",
-		//	asset.Owner, asset.Code, asset.Scale)
+		var srcBalance *model.Balance
+		if a.OperationSource != nil && r.Owner != *a.OperationSource {
+			srcBalance, err = model.LoadBalanceByAssetHolder(ctx,
+				*a.OperationAsset, *a.OperationSource)
+			if err != nil {
+				return errors.Trace(err)
+			} else if srcBalance == nil {
+				return errors.Trace(errors.Newf(
+					"Source has no balance in %s: %s",
+					*a.OperationAsset, *a.OperationSource))
+			}
+		}
 
-		//balances := []*model.Balance{}
+		var dstBalance *model.Balance
+		if a.OperationDestination != nil && r.Owner != *a.OperationDestination {
+			dstBalance, err = model.LoadOrCreateBalanceByAssetHolder(ctx,
+				asset.User,
+				asset.Owner,
+				*a.OperationAsset, *a.OperationDestination)
+			if err != nil {
+				return errors.Trace(err)
+			}
+		}
 
-		//var srcBalance *model.Balance
-		//if e.Source != nil {
-		//	srcBalance, err = model.LoadBalanceByAssetHolder(ctx,
-		//		assetName, *e.Source)
-		//	if err != nil {
-		//		return nil, nil, errors.Trace(err) // 500
-		//	} else if srcBalance == nil {
-		//		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-		//			400, "source_invalid",
-		//			"The source address you provided has no existing balance: %s.",
-		//			*e.Source,
-		//		))
-		//	}
-		//	balances = append(balances, srcBalance)
-		//}
+		operation, err := model.CreateCanonicalOperation(ctx,
+			asset.User,
+			asset.Owner,
+			*a.OperationAsset,
+			a.OperationSource, a.OperationDestination,
+			model.Amount(*a.Amount))
+		if err != nil {
+			return errors.Trace(err)
+		}
 
-		//var dstBalance *model.Balance
-		//if e.Destination != nil {
-		//	dstBalance, err = model.LoadOrCreateBalanceByAssetHolder(ctx,
-		//		authentication.Get(ctx).User.Token,
-		//		e.Owner,
-		//		assetName, *e.Destination)
-		//	if err != nil {
-		//		return nil, nil, errors.Trace(err) // 500
-		//	}
+		if dstBalance != nil {
+			(*big.Int)(&dstBalance.Value).Add(
+				(*big.Int)(&dstBalance.Value), (*big.Int)(&operation.Amount))
+			// Checks if the dstBalance is positive and not overflown.
+			b := (*big.Int)(&dstBalance.Value)
+			if new(big.Int).Abs(b).Cmp(model.MaxAssetAmount) >= 0 ||
+				b.Cmp(new(big.Int)) < 0 {
+				return errors.Trace(errors.Newf(
+					"Invalid resulting balance: %s", b.String()))
+			}
+			err = dstBalance.Save(ctx)
+			if err != nil {
+				return errors.Trace(err)
+			}
+		}
 
-		//	balances = append(balances, dstBalance)
-		//}
+		if srcBalance != nil {
+			(*big.Int)(&srcBalance.Value).Sub(
+				(*big.Int)(&srcBalance.Value), (*big.Int)(&operation.Amount))
 
-		//operation, err := model.CreateCanonicalOperation(ctx,
-		//	authentication.Get(ctx).User.Token,
-		//	e.Owner,
-		//	assetName, e.Source, e.Destination, model.Amount(e.Amount))
-		//if err != nil {
-		//	return nil, nil, errors.Trace(err) // 500
-		//}
+			// Checks if the srcBalance is positive and not overflown.
+			b := (*big.Int)(&srcBalance.Value)
+			if new(big.Int).Abs(b).Cmp(model.MaxAssetAmount) >= 0 ||
+				b.Cmp(new(big.Int)) < 0 {
+				return errors.Trace(errors.Newf(
+					"Invalid resulting balance: %s", b.String()))
+			}
+			err = srcBalance.Save(ctx)
+			if err != nil {
+				return errors.Trace(err)
+			}
+		}
 
-		//if dstBalance != nil {
-		//	(*big.Int)(&dstBalance.Value).Add(
-		//		(*big.Int)(&dstBalance.Value), (*big.Int)(&operation.Amount))
-
-		//	// Checks if the dstBalance is positive and not overflown.
-		//	b := (*big.Int)(&dstBalance.Value)
-		//	if new(big.Int).Abs(b).Cmp(model.MaxAssetAmount) >= 0 ||
-		//		b.Cmp(new(big.Int)) < 0 {
-		//		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
-		//			400, "amount_invalid",
-		//			"The resulting destination balance is invalid: %s. The "+
-		//				"balance must be an integer between 0 and 2^128.",
-		//			b.String(),
-		//		))
-		//	}
-
-		//	err = dstBalance.Save(ctx)
-		//	if err != nil {
-		//		return nil, nil, errors.Trace(err) // 500
-		//	}
-		//}
-
-		//if srcBalance != nil {
-		//	(*big.Int)(&srcBalance.Value).Sub(
-		//		(*big.Int)(&srcBalance.Value), (*big.Int)(&operation.Amount))
-
-		//	// Checks if the srcBalance is positive and not overflown.
-		//	b := (*big.Int)(&srcBalance.Value)
-		//	if new(big.Int).Abs(b).Cmp(model.MaxAssetAmount) >= 0 ||
-		//		b.Cmp(new(big.Int)) < 0 {
-		//		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
-		//			400, "amount_invalid",
-		//			"The resulting source balance is invalid: %s. The "+
-		//				"balance must be an integer between 0 and 2^128.",
-		//			b.String(),
-		//		))
-		//	}
-
-		//	err = srcBalance.Save(ctx)
-		//	if err != nil {
-		//		return nil, nil, errors.Trace(err) // 500
-		//	}
-		//}
+		logging.Logf(ctx, ">> %+v %s %s", operation, *a.OperationSource, r.Owner)
 
 	case TxActTpCrossing:
 	}

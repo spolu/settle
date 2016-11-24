@@ -1,5 +1,6 @@
 # mint
 
+ [ ] remove nil from creation operation, prevent issuer from owning balance
  [ ] transaction protocol
  [ ] propagation protocol for both operations and offers (need to learn more)
  [ ] pass DSN for DB, support Postgres
