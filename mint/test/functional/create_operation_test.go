@@ -29,7 +29,7 @@ func setupCreateOperation(
 	return m, u, a
 }
 
-func TestCreateIssuingOperation(
+func TestCreateNoopOperation(
 	t *testing.T,
 ) {
 	t.Parallel()
@@ -39,6 +39,7 @@ func TestCreateIssuingOperation(
 		fmt.Sprintf("/assets/%s/operations", a[0].Name),
 		url.Values{
 			"amount":      {"100"},
+			"source":      {u[0].Address},
 			"destination": {u[0].Address},
 		})
 
@@ -61,26 +62,17 @@ func TestCreateIssuingOperation(
 	assert.Equal(t, "USD", op.Asset.Code)
 
 	assert.NotNil(t, op.Destination)
-	assert.Equal(t, u[0].Address, *op.Destination)
-	assert.Nil(t, op.Source)
+	assert.Equal(t, u[0].Address, op.Destination)
+	assert.Equal(t, u[0].Address, op.Source)
 	assert.Equal(t, int8(2), op.Asset.Scale)
 	assert.Equal(t, big.NewInt(100), op.Amount)
 }
 
-func TestCreateOperation(
+func TestCreateOperationIssuing(
 	t *testing.T,
 ) {
 	t.Parallel()
 	_, u, a := setupCreateOperation(t)
-
-	status, _ := u[0].Post(t,
-		fmt.Sprintf("/assets/%s/operations", a[0].Name),
-		url.Values{
-			"amount":      {"100"},
-			"destination": {u[0].Address},
-		})
-
-	assert.Equal(t, 201, status)
 
 	status, raw := u[0].Post(t,
 		fmt.Sprintf("/assets/%s/operations", a[0].Name),
@@ -103,14 +95,14 @@ func TestCreateOperation(
 	assert.Equal(t, u[0].Address, op.Owner)
 
 	assert.NotNil(t, op.Source)
-	assert.Equal(t, u[0].Address, *op.Source)
+	assert.Equal(t, u[0].Address, op.Source)
 	assert.NotNil(t, op.Destination)
-	assert.Equal(t, "von.neumann@ias.edu", *op.Destination)
+	assert.Equal(t, "von.neumann@ias.edu", op.Destination)
 	assert.Equal(t, int8(2), op.Asset.Scale)
 	assert.Equal(t, big.NewInt(10), op.Amount)
 }
 
-func TestCreateAnnihilatingOperation(
+func TestCreateOperationAnnihilating(
 	t *testing.T,
 ) {
 	t.Parallel()
@@ -119,17 +111,18 @@ func TestCreateAnnihilatingOperation(
 	status, _ := u[0].Post(t,
 		fmt.Sprintf("/assets/%s/operations", a[0].Name),
 		url.Values{
-			"amount":      {"100"},
-			"destination": {u[0].Address},
+			"amount":      {"10"},
+			"source":      {u[0].Address},
+			"destination": {"von.neumann@ias.edu"},
 		})
-
 	assert.Equal(t, 201, status)
 
 	status, raw := u[0].Post(t,
 		fmt.Sprintf("/assets/%s/operations", a[0].Name),
 		url.Values{
-			"amount": {"10"},
-			"source": {u[0].Address},
+			"amount":      {"5"},
+			"source":      {"von.neumann@ias.edu"},
+			"destination": {u[0].Address},
 		})
 
 	var op mint.OperationResource
@@ -145,10 +138,10 @@ func TestCreateAnnihilatingOperation(
 	assert.Equal(t, u[0].Address, op.Owner)
 
 	assert.NotNil(t, op.Source)
-	assert.Equal(t, u[0].Address, *op.Source)
-	assert.Nil(t, op.Destination)
+	assert.Equal(t, "von.neumann@ias.edu", op.Source)
+	assert.Equal(t, u[0].Address, op.Destination)
 	assert.Equal(t, int8(2), op.Asset.Scale)
-	assert.Equal(t, big.NewInt(10), op.Amount)
+	assert.Equal(t, big.NewInt(5), op.Amount)
 }
 
 func TestCreateOperationWithNegativeAmount(
@@ -161,7 +154,8 @@ func TestCreateOperationWithNegativeAmount(
 		fmt.Sprintf("/assets/%s/operations", a[0].Name),
 		url.Values{
 			"amount":      {"-100"},
-			"destination": {u[0].Address},
+			"source":      {u[0].Address},
+			"destination": {"von.neumann@ias.edu"},
 		})
 
 	var e errors.ConcreteUserError
@@ -184,7 +178,8 @@ func TestCreateOperationWithInvalidAsset(
 		fmt.Sprintf("/assets/%s/operations", invalidAsset),
 		url.Values{
 			"amount":      {"100"},
-			"destination": {u[0].Address},
+			"source":      {u[0].Address},
+			"destination": {"von.neumann@ias.edu"},
 		})
 
 	var e errors.ConcreteUserError
@@ -207,7 +202,8 @@ func TestCreateOperationWithInvalidAssetHostname(
 		fmt.Sprintf("/assets/%s/operations", invalidAsset),
 		url.Values{
 			"amount":      {"100"},
-			"destination": {u[0].Address},
+			"source":      {u[0].Address},
+			"destination": {"von.neumann@ias.edu"},
 		})
 
 	var e errors.ConcreteUserError
@@ -231,7 +227,8 @@ func TestCreateOperationWithInvalidAssetUsername(
 		fmt.Sprintf("/assets/%s/operations", invalidAsset),
 		url.Values{
 			"amount":      {"100"},
-			"destination": {u[0].Address},
+			"source":      {u[0].Address},
+			"destination": {"von.neumann@ias.edu"},
 		})
 
 	var e errors.ConcreteUserError
@@ -255,7 +252,8 @@ func TestCreateOperationWithUnknownAsset(
 		fmt.Sprintf("/assets/%s/operations", invalidAsset),
 		url.Values{
 			"amount":      {"100"},
-			"destination": {u[0].Address},
+			"source":      {u[0].Address},
+			"destination": {"von.neumann@ias.edu"},
 		})
 
 	var e errors.ConcreteUserError
@@ -267,7 +265,29 @@ func TestCreateOperationWithUnknownAsset(
 	assert.Equal(t, "asset_not_found", e.ErrCode)
 }
 
-func TestCreateOperationWithNoSourceOrDestination(
+func TestCreateOperationWithNoSource(
+	t *testing.T,
+) {
+	t.Parallel()
+	_, u, a := setupCreateOperation(t)
+
+	status, raw := u[0].Post(t,
+		fmt.Sprintf("/assets/%s/operations", a[0].Name),
+		url.Values{
+			"amount":      {"100"},
+			"destination": {"von.neumann@ias.edu"},
+		})
+
+	var e errors.ConcreteUserError
+	if err := raw.Extract("error", &e); err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, 400, status)
+	assert.Equal(t, "source_invalid", e.ErrCode)
+}
+
+func TestCreateOperationWithNoDestination(
 	t *testing.T,
 ) {
 	t.Parallel()
@@ -277,6 +297,7 @@ func TestCreateOperationWithNoSourceOrDestination(
 		fmt.Sprintf("/assets/%s/operations", a[0].Name),
 		url.Values{
 			"amount": {"100"},
+			"source": {u[0].Address},
 		})
 
 	var e errors.ConcreteUserError
@@ -285,7 +306,7 @@ func TestCreateOperationWithNoSourceOrDestination(
 	}
 
 	assert.Equal(t, 400, status)
-	assert.Equal(t, "operation_invalid", e.ErrCode)
+	assert.Equal(t, "destination_invalid", e.ErrCode)
 }
 
 func TestCreateOperationWithInsufficientBalance(
@@ -298,6 +319,7 @@ func TestCreateOperationWithInsufficientBalance(
 		fmt.Sprintf("/assets/%s/operations", a[0].Name),
 		url.Values{
 			"amount":      {"10"},
+			"source":      {u[0].Address},
 			"destination": {"von.neumann@ias.edu"},
 		})
 	assert.Equal(t, 201, status)

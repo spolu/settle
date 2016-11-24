@@ -503,7 +503,7 @@ func (e *CreateTransaction) ExecutePlan(
 			asset.User,
 			asset.Owner,
 			*a.OperationAsset,
-			a.OperationSource, a.OperationDestination,
+			*a.OperationSource, *a.OperationDestination,
 			model.Amount(*a.Amount))
 		if err != nil {
 			return errors.Trace(err)

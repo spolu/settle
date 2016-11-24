@@ -9,6 +9,7 @@ import (
 )
 
 const (
+	// Version is the current protocol version.
 	Version string = "0"
 )
 
@@ -49,8 +50,8 @@ type OperationResource struct {
 	Owner   string `json:"owner"`
 
 	Asset       AssetResource `json:"asset"`
-	Source      *string       `json:"source"`
-	Destination *string       `json:"destination"`
+	Source      string        `json:"source"`
+	Destination string        `json:"destination"`
 	Amount      *big.Int      `json:"amount"`
 }
 

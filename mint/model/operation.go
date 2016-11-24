@@ -33,9 +33,9 @@ type Operation struct {
 	Created     time.Time
 	Propagation PgType
 
-	Asset       string  // Asset name.
-	Source      *string // Source address (if nil issuance).
-	Destination *string // Destination addres (if nil annihilation).
+	Asset       string // Asset name.
+	Source      string // Source address (if owner, issuance).
+	Destination string // Destination addres (if owner, annihilation).
 	Amount      Amount
 }
 
@@ -45,8 +45,8 @@ func CreateCanonicalOperation(
 	user string,
 	owner string,
 	asset string,
-	source *string,
-	destination *string,
+	source string,
+	destination string,
 	amount Amount,
 ) (*Operation, error) {
 	operation := Operation{
@@ -95,8 +95,8 @@ func CreatePropagatedOperation(
 	created time.Time,
 	owner string,
 	asset string,
-	source *string,
-	destination *string,
+	source string,
+	destination string,
 	amount Amount,
 ) (*Operation, error) {
 	operation := Operation{

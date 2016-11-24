@@ -40,8 +40,8 @@ type CreateOperation struct {
 	Owner       string
 	Asset       mint.AssetResource
 	Amount      big.Int
-	Source      *string
-	Destination *string
+	Source      string
+	Destination string
 }
 
 // NewCreateOperation constructs and initialiezes the endpoint.
@@ -103,44 +103,26 @@ func (e *CreateOperation) Validate(
 	e.Amount = *amount
 
 	// Validate source.
-	var srcAddress *string
-	if r.PostFormValue("source") != "" {
-		addr, err := mint.NormalizedAddress(ctx, r.PostFormValue("source"))
-		if err != nil {
-			return errors.Trace(errors.NewUserErrorf(err,
-				400, "source_invalid",
-				"The source address you provided is invalid: %s.",
-				*srcAddress,
-			))
-		}
-		srcAddress = &addr
+	srcAddress, err := mint.NormalizedAddress(ctx, r.PostFormValue("source"))
+	if err != nil {
+		return errors.Trace(errors.NewUserErrorf(err,
+			400, "source_invalid",
+			"The source address you provided is invalid: %s.",
+			srcAddress,
+		))
 	}
 	e.Source = srcAddress
 
 	// Validate destination.
-	var dstAddress *string
-	if r.PostFormValue("destination") != "" {
-		addr, err := mint.NormalizedAddress(ctx, r.PostFormValue("destination"))
-		if err != nil {
-			return errors.Trace(errors.NewUserErrorf(err,
-				400, "destination_invalid",
-				"The destination address you provided is invalid: %s.",
-				*dstAddress,
-			))
-		}
-		dstAddress = &addr
-	}
-	e.Destination = dstAddress
-
-	if srcAddress == nil && dstAddress == nil {
+	dstAddress, err := mint.NormalizedAddress(ctx, r.PostFormValue("destination"))
+	if err != nil {
 		return errors.Trace(errors.NewUserErrorf(err,
-			400, "operation_invalid",
-			"The operation has no source and no destination. You must "+
-				"specify at least one of them (no source: issuance; no "+
-				"destination: annihilation; source and destination: "+
-				"transfer).",
+			400, "destination_invalid",
+			"The destination address you provided is invalid: %s.",
+			dstAddress,
 		))
 	}
+	e.Destination = dstAddress
 
 	return nil
 }
@@ -166,45 +148,37 @@ func (e *CreateOperation) Execute(
 			e.Asset.Name,
 		))
 	}
-	assetName := fmt.Sprintf(
-		"%s[%s.%d]",
-		asset.Owner, asset.Code, asset.Scale)
-
-	balances := []*model.Balance{}
 
 	var srcBalance *model.Balance
-	if e.Source != nil && e.Asset.Owner != *e.Source {
+	if e.Asset.Owner != e.Source {
 		srcBalance, err = model.LoadBalanceByAssetHolder(ctx,
-			assetName, *e.Source)
+			e.Asset.Name, e.Source)
 		if err != nil {
 			return nil, nil, errors.Trace(err) // 500
 		} else if srcBalance == nil {
 			return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
 				400, "source_invalid",
 				"The source address you provided has no existing balance: %s.",
-				*e.Source,
+				e.Source,
 			))
 		}
-		balances = append(balances, srcBalance)
 	}
 
 	var dstBalance *model.Balance
-	if e.Destination != nil && e.Asset.Owner != *e.Destination {
+	if e.Asset.Owner != e.Destination {
 		dstBalance, err = model.LoadOrCreateBalanceByAssetHolder(ctx,
 			authentication.Get(ctx).User.Token,
 			e.Owner,
-			assetName, *e.Destination)
+			e.Asset.Name, e.Destination)
 		if err != nil {
 			return nil, nil, errors.Trace(err) // 500
 		}
-
-		balances = append(balances, dstBalance)
 	}
 
 	operation, err := model.CreateCanonicalOperation(ctx,
 		authentication.Get(ctx).User.Token,
 		e.Owner,
-		assetName, e.Source, e.Destination, model.Amount(e.Amount))
+		e.Asset.Name, e.Source, e.Destination, model.Amount(e.Amount))
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
 	}
