@@ -179,7 +179,7 @@ func (e *CreateOperation) Execute(
 		authentication.Get(ctx).User.Token,
 		e.Owner,
 		e.Asset.Name, e.Source, e.Destination, model.Amount(e.Amount),
-		model.TxStSettled, nil)
+		mint.TxStSettled, nil)
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
 	}
@@ -240,7 +240,7 @@ func (e *CreateOperation) Execute(
 	// TODO(stan): propagation
 
 	return ptr.Int(http.StatusCreated), &svc.Resp{
-		"operation": format.JSONPtr(mint.NewOperationResource(ctx,
+		"operation": format.JSONPtr(model.NewOperationResource(ctx,
 			op, asset)),
 	}, nil
 }

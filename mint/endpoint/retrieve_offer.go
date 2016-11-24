@@ -11,7 +11,6 @@ import (
 	"github.com/spolu/settle/lib/format"
 	"github.com/spolu/settle/lib/ptr"
 	"github.com/spolu/settle/lib/svc"
-	"github.com/spolu/settle/mint"
 	"github.com/spolu/settle/mint/model"
 )
 
@@ -79,6 +78,6 @@ func (e *RetrieveOffer) Execute(
 	db.Commit(ctx)
 
 	return ptr.Int(http.StatusOK), &svc.Resp{
-		"offer": format.JSONPtr(mint.NewOfferResource(ctx, offer)),
+		"offer": format.JSONPtr(model.NewOfferResource(ctx, offer)),
 	}, nil
 }

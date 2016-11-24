@@ -197,7 +197,7 @@ func (e *CreateTransaction) ExecuteCanonical(
 		e.Pair[0].Name, e.Pair[1].Name,
 		model.Amount(e.Amount),
 		e.Destination, model.OfPath(e.Path),
-		model.TxStReserved)
+		mint.TxStReserved)
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
 	}
@@ -456,13 +456,7 @@ func (e *CreateTransaction) ExecutePlan(
 	switch a.Type {
 	case TxActTpOperation:
 
-		r, err := mint.AssetResourceFromName(ctx, *a.OperationAsset)
-		if err != nil {
-			return errors.Trace(err)
-		}
-
-		asset, err := model.LoadAssetByOwnerCodeScale(ctx,
-			a.Owner, r.Code, r.Scale)
+		asset, err := model.LoadAssetByName(ctx, *a.OperationAsset)
 		if err != nil {
 			return errors.Trace(err)
 		} else if asset == nil {
@@ -471,7 +465,7 @@ func (e *CreateTransaction) ExecutePlan(
 		}
 
 		var srcBalance *model.Balance
-		if a.OperationSource != nil && r.Owner != *a.OperationSource {
+		if a.OperationSource != nil && asset.Owner != *a.OperationSource {
 			srcBalance, err = model.LoadBalanceByAssetHolder(ctx,
 				*a.OperationAsset, *a.OperationSource)
 			if err != nil {
@@ -484,7 +478,8 @@ func (e *CreateTransaction) ExecutePlan(
 		}
 
 		var dstBalance *model.Balance
-		if a.OperationDestination != nil && r.Owner != *a.OperationDestination {
+		if a.OperationDestination != nil &&
+			asset.Owner != *a.OperationDestination {
 			dstBalance, err = model.LoadOrCreateBalanceByAssetHolder(ctx,
 				asset.User,
 				asset.Owner,
@@ -500,7 +495,7 @@ func (e *CreateTransaction) ExecutePlan(
 			*a.OperationAsset,
 			*a.OperationSource, *a.OperationDestination,
 			model.Amount(*a.Amount),
-			model.TxStReserved,
+			mint.TxStReserved,
 			ptr.Str(fmt.Sprintf("%s[%s]", e.Tx.Owner, e.Tx.Token)))
 		if err != nil {
 			return errors.Trace(err)
@@ -549,11 +544,8 @@ func (e *CreateTransaction) ExecutePlan(
 
 	case TxActTpCrossing:
 
-		owner, token, err := mint.NormalizedOwnerAndTokenFromID(ctx,
+		offer, err := model.LoadCanonicalOfferByID(ctx,
 			*a.CrossingOffer)
-
-		offer, err := model.LoadCanonicalOfferByOwnerToken(ctx,
-			owner, token)
 		if err != nil {
 			return errors.Trace(err)
 		} else if offer == nil {
@@ -566,7 +558,7 @@ func (e *CreateTransaction) ExecutePlan(
 			offer.Owner,
 			*a.CrossingOffer,
 			model.Amount(*a.Amount),
-			model.TxStReserved,
+			mint.TxStReserved,
 			fmt.Sprintf("%s[%s]", e.Tx.Owner, e.Tx.Token))
 		if err != nil {
 			return errors.Trace(err)

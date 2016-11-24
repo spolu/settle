@@ -12,6 +12,7 @@ import (
 	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/token"
+	"github.com/spolu/settle/mint"
 )
 
 // Crossing represents a transaction crossing an offer and consuming some of
@@ -25,7 +26,7 @@ type Crossing struct {
 	Offer  string
 	Amount Amount
 
-	Status      TxStatus
+	Status      mint.TxStatus
 	Transaction string `db:"txn"`
 }
 
@@ -36,7 +37,7 @@ func CreateCrossing(
 	owner string,
 	offer string,
 	amount Amount,
-	status TxStatus,
+	status mint.TxStatus,
 	transaction string,
 ) (*Crossing, error) {
 	crossing := Crossing{

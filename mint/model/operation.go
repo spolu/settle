@@ -4,6 +4,7 @@ package model
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/token"
+	"github.com/spolu/settle/mint"
 )
 
 // MaxAssetAmount is the maximum amount for an asset (2^128).
@@ -34,15 +36,35 @@ type Operation struct {
 	Owner       string // Owner address.
 	Token       string
 	Created     time.Time
-	Propagation PgType
+	Propagation mint.PgType
 
 	Asset       string // Asset name.
 	Source      string // Source address (if owner, issuance).
 	Destination string // Destination addres (if owner, annihilation).
 	Amount      Amount
 
-	Status      TxStatus
+	Status      mint.TxStatus
 	Transaction *string `db:"txn"`
+}
+
+// NewOperationResource generates a new resource.
+func NewOperationResource(
+	ctx context.Context,
+	operation *Operation,
+	asset *Asset,
+) mint.OperationResource {
+	return mint.OperationResource{
+		ID: fmt.Sprintf(
+			"%s[%s]", operation.Owner, operation.Token),
+		Created:     operation.Created.UnixNano() / (1000 * 1000),
+		Owner:       operation.Owner,
+		Asset:       NewAssetResource(ctx, asset),
+		Source:      operation.Source,
+		Destination: operation.Destination,
+		Amount:      (*big.Int)(&operation.Amount),
+		Status:      operation.Status,
+		Transaction: operation.Transaction,
+	}
 }
 
 // CreateCanonicalOperation creates and stores a new Operation.
@@ -54,7 +76,7 @@ func CreateCanonicalOperation(
 	source string,
 	destination string,
 	amount Amount,
-	status TxStatus,
+	status mint.TxStatus,
 	transaction *string,
 ) (*Operation, error) {
 	operation := Operation{
@@ -62,7 +84,7 @@ func CreateCanonicalOperation(
 		Owner:       owner,
 		Token:       token.New("operation"),
 		Created:     time.Now(),
-		Propagation: PgTpCanonical,
+		Propagation: mint.PgTpCanonical,
 
 		Asset:       asset,
 		Source:      source,
@@ -115,7 +137,7 @@ func CreatePropagatedOperation(
 		Owner:       owner,
 		Token:       token,
 		Created:     created,
-		Propagation: PgTpPropagated,
+		Propagation: mint.PgTpPropagated,
 
 		Asset:       asset,
 		Source:      source,
@@ -158,7 +180,7 @@ func LoadCanonicalOperationByOwnerToken(
 	operation := Operation{
 		Owner:       owner,
 		Token:       token,
-		Propagation: PgTpCanonical,
+		Propagation: mint.PgTpCanonical,
 	}
 
 	ext := db.Ext(ctx)

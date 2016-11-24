@@ -4,6 +4,8 @@ package model
 
 import (
 	"context"
+	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -12,6 +14,7 @@ import (
 	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/token"
+	"github.com/spolu/settle/mint"
 )
 
 // Transaction represents a transaction across a chain of offers.
@@ -20,7 +23,7 @@ type Transaction struct {
 	Owner       string
 	Token       string
 	Created     time.Time
-	Propagation PgType
+	Propagation mint.PgType
 
 	BaseAsset   string `db:"base_asset"`  // BaseAsset name.
 	QuoteAsset  string `db:"quote_asset"` // QuoteAsset name.
@@ -28,7 +31,26 @@ type Transaction struct {
 	Destination string
 	Path        OfPath
 
-	Status TxStatus
+	Status mint.TxStatus
+}
+
+// NewTransactionResource generates a new resource.
+func NewTransactionResource(
+	ctx context.Context,
+	transaction *Transaction,
+) mint.TransactionResource {
+	return mint.TransactionResource{
+		ID: fmt.Sprintf(
+			"%s[%s]", transaction.Owner, transaction.Token),
+		Created: transaction.Created.UnixNano() / (1000 * 1000),
+		Owner:   transaction.Owner,
+		Pair: fmt.Sprintf("%s/%s",
+			transaction.BaseAsset, transaction.QuoteAsset),
+		Amount:      (*big.Int)(&transaction.Amount),
+		Destination: transaction.Destination,
+		Path:        []string(transaction.Path),
+		Status:      transaction.Status,
+	}
 }
 
 // CreateCanonicalTransaction creates and stores a new canonical Transaction
@@ -42,14 +64,14 @@ func CreateCanonicalTransaction(
 	amount Amount,
 	destination string,
 	path []string,
-	status TxStatus,
+	status mint.TxStatus,
 ) (*Transaction, error) {
 	transaction := Transaction{
 		User:        user,
 		Owner:       owner,
 		Token:       token.New("transaction"),
 		Created:     time.Now(),
-		Propagation: PgTpCanonical,
+		Propagation: mint.PgTpCanonical,
 
 		BaseAsset:   baseAsset,
 		QuoteAsset:  quoteAsset,
@@ -93,7 +115,7 @@ func LoadCanonicalTransactionByOwnerToken(
 	transaction := Transaction{
 		Owner:       owner,
 		Token:       token,
-		Propagation: PgTpCanonical,
+		Propagation: mint.PgTpCanonical,
 	}
 
 	ext := db.Ext(ctx)

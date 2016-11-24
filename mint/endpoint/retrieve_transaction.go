@@ -9,7 +9,6 @@ import (
 	"github.com/spolu/settle/lib/format"
 	"github.com/spolu/settle/lib/ptr"
 	"github.com/spolu/settle/lib/svc"
-	"github.com/spolu/settle/mint"
 	"github.com/spolu/settle/mint/model"
 	"goji.io/pat"
 )
@@ -79,6 +78,6 @@ func (e *RetrieveTransaction) Execute(
 	db.Commit(ctx)
 
 	return ptr.Int(http.StatusOK), &svc.Resp{
-		"offer": format.JSONPtr(mint.NewTransactionResource(ctx, offer)),
+		"offer": format.JSONPtr(model.NewTransactionResource(ctx, offer)),
 	}, nil
 }

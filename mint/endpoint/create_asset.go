@@ -104,6 +104,6 @@ func (e *CreateAsset) Execute(
 	db.Commit(ctx)
 
 	return ptr.Int(http.StatusCreated), &svc.Resp{
-		"asset": format.JSONPtr(mint.NewAssetResource(ctx, asset)),
+		"asset": format.JSONPtr(model.NewAssetResource(ctx, asset)),
 	}, nil
 }

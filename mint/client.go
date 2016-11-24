@@ -13,7 +13,6 @@ import (
 	"github.com/spolu/settle/lib/env"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/svc"
-	"github.com/spolu/settle/mint/model"
 )
 
 var defaultHTTPClient = (*http.Client)(nil)
@@ -181,7 +180,7 @@ func FullMintURL(
 // PropagateOperation propagates an operation to the `destination` mint.
 func (c *Client) PropagateOperation(
 	ctx context.Context,
-	operation *model.Operation,
+	operation string,
 	destination string,
 ) error {
 	return nil
@@ -190,7 +189,7 @@ func (c *Client) PropagateOperation(
 // PropagateOffer propagates an offer to the `destination` mint.
 func (c *Client) PropagateOffer(
 	ctx context.Context,
-	operation *model.Offer,
+	offer string,
 	destination string,
 ) error {
 	return nil
@@ -229,4 +228,39 @@ func (c *Client) RetrieveOffer(
 	}
 
 	return &offer, nil
+}
+
+// RetrieveTransaction retrieves a transaction given its ID by extracting the
+// mint and retrieving it from there.
+func (c *Client) RetrieveTransaction(
+	ctx context.Context,
+	id string,
+) (*TransactionResource, error) {
+	owner, _, err := NormalizedOwnerAndTokenFromID(ctx, id)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	_, host, err := UsernameAndMintHostFromAddress(ctx, owner)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	r, err := c.httpClient.Get(
+		FullMintURL(ctx, host, fmt.Sprintf("/transactions/%s", id)).String())
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	defer r.Body.Close()
+
+	var raw svc.Resp
+	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	var transaction TransactionResource
+	if err := raw.Extract("transaction", &transaction); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &transaction, nil
 }

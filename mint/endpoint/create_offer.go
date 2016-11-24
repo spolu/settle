@@ -118,7 +118,7 @@ func (e *CreateOffer) Execute(
 		e.Pair[0].Name, e.Pair[1].Name,
 		model.Amount(e.BasePrice), model.Amount(e.QuotePrice),
 		model.Amount(e.Amount),
-		model.OfStActive, model.Amount(e.Amount))
+		mint.OfStActive, model.Amount(e.Amount))
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
 	}
@@ -128,6 +128,6 @@ func (e *CreateOffer) Execute(
 	// TODO(stan): propagation
 
 	return ptr.Int(http.StatusCreated), &svc.Resp{
-		"offer": format.JSONPtr(mint.NewOfferResource(ctx, offer)),
+		"offer": format.JSONPtr(model.NewOfferResource(ctx, offer)),
 	}, nil
 }
