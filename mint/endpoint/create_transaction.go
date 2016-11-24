@@ -572,14 +572,29 @@ func (e *CreateTransaction) ExecutePlan(
 			return errors.Trace(err)
 		}
 
+		(*big.Int)(&offer.Remainder).Sub(
+			(*big.Int)(&offer.Remainder), (*big.Int)(&cr.Amount))
+		// Checks if the remainder is positive and not overflown.
+		b := (*big.Int)(&offer.Remainder)
+		if new(big.Int).Abs(b).Cmp(model.MaxAssetAmount) >= 0 ||
+			b.Cmp(new(big.Int)) < 0 {
+			return errors.Trace(errors.Newf(
+				"Invalid resulting remainder: %s", b.String()))
+		}
+		// Do not set the offer as consumed (if remainder is 0) as this is just
+		// a reservation.
+
+		err = offer.Save(ctx)
+		if err != nil {
+			return errors.Trace(err)
+		}
+
 		logging.Logf(ctx,
 			"Reserved crossing: user=%s id=%s[%s] created=%q "+
 				"offer=%s amount=%s status=%s transaction=%s",
 			cr.User, cr.Owner, cr.Token, cr.Created,
 			cr.Offer, (*big.Int)(&cr.Amount).String(),
 			cr.Status, cr.Transaction)
-
-		// TODO(stan) decrease offer remainder
 	}
 
 	return nil
