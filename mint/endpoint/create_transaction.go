@@ -8,6 +8,9 @@ import (
 	"math/big"
 	"net/http"
 	"strconv"
+	"time"
+
+	"goji.io/pat"
 
 	"golang.org/x/sync/errgroup"
 
@@ -65,14 +68,16 @@ type CreateTransaction struct {
 	Client *mint.Client
 
 	// Parameters
-	Hop         int8                 // propagated
-	ID          string               // propagated
-	Token       string               // propagated
-	Owner       string               // canonical, propagated
-	Pair        []mint.AssetResource // canonical
-	Amount      big.Int              // canonical
-	Destination string               // canonical
-	Path        []string             // canonical
+	Hop         int8
+	ID          string
+	Token       string
+	Owner       string
+	Created     time.Time
+	BaseAsset   string
+	QuoteAsset  string
+	Amount      big.Int
+	Destination string
+	Path        []string
 
 	// State
 	Tx     *model.Transaction
@@ -104,7 +109,7 @@ func (e *CreateTransaction) Validate(
 
 	if authentication.Get(ctx).Status != authentication.AutStSucceeded {
 		// Validate id.
-		id, owner, token, err := ValidateID(ctx, r.PostFormValue("id"))
+		id, owner, token, err := ValidateID(ctx, pat.Param(r, "transaction"))
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -136,7 +141,8 @@ func (e *CreateTransaction) Validate(
 	if err != nil {
 		return errors.Trace(err) // 400
 	}
-	e.Pair = pair
+	e.BaseAsset = pair[0].Name
+	e.QuoteAsset = pair[1].Name
 
 	// Validate amount.
 	amount, err := ValidateAmount(ctx, r.PostFormValue("amount"))
@@ -194,7 +200,7 @@ func (e *CreateTransaction) ExecuteCanonical(
 	tx, err := model.CreateCanonicalTransaction(ctx,
 		authentication.Get(ctx).User.Token,
 		e.Owner,
-		e.Pair[0].Name, e.Pair[1].Name,
+		e.BaseAsset, e.QuoteAsset,
 		model.Amount(e.Amount),
 		e.Destination, model.OfPath(e.Path),
 		mint.TxStReserved)
@@ -203,6 +209,8 @@ func (e *CreateTransaction) ExecuteCanonical(
 	}
 	e.Tx = tx
 	e.ID = fmt.Sprintf("%s[%s]", tx.Owner, tx.Token)
+	e.Token = tx.Token
+	e.Created = tx.Created
 
 	// Store the transcation in memory so that it's available through API
 	// before we commit.
@@ -229,12 +237,10 @@ func (e *CreateTransaction) ExecuteCanonical(
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
 			402, "transaction_failed",
-			"The transaction failed to propagate to all required mints: %s.",
+			"The transaction failed to propagate to required mints: %s.",
 			e.ID,
 		))
 	}
-
-	// TODO(stan): reserve operation or crossing
 
 	db.Commit(ctx)
 
@@ -246,12 +252,53 @@ func (e *CreateTransaction) ExecuteCanonical(
 func (e *CreateTransaction) ExecutePropagated(
 	ctx context.Context,
 ) (*int, *svc.Resp, error) {
-	// TODO(stan): retrieve transaction from ID
+	ctx = db.Begin(ctx)
+	defer db.LoggedRollback(ctx)
 
-	// Store the transcation in memory so that it's available through API
-	// before we commit.
-	//txStore.Put(ctx, e.ID, tx)
-	//defer txStore.Clear(e.ID)
+	// Fetch transaction in transaction store or retrieve it from the canonical
+	// mint.
+	if txStore.Get(ctx, e.ID) != nil {
+		e.Tx = txStore.Get(ctx, e.ID)
+		e.Token = e.Tx.Token
+		e.Owner = e.Tx.Owner
+		e.Created = e.Tx.Created
+		e.BaseAsset = e.Tx.BaseAsset
+		e.QuoteAsset = e.Tx.QuoteAsset
+		e.Amount = big.Int(e.Tx.Amount)
+		e.Destination = e.Tx.Destination
+		e.Path = []string(e.Tx.Path)
+	} else {
+		transaction, err := e.Client.RetrieveTransaction(ctx, e.ID, nil)
+		if err != nil {
+			return nil, nil, errors.Trace(errors.NewUserErrorf(err,
+				402, "transaction_failed",
+				"Failed to retrieve transaction: %s", e.ID,
+			))
+		}
+
+		owner, token, err := mint.NormalizedOwnerAndTokenFromID(ctx, e.ID)
+		if err != nil {
+			return nil, nil, errors.Trace(errors.NewUserErrorf(err,
+				402, "transaction_failed",
+				"Failed to retrieve transaction: %s", e.ID,
+			))
+		}
+		e.Token = token
+		e.Owner = owner
+		e.Created = time.Unix(0, transaction.Created*1000*1000)
+		p, err := mint.AssetResourcesFromPair(ctx, transaction.Pair)
+		if err != nil {
+			return nil, nil, errors.Trace(errors.NewUserErrorf(err,
+				402, "transaction_failed",
+				"Failed to retrieve transaction: %s", e.ID,
+			))
+		}
+		e.BaseAsset = p[0].Name
+		e.QuoteAsset = p[1].Name
+		e.Amount = *transaction.Amount
+		e.Destination = transaction.Destination
+		e.Path = transaction.Path
+	}
 
 	err := e.ComputePlan(ctx)
 	if err != nil {
@@ -261,37 +308,86 @@ func (e *CreateTransaction) ExecutePropagated(
 		))
 	}
 
+	// Create propagated transaction locally.
+	if e.Tx == nil {
+		username, _, err := mint.UsernameAndMintHostFromAddress(ctx,
+			e.Plan[e.Hop].Owner)
+		if err != nil {
+			return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
+				402, "transaction_failed",
+				"Failed to retrieve local user: %s", e.Plan[e.Hop].Owner,
+			))
+		}
+
+		user, err := model.LoadUserByUsername(ctx, username)
+		if err != nil {
+			return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
+				402, "transaction_failed",
+				"Failed to retrieve local user: %s", e.Plan[e.Hop].Owner,
+			))
+		}
+
+		tx, err := model.CreatePropagatedTransaction(ctx,
+			user.Token, e.Token, e.Created, e.Owner,
+			e.BaseAsset, e.QuoteAsset,
+			model.Amount(e.Amount),
+			e.Destination, model.OfPath(e.Path),
+			mint.TxStReserved)
+		if err != nil {
+			return nil, nil, errors.Trace(err) // 500
+		}
+		e.Tx = tx
+
+		// Store the transcation in memory so that it's available through API
+		// before we commit.
+		txStore.Put(ctx, e.ID, tx)
+		defer txStore.Clear(ctx, e.ID)
+	}
+
+	// TODO(stan) check that mint at previous hop has reserved its action
+	// > requires operations to be stored in memory
+	// > requires local operations to be returned as part of transactions
+
+	//err = e.ExecutePlan(ctx)
+	//if err != nil {
+	//	return nil, nil, errors.Trace(errors.NewUserErrorf(err,
+	//		402, "transaction_failed",
+	//		"The plan execution for the transaction failed: %s", e.ID,
+	//	))
+	//}
+
 	err = e.Propagate(ctx)
 	if err != nil {
-		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
+		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 			402, "transaction_failed",
 			"The transaction failed to propagate to all required mints: %s.",
 			e.ID,
 		))
 	}
 
-	// TODO(stan): reserve operation or crossing
-
 	return ptr.Int(http.StatusCreated), &svc.Resp{}, nil
 }
 
 // ComputePlan retrieves the offers of the path and compute the transaction
-// plan.
+// plan. Uses e.ID, e.Owner, e.Path, e.BaseAsset, e.QuoteAsset, e.Amount,
+// e.Destiantion, sets e.Offers, e.Plan.
 func (e *CreateTransaction) ComputePlan(
 	ctx context.Context,
 ) error {
 	g, ctx := errgroup.WithContext(ctx)
 
-	e.Offers = make([]mint.OfferResource, len(e.Tx.Path))
+	e.Offers = make([]mint.OfferResource, len(e.Path))
 
-	for i, id := range e.Tx.Path {
+	for i, id := range e.Path {
 		i, id := i, id
 		g.Go(func() error {
 			offer, err := e.Client.RetrieveOffer(ctx, id)
 			if err != nil {
 				return errors.Trace(err)
 			}
+
 			// TODO(stan): validate that the offer owner owns the base asset.
+
 			e.Offers[i] = *offer
 			return nil
 		})
@@ -318,12 +414,12 @@ func (e *CreateTransaction) ComputePlan(
 	}
 	e.Plan = append(e.Plan, TxAction{
 		Mint:                 host,
-		Owner:                e.Tx.Owner,
+		Owner:                e.Owner,
 		Type:                 TxActTpOperation,
-		OperationAsset:       &e.Tx.BaseAsset,
+		OperationAsset:       &e.BaseAsset,
 		Amount:               nil, // computed on second pass
 		OperationDestination: nil, // computed by next offer
-		OperationSource:      &e.Tx.Owner,
+		OperationSource:      &e.Owner,
 	})
 
 	// Generate actions from path of offers.
@@ -374,18 +470,18 @@ func (e *CreateTransaction) ComputePlan(
 		})
 	}
 	// Compare the last operation asset to the transaction quote asset.
-	if e.Tx.QuoteAsset != *e.Plan[len(e.Plan)-1].OperationAsset {
+	if e.QuoteAsset != *e.Plan[len(e.Plan)-1].OperationAsset {
 		return errors.Trace(errors.Newf(
 			"Operation/Transaction asset mismatchs: %s expected %s.",
-			e.Tx.QuoteAsset, *e.Plan[len(e.Plan)-1].OperationAsset))
+			e.QuoteAsset, *e.Plan[len(e.Plan)-1].OperationAsset))
 	}
 	// Compute the last operation destination.
-	e.Plan[len(e.Plan)-1].OperationDestination = &e.Tx.Destination
+	e.Plan[len(e.Plan)-1].OperationDestination = &e.Destination
 
 	// SECOND PASS: consists in computing the amounts for each operations.
 
 	// Compute the last amount, this is the transaction amount.
-	e.Plan[len(e.Plan)-1].Amount = (*big.Int)(&e.Tx.Amount)
+	e.Plan[len(e.Plan)-1].Amount = &e.Amount
 
 	// Compute amounts for each action.
 	for i := len(e.Offers) - 1; i >= 0; i-- {
@@ -496,7 +592,7 @@ func (e *CreateTransaction) ExecutePlan(
 			*a.OperationSource, *a.OperationDestination,
 			model.Amount(*a.Amount),
 			mint.TxStReserved,
-			ptr.Str(fmt.Sprintf("%s[%s]", e.Tx.Owner, e.Tx.Token)))
+			ptr.Str(fmt.Sprintf("%s[%s]", e.Owner, e.Token)))
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -559,7 +655,7 @@ func (e *CreateTransaction) ExecutePlan(
 			*a.CrossingOffer,
 			model.Amount(*a.Amount),
 			mint.TxStReserved,
-			fmt.Sprintf("%s[%s]", e.Tx.Owner, e.Tx.Token))
+			fmt.Sprintf("%s[%s]", e.Owner, e.Token))
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -597,5 +693,12 @@ func (e *CreateTransaction) ExecutePlan(
 func (e *CreateTransaction) Propagate(
 	ctx context.Context,
 ) error {
+	if int(e.Hop)+1 < len(e.Plan) {
+		_, err := e.Client.PropagateTransaction(ctx,
+			e.ID, e.Hop+1, e.Plan[e.Hop+1].Mint)
+		if err != nil {
+			return errors.Trace(err)
+		}
+	}
 	return nil
 }

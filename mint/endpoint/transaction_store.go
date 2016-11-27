@@ -4,6 +4,8 @@ import (
 	"context"
 	"sync"
 
+	"github.com/spolu/settle/lib/env"
+	"github.com/spolu/settle/mint"
 	"github.com/spolu/settle/mint/model"
 )
 
@@ -33,7 +35,9 @@ func (c *TransactionStore) Put(
 	c.Mutex.Lock()
 	defer c.Mutex.Unlock()
 
-	c.Values[id] = tx
+	// Values are stored under mint_host-id as key to avoid collision in tests
+	// (which run in memory in same process, so with a shared store).
+	c.Values[env.Get(ctx).Config[mint.EnvCfgMintHost]+"-"+id] = tx
 }
 
 // Get attempts to retrieve a transaction from the memory store.
@@ -42,9 +46,9 @@ func (c *TransactionStore) Get(
 	id string,
 ) *model.Transaction {
 	c.Mutex.RLock()
-	defer c.Mutex.Unlock()
+	defer c.Mutex.RUnlock()
 
-	if tx, ok := c.Values[id]; ok {
+	if tx, ok := c.Values[env.Get(ctx).Config[mint.EnvCfgMintHost]+"-"+id]; ok {
 		return tx
 	}
 	return nil
@@ -58,5 +62,5 @@ func (c *TransactionStore) Clear(
 	c.Mutex.Lock()
 	defer c.Mutex.Unlock()
 
-	delete(c.Values, id)
+	delete(c.Values, env.Get(ctx).Config[mint.EnvCfgMintHost]+"-"+id)
 }

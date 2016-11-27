@@ -34,11 +34,21 @@ func setupCreateOffer(
 	return m, u, a
 }
 
+func tearDownCreateOffer(
+	t *testing.T,
+	mints []*test.Mint,
+) {
+	for _, m := range mints {
+		m.Close()
+	}
+}
+
 func TestCreateOffer(
 	t *testing.T,
 ) {
 	t.Parallel()
-	_, u, _ := setupCreateOffer(t)
+	m, u, _ := setupCreateOffer(t)
+	defer tearDownCreateOffer(t, m)
 
 	status, raw := u[0].Post(t,
 		fmt.Sprintf("/offers"),

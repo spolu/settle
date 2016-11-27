@@ -29,11 +29,21 @@ func setupCreateOperation(
 	return m, u, a
 }
 
+func tearDownCreateOperation(
+	t *testing.T,
+	mints []*test.Mint,
+) {
+	for _, m := range mints {
+		m.Close()
+	}
+}
+
 func TestCreateNoopOperation(
 	t *testing.T,
 ) {
 	t.Parallel()
-	_, u, a := setupCreateOperation(t)
+	m, u, a := setupCreateOperation(t)
+	defer tearDownCreateOperation(t, m)
 
 	status, raw := u[0].Post(t,
 		fmt.Sprintf("/assets/%s/operations", a[0].Name),
@@ -72,7 +82,8 @@ func TestCreateOperationIssuing(
 	t *testing.T,
 ) {
 	t.Parallel()
-	_, u, a := setupCreateOperation(t)
+	m, u, a := setupCreateOperation(t)
+	defer tearDownCreateOperation(t, m)
 
 	status, raw := u[0].Post(t,
 		fmt.Sprintf("/assets/%s/operations", a[0].Name),
@@ -106,7 +117,8 @@ func TestCreateOperationAnnihilating(
 	t *testing.T,
 ) {
 	t.Parallel()
-	_, u, a := setupCreateOperation(t)
+	m, u, a := setupCreateOperation(t)
+	defer tearDownCreateOperation(t, m)
 
 	status, _ := u[0].Post(t,
 		fmt.Sprintf("/assets/%s/operations", a[0].Name),
@@ -148,7 +160,8 @@ func TestCreateOperationWithNegativeAmount(
 	t *testing.T,
 ) {
 	t.Parallel()
-	_, u, a := setupCreateOperation(t)
+	m, u, a := setupCreateOperation(t)
+	defer tearDownCreateOperation(t, m)
 
 	status, raw := u[0].Post(t,
 		fmt.Sprintf("/assets/%s/operations", a[0].Name),
@@ -171,7 +184,8 @@ func TestCreateOperationWithInvalidAsset(
 	t *testing.T,
 ) {
 	t.Parallel()
-	_, u, _ := setupCreateOperation(t)
+	m, u, _ := setupCreateOperation(t)
+	defer tearDownCreateOperation(t, m)
 
 	invalidAsset := "foo"
 	status, raw := u[0].Post(t,
@@ -195,7 +209,8 @@ func TestCreateOperationWithInvalidAssetHostname(
 	t *testing.T,
 ) {
 	t.Parallel()
-	_, u, _ := setupCreateOperation(t)
+	m, u, _ := setupCreateOperation(t)
+	defer tearDownCreateOperation(t, m)
 
 	invalidAsset := "foo@bar.com[USD.2]"
 	status, raw := u[0].Post(t,
@@ -220,6 +235,7 @@ func TestCreateOperationWithInvalidAssetUsername(
 ) {
 	t.Parallel()
 	m, u, _ := setupCreateOperation(t)
+	defer tearDownCreateOperation(t, m)
 
 	invalidAsset := fmt.Sprintf(
 		"foo@%s[USD.2]", m[0].Env.Config[mint.EnvCfgMintHost])
@@ -245,6 +261,7 @@ func TestCreateOperationWithUnknownAsset(
 ) {
 	t.Parallel()
 	m, u, _ := setupCreateOperation(t)
+	defer tearDownCreateOperation(t, m)
 
 	invalidAsset := fmt.Sprintf(
 		"%s@%s[FOO.2]", u[0].Username, m[0].Env.Config[mint.EnvCfgMintHost])
@@ -269,7 +286,8 @@ func TestCreateOperationWithNoSource(
 	t *testing.T,
 ) {
 	t.Parallel()
-	_, u, a := setupCreateOperation(t)
+	m, u, a := setupCreateOperation(t)
+	defer tearDownCreateOperation(t, m)
 
 	status, raw := u[0].Post(t,
 		fmt.Sprintf("/assets/%s/operations", a[0].Name),
@@ -291,7 +309,8 @@ func TestCreateOperationWithNoDestination(
 	t *testing.T,
 ) {
 	t.Parallel()
-	_, u, a := setupCreateOperation(t)
+	m, u, a := setupCreateOperation(t)
+	defer tearDownCreateOperation(t, m)
 
 	status, raw := u[0].Post(t,
 		fmt.Sprintf("/assets/%s/operations", a[0].Name),
@@ -313,7 +332,8 @@ func TestCreateOperationWithInsufficientBalance(
 	t *testing.T,
 ) {
 	t.Parallel()
-	_, u, a := setupCreateOperation(t)
+	m, u, a := setupCreateOperation(t)
+	defer tearDownCreateOperation(t, m)
 
 	status, _ := u[0].Post(t,
 		fmt.Sprintf("/assets/%s/operations", a[0].Name),

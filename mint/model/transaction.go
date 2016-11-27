@@ -78,6 +78,62 @@ func CreateCanonicalTransaction(
 		Amount:      amount,
 		Destination: destination,
 		Path:        OfPath(path),
+		Status:      status,
+	}
+
+	ext := db.Ext(ctx)
+	if _, err := sqlx.NamedExec(ext, `
+INSERT INTO transactions
+  (user, owner, token, created, propagation, base_asset, quote_asset,
+   amount, destination, path, status)
+VALUES
+  (:user, :owner, :token, :created, :propagation, :base_asset, :quote_asset,
+   :amount, :destination, :path, :status)
+`, transaction); err != nil {
+		switch err := err.(type) {
+		case *pq.Error:
+			if err.Code.Name() == "unique_violation" {
+				return nil, errors.Trace(ErrUniqueConstraintViolation{err})
+			}
+		case sqlite3.Error:
+			if err.ExtendedCode == sqlite3.ErrConstraintUnique {
+				return nil, errors.Trace(ErrUniqueConstraintViolation{err})
+			}
+		}
+		return nil, errors.Trace(err)
+	}
+
+	return &transaction, nil
+}
+
+// CreatePropagatedTransaction creates and stores a new propagated Transaction
+// object.
+func CreatePropagatedTransaction(
+	ctx context.Context,
+	user string,
+	token string,
+	created time.Time,
+	owner string,
+	baseAsset string,
+	quoteAsset string,
+	amount Amount,
+	destination string,
+	path []string,
+	status mint.TxStatus,
+) (*Transaction, error) {
+	transaction := Transaction{
+		User:        user,
+		Owner:       owner,
+		Token:       token,
+		Created:     created,
+		Propagation: mint.PgTpPropagated,
+
+		BaseAsset:   baseAsset,
+		QuoteAsset:  quoteAsset,
+		Amount:      amount,
+		Destination: destination,
+		Path:        OfPath(path),
+		Status:      status,
 	}
 
 	ext := db.Ext(ctx)

@@ -177,24 +177,6 @@ func FullMintURL(
 	return &url
 }
 
-// PropagateOperation propagates an operation to the `destination` mint.
-func (c *Client) PropagateOperation(
-	ctx context.Context,
-	operation string,
-	destination string,
-) error {
-	return nil
-}
-
-// PropagateOffer propagates an offer to the `destination` mint.
-func (c *Client) PropagateOffer(
-	ctx context.Context,
-	offer string,
-	destination string,
-) error {
-	return nil
-}
-
 // RetrieveOffer retrieves an offer given its ID by extracting the mint and
 // retrieving it from there.
 func (c *Client) RetrieveOffer(
@@ -231,22 +213,64 @@ func (c *Client) RetrieveOffer(
 }
 
 // RetrieveTransaction retrieves a transaction given its ID by extracting the
-// mint and retrieving it from there.
+// mint and retrieving it from there. If host is specified, it attempts to
+// retrrieve the transaction from this host instead of the canonical host.
 func (c *Client) RetrieveTransaction(
 	ctx context.Context,
 	id string,
+	mint *string,
 ) (*TransactionResource, error) {
-	owner, _, err := NormalizedOwnerAndTokenFromID(ctx, id)
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-	_, host, err := UsernameAndMintHostFromAddress(ctx, owner)
-	if err != nil {
-		return nil, errors.Trace(err)
+	if mint == nil {
+		owner, _, err := NormalizedOwnerAndTokenFromID(ctx, id)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		_, host, err := UsernameAndMintHostFromAddress(ctx, owner)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		mint = &host
 	}
 
 	r, err := c.httpClient.Get(
-		FullMintURL(ctx, host, fmt.Sprintf("/transactions/%s", id)).String())
+		FullMintURL(ctx, *mint, fmt.Sprintf("/transactions/%s", id)).String())
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	defer r.Body.Close()
+
+	var raw svc.Resp
+	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	var transaction TransactionResource
+	if err := raw.Extract("transaction", &transaction); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &transaction, nil
+}
+
+// PropagateTransaction propagates an offer to the `destination` mint.
+func (c *Client) PropagateTransaction(
+	ctx context.Context,
+	id string,
+	hop int8,
+	host string,
+) (*TransactionResource, error) {
+	req, err := http.NewRequest("POST",
+		FullMintURL(ctx, host,
+			fmt.Sprintf("/transactions/%s", id)).String(),
+		strings.NewReader(url.Values{
+			"hop": {fmt.Sprintf("%d", hop)},
+		}.Encode()))
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	r, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}

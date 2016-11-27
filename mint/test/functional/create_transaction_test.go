@@ -45,11 +45,21 @@ func setupCreateTransaction(
 	return m, u, a, o
 }
 
+func tearDownCreateTransaction(
+	t *testing.T,
+	mints []*test.Mint,
+) {
+	for _, m := range mints {
+		m.Close()
+	}
+}
+
 func TestCreateTransaction(
 	t *testing.T,
 ) {
 	t.Parallel()
-	_, u, _, o := setupCreateTransaction(t)
+	m, u, _, o := setupCreateTransaction(t)
+	defer tearDownCreateTransaction(t, m)
 
 	status, _ := u[0].Post(t,
 		fmt.Sprintf("/transactions"),

@@ -26,11 +26,21 @@ func setupCreateAsset(
 	return m, u
 }
 
+func tearDownCreateAsset(
+	t *testing.T,
+	mints []*test.Mint,
+) {
+	for _, m := range mints {
+		m.Close()
+	}
+}
+
 func TestCreateAsset(
 	t *testing.T,
 ) {
 	t.Parallel()
-	_, u := setupCreateAsset(t)
+	m, u := setupCreateAsset(t)
+	defer tearDownCreateAsset(t, m)
 
 	status, raw := u[0].Post(t,
 		"/assets",
@@ -61,7 +71,8 @@ func TestCreateAssetWithInvalidCode(
 	t *testing.T,
 ) {
 	t.Parallel()
-	_, u := setupCreateAsset(t)
+	m, u := setupCreateAsset(t)
+	defer tearDownCreateAsset(t, m)
 
 	status, raw := u[0].Post(t,
 		"/assets",
@@ -83,7 +94,8 @@ func TestCreateAssetWithInvalidScale(
 	t *testing.T,
 ) {
 	t.Parallel()
-	_, u := setupCreateAsset(t)
+	m, u := setupCreateAsset(t)
+	defer tearDownCreateAsset(t, m)
 
 	status, raw := u[0].Post(t,
 		"/assets",
@@ -105,7 +117,8 @@ func TestCreateAssetThatAlreadyExists(
 	t *testing.T,
 ) {
 	t.Parallel()
-	_, u := setupCreateAsset(t)
+	m, u := setupCreateAsset(t)
+	defer tearDownCreateAsset(t, m)
 
 	status, _ := u[0].Post(t,
 		"/assets",

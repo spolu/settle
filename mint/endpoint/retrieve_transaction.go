@@ -60,24 +60,29 @@ func (e *RetrieveTransaction) Validate(
 func (e *RetrieveTransaction) Execute(
 	ctx context.Context,
 ) (*int, *svc.Resp, error) {
-	ctx = db.Begin(ctx)
-	defer db.LoggedRollback(ctx)
+	transaction := txStore.Get(ctx, e.ID)
 
-	offer, err := model.LoadCanonicalTransactionByOwnerToken(ctx,
-		e.Owner, e.Token)
-	if err != nil {
-		return nil, nil, errors.Trace(err) // 500
-	} else if offer == nil {
-		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-			404, "transaction_not_found",
-			"The transaction you are trying to retrieve does not exist: %s.",
-			e.ID,
-		))
+	if transaction == nil {
+		ctx = db.Begin(ctx)
+		defer db.LoggedRollback(ctx)
+
+		tx, err := model.LoadCanonicalTransactionByOwnerToken(ctx,
+			e.Owner, e.Token)
+		if err != nil {
+			return nil, nil, errors.Trace(err) // 500
+		} else if transaction == nil {
+			return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
+				404, "transaction_not_found",
+				"The transaction you are trying to retrieve does not exist: %s.",
+				e.ID,
+			))
+		}
+		transaction = tx
+
+		db.Commit(ctx)
 	}
 
-	db.Commit(ctx)
-
 	return ptr.Int(http.StatusOK), &svc.Resp{
-		"offer": format.JSONPtr(model.NewTransactionResource(ctx, offer)),
+		"transaction": format.JSONPtr(model.NewTransactionResource(ctx, transaction)),
 	}, nil
 }
