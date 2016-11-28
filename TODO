@@ -1,6 +1,6 @@
 # mint
 
- [ ] transaction protocol
+ [ ] transaction protocol > locks
  [ ] propagation protocol for both operations and offers (need to learn more)
  [ ] attempt to use Amount everywhere?
  [ ] pass DSN for DB, support Postgres
@@ -16,6 +16,7 @@
 
   # test
 
+    [ ] transaction tests with misbehaving mint
     [x] test transaction that uses the same user twice
     [x] test transaction that uses more than what is left on an offer
     [x] make the DB a context value that can be created independently for tests
