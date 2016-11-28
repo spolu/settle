@@ -61,10 +61,10 @@ type OperationResource struct {
 	Created int64  `json:"created"`
 	Owner   string `json:"owner"`
 
-	Asset       AssetResource `json:"asset"`
-	Source      string        `json:"source"`
-	Destination string        `json:"destination"`
-	Amount      *big.Int      `json:"amount"`
+	Asset       string   `json:"asset"`
+	Source      string   `json:"source"`
+	Destination string   `json:"destination"`
+	Amount      *big.Int `json:"amount"`
 
 	Status      TxStatus `json:"status"`
 	Transaction *string  `json:"transaction"`
@@ -84,6 +84,19 @@ type OfferResource struct {
 	Remainder *big.Int `json:"remainder"`
 }
 
+// CrossingResource is the representation of a crossing in the mint API.
+type CrossingResource struct {
+	ID      string `json:"id"`
+	Created int64  `json:"created"`
+	Owner   string `json:"owner"`
+
+	Offer  string   `json:"offer"`
+	Amount *big.Int `json:"amount"`
+
+	Status      TxStatus `json:"status"`
+	Transaction string   `json:"transaction"`
+}
+
 // TransactionResource is the representation of a transaction in the mint API.
 type TransactionResource struct {
 	ID      string `json:"id"`
@@ -96,4 +109,7 @@ type TransactionResource struct {
 	Path        []string `json:"path"`
 
 	Status TxStatus `json:"status"`
+
+	Operations []OperationResource `json:"operations"`
+	Crossings  []CrossingResource  `json:"crossings"`
 }

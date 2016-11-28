@@ -214,7 +214,7 @@ func (e *CreateTransaction) ExecuteCanonical(
 
 	// Store the transcation in memory so that it's available through API
 	// before we commit.
-	txStore.Put(ctx, e.ID, tx)
+	txStore.Store(ctx, e.ID, tx)
 	defer txStore.Clear(ctx, e.ID)
 
 	err = e.ComputePlan(ctx)
@@ -340,7 +340,7 @@ func (e *CreateTransaction) ExecutePropagated(
 
 		// Store the transcation in memory so that it's available through API
 		// before we commit.
-		txStore.Put(ctx, e.ID, tx)
+		txStore.Store(ctx, e.ID, tx)
 		defer txStore.Clear(ctx, e.ID)
 	}
 
@@ -597,6 +597,10 @@ func (e *CreateTransaction) ExecutePlan(
 			return errors.Trace(err)
 		}
 
+		// Store the newly created operation so that it's available when the
+		// transaction is returned from this mint.
+		txStore.StoreOperation(ctx, e.ID, op)
+
 		// Check the balances but only update the source balance. The
 		// destination balance will get updated when the operation is confirmed
 		// and the source balance will get reverted if it cancels.
@@ -659,6 +663,10 @@ func (e *CreateTransaction) ExecutePlan(
 		if err != nil {
 			return errors.Trace(err)
 		}
+
+		// Store the newly created crossing so that it's available when the
+		// transaction is returned from this mint.
+		txStore.StoreCrossing(ctx, e.ID, cr)
 
 		(*big.Int)(&offer.Remainder).Sub(
 			(*big.Int)(&offer.Remainder), (*big.Int)(&cr.Amount))

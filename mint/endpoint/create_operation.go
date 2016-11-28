@@ -240,7 +240,6 @@ func (e *CreateOperation) Execute(
 	// TODO(stan): propagation
 
 	return ptr.Int(http.StatusCreated), &svc.Resp{
-		"operation": format.JSONPtr(model.NewOperationResource(ctx,
-			op, asset)),
+		"operation": format.JSONPtr(model.NewOperationResource(ctx, op)),
 	}, nil
 }

@@ -60,12 +60,11 @@ func (e *RetrieveTransaction) Validate(
 func (e *RetrieveTransaction) Execute(
 	ctx context.Context,
 ) (*int, *svc.Resp, error) {
+	ctx = db.Begin(ctx)
+	defer db.LoggedRollback(ctx)
+
 	transaction := txStore.Get(ctx, e.ID)
-
 	if transaction == nil {
-		ctx = db.Begin(ctx)
-		defer db.LoggedRollback(ctx)
-
 		tx, err := model.LoadCanonicalTransactionByOwnerToken(ctx,
 			e.Owner, e.Token)
 		if err != nil {
@@ -78,11 +77,22 @@ func (e *RetrieveTransaction) Execute(
 			))
 		}
 		transaction = tx
-
-		db.Commit(ctx)
 	}
 
+	operations := txStore.GetOperations(ctx, e.ID)
+	if operations == nil {
+		// TODO(stan): retrieve operations from DB
+	}
+
+	crossings := txStore.GetCrossings(ctx, e.ID)
+	if crossings == nil {
+		// TODO(stan): retrieve crossings from DB
+	}
+
+	db.Commit(ctx)
+
 	return ptr.Int(http.StatusOK), &svc.Resp{
-		"transaction": format.JSONPtr(model.NewTransactionResource(ctx, transaction)),
+		"transaction": format.JSONPtr(model.NewTransactionResource(ctx,
+			transaction, operations, crossings)),
 	}, nil
 }

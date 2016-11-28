@@ -9,25 +9,29 @@ import (
 	"github.com/spolu/settle/mint/model"
 )
 
-// txStore is the memory store
+// txStore is the memory store for (not yet committed) transactions.
 var txStore *TransactionStore
 
 func init() {
 	txStore = &TransactionStore{
-		Values: map[string]*model.Transaction{},
-		Mutex:  &sync.RWMutex{},
+		Transactions: map[string]*model.Transaction{},
+		Operations:   map[string][]*model.Operation{},
+		Crossings:    map[string][]*model.Crossing{},
+		Mutex:        &sync.RWMutex{},
 	}
 }
 
 // TransactionStore is a memory store for transactions that are not yet
 // committed but needs to be accessible through the API.
 type TransactionStore struct {
-	Values map[string]*model.Transaction
-	Mutex  *sync.RWMutex
+	Transactions map[string]*model.Transaction
+	Operations   map[string][]*model.Operation
+	Crossings    map[string][]*model.Crossing
+	Mutex        *sync.RWMutex
 }
 
-// Put adds a transaction to the memory store.
-func (c *TransactionStore) Put(
+// Store adds a transaction to the memory store.
+func (c *TransactionStore) Store(
 	ctx context.Context,
 	id string,
 	tx *model.Transaction,
@@ -35,9 +39,47 @@ func (c *TransactionStore) Put(
 	c.Mutex.Lock()
 	defer c.Mutex.Unlock()
 
-	// Values are stored under mint_host-id as key to avoid collision in tests
-	// (which run in memory in same process, so with a shared store).
-	c.Values[env.Get(ctx).Config[mint.EnvCfgMintHost]+"-"+id] = tx
+	at := env.Get(ctx).Config[mint.EnvCfgMintHost] + "-" + id
+
+	// Transactions are stored under mint_host-id as key to avoid collision in
+	// tests (which run in memory in same process, so with a shared store).
+	c.Transactions[at] = tx
+}
+
+// StoreOperation adds an operation to the array of operations associated with
+// a transaction id.
+func (c *TransactionStore) StoreOperation(
+	ctx context.Context,
+	id string,
+	op *model.Operation,
+) {
+	c.Mutex.Lock()
+	defer c.Mutex.Unlock()
+
+	at := env.Get(ctx).Config[mint.EnvCfgMintHost] + "-" + id
+
+	if _, ok := c.Operations[at]; !ok {
+		c.Operations[at] = []*model.Operation{}
+	}
+	c.Operations[at] = append(c.Operations[at], op)
+}
+
+// StoreCrossing adds an crossing to the array of crossings associated with a
+// transaction id.
+func (c *TransactionStore) StoreCrossing(
+	ctx context.Context,
+	id string,
+	cr *model.Crossing,
+) {
+	c.Mutex.Lock()
+	defer c.Mutex.Unlock()
+
+	at := env.Get(ctx).Config[mint.EnvCfgMintHost] + "-" + id
+
+	if _, ok := c.Crossings[at]; !ok {
+		c.Crossings[at] = []*model.Crossing{}
+	}
+	c.Crossings[at] = append(c.Crossings[at], cr)
 }
 
 // Get attempts to retrieve a transaction from the memory store.
@@ -48,8 +90,42 @@ func (c *TransactionStore) Get(
 	c.Mutex.RLock()
 	defer c.Mutex.RUnlock()
 
-	if tx, ok := c.Values[env.Get(ctx).Config[mint.EnvCfgMintHost]+"-"+id]; ok {
+	at := env.Get(ctx).Config[mint.EnvCfgMintHost] + "-" + id
+
+	if tx, ok := c.Transactions[at]; ok {
 		return tx
+	}
+	return nil
+}
+
+// GetOperations attempts to retrieve operations associated with a transaction.
+func (c *TransactionStore) GetOperations(
+	ctx context.Context,
+	id string,
+) []*model.Operation {
+	c.Mutex.RLock()
+	defer c.Mutex.RUnlock()
+
+	at := env.Get(ctx).Config[mint.EnvCfgMintHost] + "-" + id
+
+	if ops, ok := c.Operations[at]; ok {
+		return ops
+	}
+	return nil
+}
+
+// GetCrossings attempts to retrieve crossings associated with a transaction.
+func (c *TransactionStore) GetCrossings(
+	ctx context.Context,
+	id string,
+) []*model.Crossing {
+	c.Mutex.RLock()
+	defer c.Mutex.RUnlock()
+
+	at := env.Get(ctx).Config[mint.EnvCfgMintHost] + "-" + id
+
+	if crs, ok := c.Crossings[at]; ok {
+		return crs
 	}
 	return nil
 }
@@ -62,5 +138,9 @@ func (c *TransactionStore) Clear(
 	c.Mutex.Lock()
 	defer c.Mutex.Unlock()
 
-	delete(c.Values, env.Get(ctx).Config[mint.EnvCfgMintHost]+"-"+id)
+	at := env.Get(ctx).Config[mint.EnvCfgMintHost] + "-" + id
+
+	delete(c.Transactions, at)
+	delete(c.Operations, at)
+	delete(c.Crossings, at)
 }

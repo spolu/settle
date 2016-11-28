@@ -38,8 +38,10 @@ type Transaction struct {
 func NewTransactionResource(
 	ctx context.Context,
 	transaction *Transaction,
+	operations []*Operation,
+	crossings []*Crossing,
 ) mint.TransactionResource {
-	return mint.TransactionResource{
+	tx := mint.TransactionResource{
 		ID: fmt.Sprintf(
 			"%s[%s]", transaction.Owner, transaction.Token),
 		Created: transaction.Created.UnixNano() / (1000 * 1000),
@@ -50,7 +52,16 @@ func NewTransactionResource(
 		Destination: transaction.Destination,
 		Path:        []string(transaction.Path),
 		Status:      transaction.Status,
+		Operations:  []mint.OperationResource{},
+		Crossings:   []mint.CrossingResource{},
 	}
+	for _, op := range operations {
+		tx.Operations = append(tx.Operations, NewOperationResource(ctx, op))
+	}
+	for _, cr := range crossings {
+		tx.Crossings = append(tx.Crossings, NewCrossingResource(ctx, cr))
+	}
+	return tx
 }
 
 // CreateCanonicalTransaction creates and stores a new canonical Transaction

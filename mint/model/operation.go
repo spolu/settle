@@ -51,14 +51,13 @@ type Operation struct {
 func NewOperationResource(
 	ctx context.Context,
 	operation *Operation,
-	asset *Asset,
 ) mint.OperationResource {
 	return mint.OperationResource{
 		ID: fmt.Sprintf(
 			"%s[%s]", operation.Owner, operation.Token),
 		Created:     operation.Created.UnixNano() / (1000 * 1000),
 		Owner:       operation.Owner,
-		Asset:       NewAssetResource(ctx, asset),
+		Asset:       operation.Asset,
 		Source:      operation.Source,
 		Destination: operation.Destination,
 		Amount:      (*big.Int)(&operation.Amount),

@@ -4,6 +4,8 @@ package model
 
 import (
 	"context"
+	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -28,6 +30,23 @@ type Crossing struct {
 
 	Status      mint.TxStatus
 	Transaction string `db:"txn"`
+}
+
+// NewCrossingResource generates a new resource.
+func NewCrossingResource(
+	ctx context.Context,
+	crossing *Crossing,
+) mint.CrossingResource {
+	return mint.CrossingResource{
+		ID: fmt.Sprintf(
+			"%s[%s]", crossing.Owner, crossing.Token),
+		Created:     crossing.Created.UnixNano() / (1000 * 1000),
+		Owner:       crossing.Owner,
+		Offer:       crossing.Offer,
+		Amount:      (*big.Int)(&crossing.Amount),
+		Status:      crossing.Status,
+		Transaction: crossing.Transaction,
+	}
 }
 
 // CreateCrossing creates and stores a new Crossing object.
