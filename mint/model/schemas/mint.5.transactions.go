@@ -21,6 +21,8 @@ CREATE TABLE IF NOT EXISTS transactions(
   path VARCHAR(2048) NOT NULL,       -- join of offer ids
 
   status VARCHAR(32) NOT NULL,       -- status (reserved, settled, canceled)
+  lock VARCHAR(256) NOT NULL,        -- lock = hex(scrypt(secret, id))
+  secret VARCHAR(256),               -- lock secret
 
   PRIMARY KEY(user, owner, token),
   CONSTRAINT transactions_user_fk FOREIGN KEY (user) REFERENCES users(token)

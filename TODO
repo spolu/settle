@@ -1,9 +1,11 @@
 # mint
 
- [ ] transaction protocol > locks
+ [ ] transaction settlement
+ [ ] transaction locks
  [ ] propagation protocol for both operations and offers (need to learn more)
  [ ] attempt to use Amount everywhere?
  [ ] pass DSN for DB, support Postgres
+ [x] transaction creation
  [x] replace 1000*1000 by protocol constant
  [x] log prefix (mint)
  [x] make user optional for propagated transactions (or other objects)

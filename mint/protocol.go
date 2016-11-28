@@ -114,6 +114,7 @@ type TransactionResource struct {
 	Path        []string `json:"path"`
 
 	Status TxStatus `json:"status"`
+	Lock   string   `json:"lock"`
 
 	Operations []OperationResource `json:"operations"`
 	Crossings  []CrossingResource  `json:"crossings"`

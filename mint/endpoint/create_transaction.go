@@ -41,9 +41,7 @@ type CreateTransaction struct {
 	// Parameters
 	Hop         int8
 	ID          string
-	Token       string
 	Owner       string
-	Created     time.Time
 	BaseAsset   string
 	QuoteAsset  string
 	Amount      big.Int
@@ -79,12 +77,11 @@ func (e *CreateTransaction) Validate(
 
 	if authentication.Get(ctx).Status != authentication.AutStSucceeded {
 		// Validate id.
-		id, owner, token, err := ValidateID(ctx, pat.Param(r, "transaction"))
+		id, owner, _, err := ValidateID(ctx, pat.Param(r, "transaction"))
 		if err != nil {
 			return errors.Trace(err)
 		}
 		e.ID = *id
-		e.Token = *token
 		e.Owner = *owner
 
 		hop, err := strconv.ParseInt(r.PostFormValue("hop"), 10, 8)
@@ -179,8 +176,6 @@ func (e *CreateTransaction) ExecuteCanonical(
 	}
 	e.Tx = tx
 	e.ID = fmt.Sprintf("%s[%s]", tx.Owner, tx.Token)
-	e.Token = tx.Token
-	e.Created = tx.Created
 
 	// Store the transcation in memory so that it's available through API
 	// before we commit.
@@ -265,9 +260,7 @@ func (e *CreateTransaction) ExecutePropagated(
 		mint.Logf(ctx, "Transaction: reuse %s", dbTx.Token)
 
 		e.Tx = txStore.Get(ctx, e.ID)
-		e.Token = e.Tx.Token
 		e.Owner = e.Tx.Owner
-		e.Created = e.Tx.Created
 		e.BaseAsset = e.Tx.BaseAsset
 		e.QuoteAsset = e.Tx.QuoteAsset
 		e.Amount = big.Int(e.Tx.Amount)
@@ -293,9 +286,7 @@ func (e *CreateTransaction) ExecutePropagated(
 				"Failed to retrieve transaction: %s", e.ID,
 			))
 		}
-		e.Token = token
 		e.Owner = owner
-		e.Created = time.Unix(0, transaction.Created*mint.TimeResolutionNs)
 		p, err := mint.AssetResourcesFromPair(ctx, transaction.Pair)
 		if err != nil {
 			return nil, nil, errors.Trace(errors.NewUserErrorf(err,
@@ -311,11 +302,13 @@ func (e *CreateTransaction) ExecutePropagated(
 
 		// Create propagated transaction locally.
 		tx, err := model.CreatePropagatedTransaction(ctx,
-			e.Token, e.Created, e.Owner,
+			token,
+			time.Unix(0, transaction.Created*mint.TimeResolutionNs),
+			e.Owner,
 			e.BaseAsset, e.QuoteAsset,
 			model.Amount(e.Amount),
 			e.Destination, model.OfPath(e.Path),
-			mint.TxStReserved)
+			mint.TxStReserved, transaction.Lock)
 		if err != nil {
 			return nil, nil, errors.Trace(err) // 500
 		}
@@ -447,7 +440,7 @@ func (e *CreateTransaction) ExecutePlan(
 			*a.OperationSource, *a.OperationDestination,
 			model.Amount(*a.Amount),
 			mint.TxStReserved,
-			ptr.Str(fmt.Sprintf("%s[%s]", e.Owner, e.Token)), &e.Hop)
+			&e.ID, &e.Hop)
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -513,7 +506,7 @@ func (e *CreateTransaction) ExecutePlan(
 			offer.Owner,
 			*a.CrossingOffer,
 			model.Amount(*a.Amount),
-			mint.TxStReserved, fmt.Sprintf("%s[%s]", e.Owner, e.Token), e.Hop)
+			mint.TxStReserved, e.ID, e.Hop)
 		if err != nil {
 			return errors.Trace(err)
 		}

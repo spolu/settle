@@ -134,6 +134,7 @@ func TestCreateTransactionWith2Offers(
 	assert.Equal(t, u[2].Address, tx1.Destination)
 	assert.Equal(t, []string{o[1].ID, o[2].ID}, tx1.Path)
 	assert.Equal(t, mint.TxStReserved, tx1.Status)
+	assert.Equal(t, tx0.Lock, tx1.Lock)
 	assert.Equal(t, 1, len(tx1.Operations))
 	assert.Equal(t, 1, len(tx1.Crossings))
 
@@ -186,6 +187,7 @@ func TestCreateTransactionWith2Offers(
 	assert.Equal(t, u[2].Address, tx2.Destination)
 	assert.Equal(t, []string{o[1].ID, o[2].ID}, tx2.Path)
 	assert.Equal(t, mint.TxStReserved, tx2.Status)
+	assert.Equal(t, tx0.Lock, tx2.Lock)
 	assert.Equal(t, 1, len(tx2.Operations))
 	assert.Equal(t, 1, len(tx2.Crossings))
 
