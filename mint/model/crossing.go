@@ -41,7 +41,7 @@ func NewCrossingResource(
 	return mint.CrossingResource{
 		ID: fmt.Sprintf(
 			"%s[%s]", crossing.Owner, crossing.Token),
-		Created:        crossing.Created.UnixNano() / (1000 * 1000),
+		Created:        crossing.Created.UnixNano() / mint.TimeResolutionNs,
 		Owner:          crossing.Owner,
 		Offer:          crossing.Offer,
 		Amount:         (*big.Int)(&crossing.Amount),

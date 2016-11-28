@@ -324,7 +324,7 @@ func (e *CreateTransaction) ExecutePropagated(
 		}
 		e.Token = token
 		e.Owner = owner
-		e.Created = time.Unix(0, transaction.Created*1000*1000)
+		e.Created = time.Unix(0, transaction.Created*mint.TimeResolutionNs)
 		p, err := mint.AssetResourcesFromPair(ctx, transaction.Pair)
 		if err != nil {
 			return nil, nil, errors.Trace(errors.NewUserErrorf(err,

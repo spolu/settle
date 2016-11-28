@@ -46,7 +46,7 @@ func NewAssetResource(
 	return mint.AssetResource{
 		ID: fmt.Sprintf(
 			"%s[%s]", asset.Owner, asset.Token),
-		Created: asset.Created.UnixNano() / (1000 * 1000),
+		Created: asset.Created.UnixNano() / mint.TimeResolutionNs,
 		Owner:   asset.Owner,
 		Name: fmt.Sprintf(
 			"%s[%s.%d]",

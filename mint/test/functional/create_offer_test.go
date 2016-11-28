@@ -67,7 +67,7 @@ func TestCreateOffer(
 	assert.Regexp(t, mint.IDRegexp, offer.ID)
 	assert.WithinDuration(t,
 		time.Now(),
-		time.Unix(0, offer.Created*1000*1000), test.PostLatency)
+		time.Unix(0, offer.Created*mint.TimeResolutionNs), test.PostLatency)
 	assert.Equal(t, u[0].Address, offer.Owner)
 
 	assert.Equal(t,

@@ -1,10 +1,10 @@
 # mint
 
- [ ] replace 1000*1000 by protocol constant
  [ ] attempt to use Amount everywhere?
  [ ] transaction protocol
  [ ] propagation protocol for both operations and offers (need to learn more)
  [ ] pass DSN for DB, support Postgres
+ [x] replace 1000*1000 by protocol constant
  [x] log prefix (mint)
  [x] make user optional for propagated transactions (or other objects)
  [x] move status values to protocol

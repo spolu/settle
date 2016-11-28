@@ -62,7 +62,7 @@ func TestCreateNoopOperation(
 	assert.Regexp(t, mint.IDRegexp, op.ID)
 	assert.WithinDuration(t,
 		time.Now(),
-		time.Unix(0, op.Created*1000*1000), test.PostLatency)
+		time.Unix(0, op.Created*mint.TimeResolutionNs), test.PostLatency)
 	assert.Equal(t, u[0].Address, op.Owner)
 
 	assert.Equal(t, a[0].Name, op.Asset)
@@ -96,7 +96,7 @@ func TestCreateOperationIssuing(
 	assert.Regexp(t, mint.IDRegexp, op.ID)
 	assert.WithinDuration(t,
 		time.Now(),
-		time.Unix(0, op.Created*1000*1000), test.PostLatency)
+		time.Unix(0, op.Created*mint.TimeResolutionNs), test.PostLatency)
 	assert.Equal(t, u[0].Address, op.Owner)
 
 	assert.Equal(t, a[0].Name, op.Asset)
@@ -140,7 +140,7 @@ func TestCreateOperationAnnihilating(
 	assert.Regexp(t, mint.IDRegexp, op.ID)
 	assert.WithinDuration(t,
 		time.Now(),
-		time.Unix(0, op.Created*1000*1000), test.PostLatency)
+		time.Unix(0, op.Created*mint.TimeResolutionNs), test.PostLatency)
 	assert.Equal(t, u[0].Address, op.Owner)
 
 	assert.Equal(t, a[0].Name, op.Asset)

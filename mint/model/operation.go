@@ -56,7 +56,7 @@ func NewOperationResource(
 	return mint.OperationResource{
 		ID: fmt.Sprintf(
 			"%s[%s]", operation.Owner, operation.Token),
-		Created:        operation.Created.UnixNano() / (1000 * 1000),
+		Created:        operation.Created.UnixNano() / mint.TimeResolutionNs,
 		Owner:          operation.Owner,
 		Asset:          operation.Asset,
 		Source:         operation.Source,
