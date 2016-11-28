@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS operations(
 
   status VARCHAR(32) NOT NULL,       -- status (reserved, settled, canceled)
   txn VARCHAR(256),                  -- transaction id
+  hop SMALLINT,                      -- transaction hop
 
   PRIMARY KEY(user, owner, token),
   CONSTRAINT operations_user_fk FOREIGN KEY (user) REFERENCES users(token)

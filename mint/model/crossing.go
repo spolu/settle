@@ -30,6 +30,7 @@ type Crossing struct {
 
 	Status      mint.TxStatus
 	Transaction string `db:"txn"`
+	Hop         int8   `db:"hop"`
 }
 
 // NewCrossingResource generates a new resource.
@@ -40,12 +41,13 @@ func NewCrossingResource(
 	return mint.CrossingResource{
 		ID: fmt.Sprintf(
 			"%s[%s]", crossing.Owner, crossing.Token),
-		Created:     crossing.Created.UnixNano() / (1000 * 1000),
-		Owner:       crossing.Owner,
-		Offer:       crossing.Offer,
-		Amount:      (*big.Int)(&crossing.Amount),
-		Status:      crossing.Status,
-		Transaction: crossing.Transaction,
+		Created:        crossing.Created.UnixNano() / (1000 * 1000),
+		Owner:          crossing.Owner,
+		Offer:          crossing.Offer,
+		Amount:         (*big.Int)(&crossing.Amount),
+		Status:         crossing.Status,
+		Transaction:    crossing.Transaction,
+		TransactionHop: crossing.Hop,
 	}
 }
 
@@ -58,6 +60,7 @@ func CreateCrossing(
 	amount Amount,
 	status mint.TxStatus,
 	transaction string,
+	hop int8,
 ) (*Crossing, error) {
 	crossing := Crossing{
 		User:    user,
@@ -70,14 +73,15 @@ func CreateCrossing(
 
 		Status:      status,
 		Transaction: transaction,
+		Hop:         hop,
 	}
 
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO crossings
-  (user, owner, token, created, offer, amount, status, txn)
+  (user, owner, token, created, offer, amount, status, txn, hop)
 VALUES
-  (:user, :owner, :token, :created, :offer, :amount, :status, :txn)
+  (:user, :owner, :token, :created, :offer, :amount, :status, :txn, :hop)
 `, crossing); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:
@@ -93,4 +97,39 @@ VALUES
 	}
 
 	return &crossing, nil
+}
+
+// LoadCrossingsByTransaction loads all crossings that are associated with the
+// specified transaction.
+func LoadCrossingsByTransaction(
+	ctx context.Context,
+	transaction string,
+) ([]*Crossing, error) {
+	query := Crossing{
+		Transaction: transaction,
+	}
+
+	ext := db.Ext(ctx)
+	rows, err := sqlx.NamedQuery(ext, `
+SELECT *
+FROM crossings
+WHERE txn = :txn
+`, query)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	crossings := []*Crossing{}
+
+	defer rows.Close()
+	for rows.Next() {
+		cr := Crossing{}
+		err := rows.StructScan(&cr)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		crossings = append(crossings, &cr)
+	}
+
+	return crossings, nil
 }

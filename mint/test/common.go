@@ -115,7 +115,9 @@ type MintUser struct {
 	Address  string
 }
 
-var userFirstnames = []string{"kurt", "alan", "albert", "john"}
+var userFirstnames = []string{
+	"kurt", "alan", "albert", "john", "henri", "charles",
+}
 
 // CreateUser creates a user and generates an associated MintUser
 func (m *Mint) CreateUser(

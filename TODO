@@ -5,6 +5,7 @@
  [ ] transaction protocol
  [ ] propagation protocol for both operations and offers (need to learn more)
  [ ] pass DSN for DB, support Postgres
+ [x] log prefix (mint)
  [x] make user optional for propagated transactions (or other objects)
  [x] move status values to protocol
  [x] move Execute to ctx
@@ -15,6 +16,7 @@
 
   # test
 
+    [ ] test transaction that uses the same offer twice
     [x] make the DB a context value that can be created independently for tests
     [x] find a way to set the MintHost after start or set the mux after creating the httptest.Server
     [x] support in memory db

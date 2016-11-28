@@ -6,8 +6,8 @@ import (
 	"regexp"
 
 	"github.com/spolu/settle/lib/errors"
-	"github.com/spolu/settle/lib/logging"
 	"github.com/spolu/settle/lib/respond"
+	"github.com/spolu/settle/mint"
 	"github.com/spolu/settle/mint/model"
 )
 
@@ -92,13 +92,13 @@ func (m middleware) ServeHTTP(
 	failedAuth := func(err error) {
 		if skip {
 			withStatus = With(ctx, Status{AutStSkipped, nil})
-			logging.Logf(ctx,
+			mint.Logf(ctx,
 				"Authentication: status=%q username=%q",
 				Get(withStatus).Status, username)
 			m.Handler.ServeHTTP(w, r.WithContext(withStatus))
 		} else {
 			withStatus = With(ctx, Status{AutStFailed, nil})
-			logging.Logf(ctx,
+			mint.Logf(ctx,
 				"Authentication: status=%q username=%q",
 				Get(withStatus).Status, username)
 			respond.Error(withStatus, w, errors.Trace(err))
@@ -126,7 +126,7 @@ func (m middleware) ServeHTTP(
 	}
 
 	withStatus = With(ctx, Status{AutStSucceeded, user})
-	logging.Logf(ctx,
+	mint.Logf(ctx,
 		"Authentication: status=%q user=%q username=%q",
 		Get(withStatus).Status, Get(withStatus).User.Token,
 		username)

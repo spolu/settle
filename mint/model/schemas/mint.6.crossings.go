@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS crossings(
 
   status VARCHAR(32) NOT NULL,       -- status (reserved, settled, canceled)
   txn VARCHAR(256) NOT NULL,         -- transaction id
+  hop SMALLINT NOT NULL,             -- transaction hop
 
   PRIMARY KEY(user, owner, token),
   CONSTRAINT crossings_user_fk FOREIGN KEY (user) REFERENCES users(token)

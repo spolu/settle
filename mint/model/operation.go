@@ -45,6 +45,7 @@ type Operation struct {
 
 	Status      mint.TxStatus
 	Transaction *string `db:"txn"`
+	Hop         *int8   `db:"hop"`
 }
 
 // NewOperationResource generates a new resource.
@@ -55,14 +56,15 @@ func NewOperationResource(
 	return mint.OperationResource{
 		ID: fmt.Sprintf(
 			"%s[%s]", operation.Owner, operation.Token),
-		Created:     operation.Created.UnixNano() / (1000 * 1000),
-		Owner:       operation.Owner,
-		Asset:       operation.Asset,
-		Source:      operation.Source,
-		Destination: operation.Destination,
-		Amount:      (*big.Int)(&operation.Amount),
-		Status:      operation.Status,
-		Transaction: operation.Transaction,
+		Created:        operation.Created.UnixNano() / (1000 * 1000),
+		Owner:          operation.Owner,
+		Asset:          operation.Asset,
+		Source:         operation.Source,
+		Destination:    operation.Destination,
+		Amount:         (*big.Int)(&operation.Amount),
+		Status:         operation.Status,
+		Transaction:    operation.Transaction,
+		TransactionHop: operation.Hop,
 	}
 }
 
@@ -77,6 +79,7 @@ func CreateCanonicalOperation(
 	amount Amount,
 	status mint.TxStatus,
 	transaction *string,
+	hop *int8,
 ) (*Operation, error) {
 	operation := Operation{
 		User:        &user,
@@ -92,16 +95,17 @@ func CreateCanonicalOperation(
 
 		Status:      status,
 		Transaction: transaction,
+		Hop:         hop,
 	}
 
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO operations
   (user, owner, token, created, propagation, asset, source, destination,
-   amount, status, txn)
+   amount, status, txn, hop)
 VALUES
   (:user, :owner, :token, :created, :propagation, :asset, :source, :destination,
-   :amount, :status, :txn)
+   :amount, :status, :txn, :hop)
 `, operation); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:
@@ -129,6 +133,9 @@ func CreatePropagatedOperation(
 	source string,
 	destination string,
 	amount Amount,
+	status mint.TxStatus,
+	transaction *string,
+	hop *int8,
 ) (*Operation, error) {
 	operation := Operation{
 		User:        nil,
@@ -141,16 +148,20 @@ func CreatePropagatedOperation(
 		Source:      source,
 		Destination: destination,
 		Amount:      amount,
+
+		Status:      status,
+		Transaction: transaction,
+		Hop:         hop,
 	}
 
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO operations
   (user, owner, token, created, propagation, asset, source, destination,
-   amount, status, txn)
+   amount, status, txn, hop)
 VALUES
   (:user, :owner, :token, :created, :propagation, :asset, :source, :destination,
-   :amount, :status, :txn)
+   :amount, :status, :txn, :hop)
 `, operation); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:
@@ -202,12 +213,39 @@ WHERE owner = :owner
 	return &operation, nil
 }
 
-// LoadOperationsByTransaction loads all operations that are associated with
-// the specified transaction.
-func LoadOperationsByTransaction(
+// LoadCanonicalOperationsByTransaction loads all operations that are
+// associated with the specified transaction.
+func LoadCanonicalOperationsByTransaction(
 	ctx context.Context,
 	transaction string,
 ) ([]*Operation, error) {
-	// TODO(stan): load list of operations
-	return nil, nil
+	query := Operation{
+		Transaction: &transaction,
+		Propagation: mint.PgTpCanonical,
+	}
+
+	ext := db.Ext(ctx)
+	rows, err := sqlx.NamedQuery(ext, `
+SELECT *
+FROM operations
+WHERE txn = :txn
+  AND propagation = :propagation
+`, query)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	operations := []*Operation{}
+
+	defer rows.Close()
+	for rows.Next() {
+		op := Operation{}
+		err := rows.StructScan(&op)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		operations = append(operations, &op)
+	}
+
+	return operations, nil
 }

@@ -204,3 +204,37 @@ WHERE owner = :owner
 
 	return &transaction, nil
 }
+
+// LoadPropagatedTransactionByOwnerToken attempts to load the propagated
+// transaction for the given owner and token.
+func LoadPropagatedTransactionByOwnerToken(
+	ctx context.Context,
+	owner string,
+	token string,
+) (*Transaction, error) {
+	transaction := Transaction{
+		Owner:       owner,
+		Token:       token,
+		Propagation: mint.PgTpPropagated,
+	}
+
+	ext := db.Ext(ctx)
+	if rows, err := sqlx.NamedQuery(ext, `
+SELECT *
+FROM transactions
+WHERE owner = :owner
+  AND token = :token
+  AND propagation = :propagation
+`, transaction); err != nil {
+		return nil, errors.Trace(err)
+	} else if !rows.Next() {
+		return nil, nil
+	} else if err := rows.StructScan(&transaction); err != nil {
+		defer rows.Close()
+		return nil, errors.Trace(err)
+	} else if err := rows.Close(); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &transaction, nil
+}

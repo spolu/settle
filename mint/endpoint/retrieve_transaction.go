@@ -69,24 +69,38 @@ func (e *RetrieveTransaction) Execute(
 			e.Owner, e.Token)
 		if err != nil {
 			return nil, nil, errors.Trace(err) // 500
-		} else if transaction == nil {
-			return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-				404, "transaction_not_found",
-				"The transaction you are trying to retrieve does not exist: %s.",
-				e.ID,
-			))
+		} else if tx == nil {
+			tx, err = model.LoadPropagatedTransactionByOwnerToken(ctx,
+				e.Owner, e.Token)
+			if err != nil {
+				return nil, nil, errors.Trace(err) // 500
+			} else if tx == nil {
+				return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
+					404, "transaction_not_found",
+					"The transaction you are trying to retrieve does not "+
+						"exist: %s.", e.ID,
+				))
+			}
 		}
 		transaction = tx
 	}
 
 	operations := txStore.GetOperations(ctx, e.ID)
 	if operations == nil {
-		// TODO(stan): retrieve operations from DB
+		ops, err := model.LoadCanonicalOperationsByTransaction(ctx, e.ID)
+		if err != nil {
+			return nil, nil, errors.Trace(err) // 500
+		}
+		operations = ops
 	}
 
 	crossings := txStore.GetCrossings(ctx, e.ID)
 	if crossings == nil {
-		// TODO(stan): retrieve crossings from DB
+		crs, err := model.LoadCrossingsByTransaction(ctx, e.ID)
+		if err != nil {
+			return nil, nil, errors.Trace(err) // 500
+		}
+		crossings = crs
 	}
 
 	db.Commit(ctx)

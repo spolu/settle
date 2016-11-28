@@ -17,7 +17,7 @@ import (
 	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/env"
 	"github.com/spolu/settle/lib/errors"
-	"github.com/spolu/settle/lib/logging"
+	"github.com/spolu/settle/lib/format"
 	"github.com/spolu/settle/lib/ptr"
 	"github.com/spolu/settle/lib/svc"
 	"github.com/spolu/settle/mint"
@@ -235,16 +235,44 @@ func (e *CreateTransaction) ExecuteCanonical(
 
 	err = e.Propagate(ctx)
 	if err != nil {
-		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
+		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 			402, "transaction_failed",
 			"The transaction failed to propagate to required mints: %s.",
 			e.ID,
 		))
 	}
 
+	// Check all the hops in the transaction in parallel before committing (as
+	// we are the canonical mint for it).
+	g, ctx := errgroup.WithContext(ctx)
+
+	for hop := 1; hop < len(e.Plan); hop++ {
+		hop := hop
+		g.Go(func() error {
+			err = e.CheckPlan(ctx, int8(hop))
+			if err != nil {
+				return errors.Trace(err)
+			}
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
+			402, "transaction_failed",
+			"Failed to check plan for transaction %s",
+			e.ID,
+		))
+	}
+
 	db.Commit(ctx)
 
-	return ptr.Int(http.StatusCreated), &svc.Resp{}, nil
+	return ptr.Int(http.StatusCreated), &svc.Resp{
+		"transaction": format.JSONPtr(model.NewTransactionResource(ctx,
+			txStore.Get(ctx, e.ID),
+			txStore.GetOperations(ctx, e.ID),
+			txStore.GetCrossings(ctx, e.ID),
+		)),
+	}, nil
 }
 
 // ExecutePropagated executes the creation of a propagated transaction
@@ -252,12 +280,19 @@ func (e *CreateTransaction) ExecuteCanonical(
 func (e *CreateTransaction) ExecutePropagated(
 	ctx context.Context,
 ) (*int, *svc.Resp, error) {
-	ctx = db.Begin(ctx)
-	defer db.LoggedRollback(ctx)
+	mustCommit := false
 
 	// Fetch transaction in transaction store or retrieve it from the canonical
 	// mint.
 	if txStore.Get(ctx, e.ID) != nil {
+		// If we find the transaction in the txStore, we also reuse the
+		// underlying db.Transaction so that the whole transaction is run on
+		// one single underlying db.Transaction (more consistent and avoids
+		// locking issues).
+		dbTx := txStore.GetDBTransaction(ctx, e.ID)
+		ctx = db.WithTransaction(ctx, *dbTx)
+		mint.Logf(ctx, "Transaction: reuse %s", dbTx.Token)
+
 		e.Tx = txStore.Get(ctx, e.ID)
 		e.Token = e.Tx.Token
 		e.Owner = e.Tx.Owner
@@ -268,6 +303,10 @@ func (e *CreateTransaction) ExecutePropagated(
 		e.Destination = e.Tx.Destination
 		e.Path = []string(e.Tx.Path)
 	} else {
+		mustCommit = true
+		ctx = db.Begin(ctx)
+		defer db.LoggedRollback(ctx)
+
 		transaction, err := e.Client.RetrieveTransaction(ctx, e.ID, nil)
 		if err != nil {
 			return nil, nil, errors.Trace(errors.NewUserErrorf(err,
@@ -302,7 +341,7 @@ func (e *CreateTransaction) ExecutePropagated(
 
 	err := e.ComputePlan(ctx)
 	if err != nil {
-		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
+		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 			402, "transaction_failed",
 			"The plan computation for the transaction failed.",
 		))
@@ -327,17 +366,24 @@ func (e *CreateTransaction) ExecutePropagated(
 		defer txStore.Clear(ctx, e.ID)
 	}
 
-	// TODO(stan) check that mint at previous hop has reserved its action
-	// > requires operations to be stored in memory
-	// > requires local operations to be returned as part of transactions
+	// Check the plan at previous hop before we execute this hop, to convince
+	// ourselves that the funds are reserved!
+	err = e.CheckPlan(ctx, e.Hop-1)
+	if err != nil {
+		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
+			402, "transaction_failed",
+			"Failed to check plan at hop %d for transaction %s",
+			e.Hop-1, e.ID,
+		))
+	}
 
-	//err = e.ExecutePlan(ctx)
-	//if err != nil {
-	//	return nil, nil, errors.Trace(errors.NewUserErrorf(err,
-	//		402, "transaction_failed",
-	//		"The plan execution for the transaction failed: %s", e.ID,
-	//	))
-	//}
+	err = e.ExecutePlan(ctx)
+	if err != nil {
+		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
+			402, "transaction_failed",
+			"The plan execution for the transaction failed: %s", e.ID,
+		))
+	}
 
 	err = e.Propagate(ctx)
 	if err != nil {
@@ -348,7 +394,32 @@ func (e *CreateTransaction) ExecutePropagated(
 		))
 	}
 
-	return ptr.Int(http.StatusCreated), &svc.Resp{}, nil
+	if mustCommit {
+		db.Commit(ctx)
+	}
+
+	return ptr.Int(http.StatusCreated), &svc.Resp{
+		"transaction": format.JSONPtr(model.NewTransactionResource(ctx,
+			txStore.Get(ctx, e.ID),
+			txStore.GetOperations(ctx, e.ID),
+			txStore.GetCrossings(ctx, e.ID),
+		)),
+	}, nil
+}
+
+// Propagate recursively propagates to the next mint in the chain of mint
+// involved in a transaction.
+func (e *CreateTransaction) Propagate(
+	ctx context.Context,
+) error {
+	if int(e.Hop)+1 < len(e.Plan) {
+		_, err := e.Client.PropagateTransaction(ctx,
+			e.ID, e.Hop+1, e.Plan[e.Hop+1].Mint)
+		if err != nil {
+			return errors.Trace(err)
+		}
+	}
+	return nil
 }
 
 // ComputePlan retrieves the offers of the path and compute the transaction
@@ -358,7 +429,6 @@ func (e *CreateTransaction) ComputePlan(
 	ctx context.Context,
 ) error {
 	g, ctx := errgroup.WithContext(ctx)
-
 	e.Offers = make([]mint.OfferResource, len(e.Path))
 
 	for i, id := range e.Path {
@@ -506,7 +576,7 @@ func (e *CreateTransaction) ComputePlan(
 				*a.CrossingOffer, e.Offers[i/2].Pair, e.Offers[i/2].Price)
 		}
 	}
-	logging.Logf(ctx, logLine)
+	mint.Logf(ctx, logLine)
 
 	return nil
 }
@@ -521,16 +591,7 @@ func (e *CreateTransaction) ExecutePlan(
 			e.Hop, len(e.Plan)))
 	}
 
-	owner := fmt.Sprintf("%s@%s",
-		authentication.Get(ctx).User.Username,
-		env.Get(ctx).Config[mint.EnvCfgMintHost])
-
 	a := e.Plan[e.Hop]
-	if a.Owner != owner {
-		return errors.Trace(errors.Newf(
-			"Action owner mismatch at current hop (%d): %s expected %s.",
-			e.Hop, a.Owner, owner))
-	}
 
 	switch a.Type {
 	case TxActTpOperation:
@@ -575,7 +636,7 @@ func (e *CreateTransaction) ExecutePlan(
 			*a.OperationSource, *a.OperationDestination,
 			model.Amount(*a.Amount),
 			mint.TxStReserved,
-			ptr.Str(fmt.Sprintf("%s[%s]", e.Owner, e.Token)))
+			ptr.Str(fmt.Sprintf("%s[%s]", e.Owner, e.Token)), &e.Hop)
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -617,11 +678,11 @@ func (e *CreateTransaction) ExecutePlan(
 			}
 		}
 
-		logging.Logf(ctx,
+		mint.Logf(ctx,
 			"Reserved operation: user=%s id=%s[%s] created=%q propagation=%s "+
 				"asset=%s source=%s destination=%s amount=%s "+
 				"status=%s transaction=%s",
-			op.User, op.Owner, op.Token, op.Created, op.Propagation,
+			*op.User, op.Owner, op.Token, op.Created, op.Propagation,
 			op.Asset, op.Source, op.Destination,
 			(*big.Int)(&op.Amount).String(), op.Status, *op.Transaction)
 
@@ -641,8 +702,7 @@ func (e *CreateTransaction) ExecutePlan(
 			offer.Owner,
 			*a.CrossingOffer,
 			model.Amount(*a.Amount),
-			mint.TxStReserved,
-			fmt.Sprintf("%s[%s]", e.Owner, e.Token))
+			mint.TxStReserved, fmt.Sprintf("%s[%s]", e.Owner, e.Token), e.Hop)
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -668,7 +728,7 @@ func (e *CreateTransaction) ExecutePlan(
 			return errors.Trace(err)
 		}
 
-		logging.Logf(ctx,
+		mint.Logf(ctx,
 			"Reserved crossing: user=%s id=%s[%s] created=%q "+
 				"offer=%s amount=%s status=%s transaction=%s",
 			cr.User, cr.Owner, cr.Token, cr.Created,
@@ -679,17 +739,82 @@ func (e *CreateTransaction) ExecutePlan(
 	return nil
 }
 
-// Propagate recursively propagates to the next mint in the chain of mint
-// involved in a transaction.
-func (e *CreateTransaction) Propagate(
+// CheckPlan checks that the plan was properly executed at the specified hop by
+// retrieving the transaction ont that mint and checking the action against the
+// advertised operations and crossings.
+func (e *CreateTransaction) CheckPlan(
 	ctx context.Context,
+	hop int8,
 ) error {
-	if int(e.Hop)+1 < len(e.Plan) {
-		_, err := e.Client.PropagateTransaction(ctx,
-			e.ID, e.Hop+1, e.Plan[e.Hop+1].Mint)
-		if err != nil {
-			return errors.Trace(err)
+	action := e.Plan[hop]
+	transaction, err := e.Client.RetrieveTransaction(ctx,
+		e.ID, &action.Mint)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	switch action.Type {
+	case TxActTpOperation:
+		operation := (*mint.OperationResource)(nil)
+		for _, op := range transaction.Operations {
+			if op.TransactionHop != nil && *op.TransactionHop == hop {
+				operation = &op
+			}
+		}
+		if operation == nil {
+			return errors.Newf("Operation at hop %d not found", hop)
+		}
+		if operation.Owner != action.Owner {
+			return errors.Newf("Operation at hop %d owner mismatch: "+
+				"%s expected %s",
+				hop, operation.Owner, action.Owner)
+		}
+		if operation.Amount.Cmp(action.Amount) != 0 {
+			return errors.Newf("Operation at hop %d amount mismatch: "+
+				"%s expected %s",
+				hop, operation.Amount.String(), action.Amount.String())
+		}
+		if operation.Asset != *action.OperationAsset {
+			return errors.Newf("Operation at hop %d asset mismatch: "+
+				"%s expected %s",
+				hop, operation.Asset, *action.OperationAsset)
+		}
+		if operation.Source != *action.OperationSource {
+			return errors.Newf("Operation at hop %d source mismatch: "+
+				"%s expected %s",
+				hop, operation.Source, *action.OperationSource)
+		}
+		if operation.Destination != *action.OperationDestination {
+			return errors.Newf("Operation at hop %d destination mismatch: "+
+				"%s expected %s",
+				hop, operation.Destination, *action.OperationDestination)
+		}
+	case TxActTpCrossing:
+		crossing := (*mint.CrossingResource)(nil)
+		for _, cr := range transaction.Crossings {
+			if cr.TransactionHop == hop {
+				crossing = &cr
+			}
+		}
+		if crossing == nil {
+			return errors.Newf("Crossing at hop %d not found", hop)
+		}
+		if crossing.Owner != action.Owner {
+			return errors.Newf("Crossing at hop %d owner mismatch: "+
+				"%s expected %s",
+				hop, crossing.Owner, action.Owner)
+		}
+		if crossing.Amount.Cmp(action.Amount) != 0 {
+			return errors.Newf("Crossing at hop %d amount mismatch: "+
+				"%s expected %s",
+				hop, crossing.Amount.String(), action.Amount.String())
+		}
+		if crossing.Offer != *action.CrossingOffer {
+			return errors.Newf("Crossing at hop %d offer mismatch: "+
+				"%s expected %s",
+				hop, crossing.Offer, *action.CrossingOffer)
 		}
 	}
+
 	return nil
 }

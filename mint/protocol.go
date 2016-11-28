@@ -66,8 +66,9 @@ type OperationResource struct {
 	Destination string   `json:"destination"`
 	Amount      *big.Int `json:"amount"`
 
-	Status      TxStatus `json:"status"`
-	Transaction *string  `json:"transaction"`
+	Status         TxStatus `json:"status"`
+	Transaction    *string  `json:"transaction"`
+	TransactionHop *int8    `json:"transaction_hop"`
 }
 
 // OfferResource is the representation of an offer in the mint API.
@@ -93,8 +94,9 @@ type CrossingResource struct {
 	Offer  string   `json:"offer"`
 	Amount *big.Int `json:"amount"`
 
-	Status      TxStatus `json:"status"`
-	Transaction string   `json:"transaction"`
+	Status         TxStatus `json:"status"`
+	Transaction    string   `json:"transaction"`
+	TransactionHop int8     `json:"transaction_hop"`
 }
 
 // TransactionResource is the representation of a transaction in the mint API.

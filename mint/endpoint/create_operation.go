@@ -12,7 +12,6 @@ import (
 	"github.com/spolu/settle/lib/env"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/format"
-	"github.com/spolu/settle/lib/logging"
 	"github.com/spolu/settle/lib/ptr"
 	"github.com/spolu/settle/lib/svc"
 	"github.com/spolu/settle/mint"
@@ -179,7 +178,7 @@ func (e *CreateOperation) Execute(
 		authentication.Get(ctx).User.Token,
 		e.Owner,
 		e.Asset.Name, e.Source, e.Destination, model.Amount(e.Amount),
-		mint.TxStSettled, nil)
+		mint.TxStSettled, nil, nil)
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
 	}
@@ -228,7 +227,7 @@ func (e *CreateOperation) Execute(
 		}
 	}
 
-	logging.Logf(ctx,
+	mint.Logf(ctx,
 		"Settled operation: user=%s id=%s[%s] created=%q propagation=%s "+
 			"asset=%s source=%s destination=%s amount=%s status=%s",
 		op.User, op.Owner, op.Token, op.Owner, op.Created, op.Propagation,
