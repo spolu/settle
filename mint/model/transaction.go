@@ -19,7 +19,7 @@ import (
 
 // Transaction represents a transaction across a chain of offers.
 type Transaction struct {
-	User        string
+	User        *string
 	Owner       string
 	Token       string
 	Created     time.Time
@@ -78,7 +78,7 @@ func CreateCanonicalTransaction(
 	status mint.TxStatus,
 ) (*Transaction, error) {
 	transaction := Transaction{
-		User:        user,
+		User:        &user,
 		Owner:       owner,
 		Token:       token.New("transaction"),
 		Created:     time.Now(),
@@ -121,7 +121,6 @@ VALUES
 // object.
 func CreatePropagatedTransaction(
 	ctx context.Context,
-	user string,
 	token string,
 	created time.Time,
 	owner string,
@@ -133,7 +132,7 @@ func CreatePropagatedTransaction(
 	status mint.TxStatus,
 ) (*Transaction, error) {
 	transaction := Transaction{
-		User:        user,
+		User:        nil,
 		Owner:       owner,
 		Token:       token,
 		Created:     created,

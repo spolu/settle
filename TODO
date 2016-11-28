@@ -5,6 +5,7 @@
  [ ] transaction protocol
  [ ] propagation protocol for both operations and offers (need to learn more)
  [ ] pass DSN for DB, support Postgres
+ [x] make user optional for propagated transactions (or other objects)
  [x] move status values to protocol
  [x] move Execute to ctx
  [x] remove nil from creation operation, prevent issuer from owning balance

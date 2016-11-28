@@ -26,7 +26,7 @@ import (
 // - Propagated offers are indicatively stored on the mints of the offers's
 //   assets, to compute order books.
 type Offer struct {
-	User        string
+	User        *string
 	Owner       string
 	Token       string
 	Created     time.Time
@@ -77,7 +77,7 @@ func CreateCanonicalOffer(
 	remainder Amount,
 ) (*Offer, error) {
 	offer := Offer{
-		User:        user,
+		User:        &user,
 		Owner:       owner,
 		Token:       token.New("offer"),
 		Created:     time.Now(),
@@ -121,7 +121,6 @@ VALUES
 // CreatePropagatedOffer creates and stores a new propagated Offer object.
 func CreatePropagatedOffer(
 	ctx context.Context,
-	user string,
 	owner string,
 	token string,
 	created time.Time,
@@ -134,7 +133,7 @@ func CreatePropagatedOffer(
 	remainder Amount,
 ) (*Offer, error) {
 	offer := Offer{
-		User:        user,
+		User:        nil,
 		Owner:       owner,
 		Token:       token,
 		Created:     created,

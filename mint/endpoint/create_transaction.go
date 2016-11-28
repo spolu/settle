@@ -310,25 +310,8 @@ func (e *CreateTransaction) ExecutePropagated(
 
 	// Create propagated transaction locally.
 	if e.Tx == nil {
-		username, _, err := mint.UsernameAndMintHostFromAddress(ctx,
-			e.Plan[e.Hop].Owner)
-		if err != nil {
-			return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-				402, "transaction_failed",
-				"Failed to retrieve local user: %s", e.Plan[e.Hop].Owner,
-			))
-		}
-
-		user, err := model.LoadUserByUsername(ctx, username)
-		if err != nil {
-			return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-				402, "transaction_failed",
-				"Failed to retrieve local user: %s", e.Plan[e.Hop].Owner,
-			))
-		}
-
 		tx, err := model.CreatePropagatedTransaction(ctx,
-			user.Token, e.Token, e.Created, e.Owner,
+			e.Token, e.Created, e.Owner,
 			e.BaseAsset, e.QuoteAsset,
 			model.Amount(e.Amount),
 			e.Destination, model.OfPath(e.Path),
@@ -654,7 +637,7 @@ func (e *CreateTransaction) ExecutePlan(
 		}
 
 		cr, err := model.CreateCrossing(ctx,
-			offer.User,
+			*offer.User,
 			offer.Owner,
 			*a.CrossingOffer,
 			model.Amount(*a.Amount),

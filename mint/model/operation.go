@@ -32,7 +32,7 @@ var MaxAssetAmount = new(big.Int).Exp(
 //   created out of a transaction are created `settled`.
 // - Only settled operation are propagated.
 type Operation struct {
-	User        string
+	User        *string
 	Owner       string // Owner address.
 	Token       string
 	Created     time.Time
@@ -79,7 +79,7 @@ func CreateCanonicalOperation(
 	transaction *string,
 ) (*Operation, error) {
 	operation := Operation{
-		User:        user,
+		User:        &user,
 		Owner:       owner,
 		Token:       token.New("operation"),
 		Created:     time.Now(),
@@ -122,7 +122,6 @@ VALUES
 // CreatePropagatedOperation creates and stores a new Operation.
 func CreatePropagatedOperation(
 	ctx context.Context,
-	user string,
 	token string,
 	created time.Time,
 	owner string,
@@ -132,7 +131,7 @@ func CreatePropagatedOperation(
 	amount Amount,
 ) (*Operation, error) {
 	operation := Operation{
-		User:        user,
+		User:        nil,
 		Owner:       owner,
 		Token:       token,
 		Created:     created,
@@ -201,4 +200,14 @@ WHERE owner = :owner
 	}
 
 	return &operation, nil
+}
+
+// LoadOperationsByTransaction loads all operations that are associated with
+// the specified transaction.
+func LoadOperationsByTransaction(
+	ctx context.Context,
+	transaction string,
+) ([]*Operation, error) {
+	// TODO(stan): load list of operations
+	return nil, nil
 }

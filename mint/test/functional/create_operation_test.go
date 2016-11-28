@@ -65,7 +65,7 @@ func TestCreateNoopOperation(
 		time.Unix(0, op.Created*1000*1000), test.PostLatency)
 	assert.Equal(t, u[0].Address, op.Owner)
 
-	assert.Regexp(t, a[0].Name, op.Asset)
+	assert.Equal(t, a[0].Name, op.Asset)
 	assert.NotNil(t, op.Destination)
 	assert.Equal(t, u[0].Address, op.Destination)
 	assert.Equal(t, u[0].Address, op.Source)
@@ -99,7 +99,7 @@ func TestCreateOperationIssuing(
 		time.Unix(0, op.Created*1000*1000), test.PostLatency)
 	assert.Equal(t, u[0].Address, op.Owner)
 
-	assert.Regexp(t, a[0].Name, op.Asset)
+	assert.Equal(t, a[0].Name, op.Asset)
 	assert.NotNil(t, op.Source)
 	assert.Equal(t, u[0].Address, op.Source)
 	assert.NotNil(t, op.Destination)
@@ -143,7 +143,7 @@ func TestCreateOperationAnnihilating(
 		time.Unix(0, op.Created*1000*1000), test.PostLatency)
 	assert.Equal(t, u[0].Address, op.Owner)
 
-	assert.Regexp(t, a[0].Name, op.Asset)
+	assert.Equal(t, a[0].Name, op.Asset)
 	assert.NotNil(t, op.Source)
 	assert.Equal(t, "von.neumann@ias.edu", op.Source)
 	assert.Equal(t, u[0].Address, op.Destination)

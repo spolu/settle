@@ -7,7 +7,7 @@ import "github.com/spolu/settle/mint/model"
 const (
 	offersSQL = `
 CREATE TABLE IF NOT EXISTS offers(
-  user VARCHAR(256) NOT NULL,   -- user token
+  user VARCHAR(256),            -- user token (not present if propagated)
   owner VARCHAR(256) NOT NULL,  -- owner address
   token VARCHAR(256) NOT NULL,  -- token
   created TIMESTAMP NOT NULL,
