@@ -543,9 +543,9 @@ func (e *CreateTransaction) ComputePlan(
 		if err != nil {
 			return errors.Trace(err)
 		}
-		amount := new(big.Int).Mul(e.Plan[2*(i+1)].Amount, quotePrice)
+		amount := new(big.Int).Mul(e.Plan[2*(i+1)].Amount, basePrice)
 		amount, remainder := new(big.Int).QuoRem(
-			amount, basePrice, new(big.Int))
+			amount, quotePrice, new(big.Int))
 
 		// Transactions do cross offers on non congruent prices, costing one
 		// base unit of quote asset. If the difference of scale between assets
@@ -557,6 +557,13 @@ func (e *CreateTransaction) ComputePlan(
 
 		e.Plan[2*i].Amount = amount
 		e.Plan[2*i+1].Amount = amount
+
+		if amount.Cmp(e.Offers[i].Remainder) > 0 {
+			return errors.Trace(errors.Newf(
+				"Insufficient remainder for offer %s: %s but needs %s.",
+				e.Offers[i].ID, e.Offers[i].Remainder.String(),
+				amount.String()))
+		}
 	}
 
 	logLine := fmt.Sprintf("Transaction plan for %s:", e.ID)
@@ -757,6 +764,7 @@ func (e *CreateTransaction) CheckPlan(
 	case TxActTpOperation:
 		operation := (*mint.OperationResource)(nil)
 		for _, op := range transaction.Operations {
+			op := op
 			if op.TransactionHop != nil && *op.TransactionHop == hop {
 				operation = &op
 			}
@@ -792,6 +800,7 @@ func (e *CreateTransaction) CheckPlan(
 	case TxActTpCrossing:
 		crossing := (*mint.CrossingResource)(nil)
 		for _, cr := range transaction.Crossings {
+			cr := cr
 			if cr.TransactionHop == hop {
 				crossing = &cr
 			}

@@ -1,8 +1,8 @@
 # mint
 
- [ ] attempt to use Amount everywhere?
  [ ] transaction protocol
  [ ] propagation protocol for both operations and offers (need to learn more)
+ [ ] attempt to use Amount everywhere?
  [ ] pass DSN for DB, support Postgres
  [x] replace 1000*1000 by protocol constant
  [x] log prefix (mint)
@@ -16,10 +16,18 @@
 
   # test
 
-    [ ] test transaction that uses the same offer twice
+    [x] test transaction that uses the same user twice
+    [x] test transaction that uses more than what is left on an offer
     [x] make the DB a context value that can be created independently for tests
     [x] find a way to set the MintHost after start or set the mux after creating the httptest.Server
     [x] support in memory db
+
+  # async processes
+
+    [ ] transaction cancelation
+    [ ] offer propagation
+    [ ] operation propagation
+    [ ] crossing propagation? (or offer updates?)
 
 # site
 
@@ -47,3 +55,4 @@
   - each element of the chain commit to performing the operation/crossing if
     provided with the lock. The operation/offer updates are propagated
     (best-effort) only once they are committed
+

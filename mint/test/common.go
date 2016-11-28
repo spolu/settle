@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -36,9 +35,10 @@ const (
 	PostLatency time.Duration = 100 * time.Millisecond
 )
 
+var userIdx int
+
 func init() {
-	// Explicitely reproducible
-	rand.Seed(1)
+	userIdx = 0
 }
 
 // Mint represents a test mint.
@@ -116,14 +116,16 @@ type MintUser struct {
 }
 
 var userFirstnames = []string{
-	"kurt", "alan", "albert", "john", "henri", "charles",
+	"kurt", "alan", "albert", "john", "henri", "charles", "isaac", "louis",
+	"niels", "alexander", "thomas", "max", "rosalind",
 }
 
 // CreateUser creates a user and generates an associated MintUser
 func (m *Mint) CreateUser(
 	t *testing.T,
 ) *MintUser {
-	username := token.New(userFirstnames[rand.Intn(len(userFirstnames))])
+	userIdx++
+	username := token.New(userFirstnames[userIdx%len(userFirstnames)])
 	password := token.New("password")
 
 	_, err := model.CreateUser(m.Ctx, username, password)
@@ -178,6 +180,41 @@ func (u *MintUser) Post(
 	params url.Values,
 ) (int, svc.Resp) {
 	return u.Mint.Post(t, u, path, params)
+}
+
+// Get gets a specified endpoint on the mint.
+func (m *Mint) Get(
+	t *testing.T,
+	user *MintUser,
+	path string,
+) (int, svc.Resp) {
+	req, err := http.NewRequest("GET",
+		fmt.Sprintf("%s%s", m.Server.URL, path), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.SetBasicAuth(user.Username, user.Password)
+
+	r, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.Body.Close()
+
+	var raw svc.Resp
+	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
+		t.Fatal(err)
+	}
+
+	return r.StatusCode, raw
+}
+
+// Get posts to a specified endpoint on the mint.
+func (u *MintUser) Get(
+	t *testing.T,
+	path string,
+) (int, svc.Resp) {
+	return u.Mint.Get(t, u, path)
 }
 
 // CreateAsset creates a new assset for this test user
