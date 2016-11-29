@@ -36,12 +36,14 @@ type TxAction struct {
 	OperationAsset       *string
 	OperationSource      *string
 	OperationDestination *string
+
+	IsExecuted bool
 }
 
 // TxPlan is the plan associated with the transaction. It is constructed by
 // each mint involved in the transaction.
 type TxPlan struct {
-	Actions     []TxAction
+	Actions     []*TxAction
 	Transaction string
 }
 
@@ -79,7 +81,7 @@ func ComputePlan(
 	// D/C
 
 	plan := TxPlan{
-		Actions:     []TxAction{},
+		Actions:     []*TxAction{},
 		Transaction: fmt.Sprintf("%s[%s]", tx.Owner, tx.Token),
 	}
 
@@ -91,7 +93,7 @@ func ComputePlan(
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
-	plan.Actions = append(plan.Actions, TxAction{
+	plan.Actions = append(plan.Actions, &TxAction{
 		Mint:                 host,
 		Owner:                tx.Owner,
 		Type:                 TxActTpOperation,
@@ -99,6 +101,7 @@ func ComputePlan(
 		Amount:               nil, // computed on second pass
 		OperationDestination: nil, // computed by next offer
 		OperationSource:      &tx.Owner,
+		IsExecuted:           false,
 	})
 
 	// Generate actions from path of offers.
@@ -121,12 +124,13 @@ func ComputePlan(
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
-		plan.Actions = append(plan.Actions, TxAction{
+		plan.Actions = append(plan.Actions, &TxAction{
 			Mint:          host,
 			Owner:         offer.Owner,
 			Type:          TxActTpCrossing,
 			CrossingOffer: &offer.ID,
 			Amount:        nil, // computed on second pass
+			IsExecuted:    false,
 		})
 		// Add the next operation action.
 		_, host, err = mint.UsernameAndMintHostFromAddress(ctx, pair[0].Owner)
@@ -138,7 +142,7 @@ func ComputePlan(
 				"Offer owner (%s) is not the offer base asset owner (%s).",
 				offer.Owner, pair[0].Owner))
 		}
-		plan.Actions = append(plan.Actions, TxAction{
+		plan.Actions = append(plan.Actions, &TxAction{
 			Mint:                 host,
 			Owner:                pair[0].Owner,
 			Type:                 TxActTpOperation,
@@ -146,6 +150,7 @@ func ComputePlan(
 			Amount:               nil,            // computed on second pass
 			OperationDestination: nil,            // computed by next offer
 			OperationSource:      &pair[0].Owner, // issuing operation
+			IsExecuted:           false,
 		})
 	}
 	// Compare the last operation asset to the transaction quote asset.

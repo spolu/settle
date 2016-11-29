@@ -14,7 +14,6 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/spolu/settle/lib/db"
-	"github.com/spolu/settle/lib/env"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/format"
 	"github.com/spolu/settle/lib/ptr"
@@ -95,7 +94,7 @@ func (e *CreateTransaction) Validate(
 
 	e.Owner = fmt.Sprintf("%s@%s",
 		authentication.Get(ctx).User.Username,
-		env.Get(ctx).Config[mint.EnvCfgMintHost])
+		mint.GetHost(ctx))
 	e.Hop = int8(0)
 
 	// Validate asset pair.
@@ -158,6 +157,8 @@ func (e *CreateTransaction) ExecuteCanonical(
 	ctx = db.Begin(ctx)
 	defer db.LoggedRollback(ctx)
 
+	txStore.Init(ctx, e.ID)
+
 	// Create canonical transaction locally.
 	tx, err := model.CreateCanonicalTransaction(ctx,
 		authentication.Get(ctx).User.Token,
@@ -177,14 +178,18 @@ func (e *CreateTransaction) ExecuteCanonical(
 	txStore.Store(ctx, e.ID, tx)
 	defer txStore.Clear(ctx, e.ID)
 
-	plan, err := ComputePlan(ctx, e.Client, e.Tx)
-	if err != nil {
-		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
-			402, "transaction_failed",
-			"The plan computation for the transaction failed: %s", e.ID,
-		))
+	e.Plan = txStore.GetPlan(ctx, e.ID)
+	if e.Plan == nil {
+		plan, err := ComputePlan(ctx, e.Client, e.Tx)
+		if err != nil {
+			return nil, nil, errors.Trace(errors.NewUserErrorf(err,
+				402, "transaction_failed",
+				"The plan computation for the transaction failed: %s", e.ID,
+			))
+		}
+		txStore.StorePlan(ctx, e.ID, plan)
+		e.Plan = plan
 	}
-	e.Plan = plan
 
 	err = e.ExecutePlan(ctx)
 	if err != nil {
@@ -242,6 +247,17 @@ func (e *CreateTransaction) ExecutePropagated(
 	ctx context.Context,
 ) (*int, *svc.Resp, error) {
 	mustCommit := false
+	txStore.Init(ctx, e.ID)
+
+	u := false
+	unlock := func() {
+		if !u {
+			u = true
+			txStore.Unlock(ctx, e.ID)
+		}
+	}
+	txStore.Lock(ctx, e.ID)
+	defer unlock()
 
 	// Fetch transaction in transaction store or retrieve it from the canonical
 	// mint.
@@ -315,18 +331,22 @@ func (e *CreateTransaction) ExecutePropagated(
 		defer txStore.Clear(ctx, e.ID)
 	}
 
-	plan, err := ComputePlan(ctx, e.Client, e.Tx)
-	if err != nil {
-		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
-			402, "transaction_failed",
-			"The plan computation for the transaction failed.",
-		))
+	e.Plan = txStore.GetPlan(ctx, e.ID)
+	if e.Plan == nil {
+		plan, err := ComputePlan(ctx, e.Client, e.Tx)
+		if err != nil {
+			return nil, nil, errors.Trace(errors.NewUserErrorf(err,
+				402, "transaction_failed",
+				"The plan computation for the transaction failed: %s", e.ID,
+			))
+		}
+		txStore.StorePlan(ctx, e.ID, plan)
+		e.Plan = plan
 	}
-	e.Plan = plan
 
 	// Check the plan at previous hop before we execute this hop, to convince
 	// ourselves that the funds are reserved!
-	err = e.Plan.Check(ctx, e.Client, e.Hop-1)
+	err := e.Plan.Check(ctx, e.Client, e.Hop-1)
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 			402, "transaction_failed",
@@ -342,6 +362,9 @@ func (e *CreateTransaction) ExecutePropagated(
 			"The plan execution for the transaction failed: %s", e.ID,
 		))
 	}
+
+	// We unlock the tranaction before propagating.
+	unlock()
 
 	err = e.Propagate(ctx)
 	if err != nil {
@@ -391,6 +414,16 @@ func (e *CreateTransaction) ExecutePlan(
 	}
 
 	a := e.Plan.Actions[e.Hop]
+	if a.IsExecuted {
+		mint.Logf(ctx,
+			"Skipping action: hop=%d", e.Hop)
+		return nil
+	}
+
+	// We have the transaction lock so this is safe to write. Also we can mark
+	// it as executed right away since everything gets canceled in case of
+	// error.
+	a.IsExecuted = true
 
 	switch a.Type {
 	case TxActTpOperation:
