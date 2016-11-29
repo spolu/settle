@@ -157,6 +157,8 @@ func (e *CreateTransaction) ExecuteCanonical(
 	ctx = db.Begin(ctx)
 	defer db.LoggedRollback(ctx)
 
+	// No need to lock the transaction here as we are the only mint to know its
+	// ID before it propagagtes.
 	txStore.Init(ctx, e.ID)
 
 	// Create canonical transaction locally.
@@ -246,9 +248,10 @@ func (e *CreateTransaction) ExecuteCanonical(
 func (e *CreateTransaction) ExecutePropagated(
 	ctx context.Context,
 ) (*int, *svc.Resp, error) {
-	mustCommit := false
 	txStore.Init(ctx, e.ID)
 
+	// This is used to be sure to unlock only once even if we use defer and
+	// unlock explicitely before propagation.
 	u := false
 	unlock := func() {
 		if !u {
@@ -256,11 +259,15 @@ func (e *CreateTransaction) ExecutePropagated(
 			txStore.Unlock(ctx, e.ID)
 		}
 	}
-	txStore.Lock(ctx, e.ID)
+	lock := func() {
+		u = false
+		txStore.Lock(ctx, e.ID)
+	}
+
+	lock()
 	defer unlock()
 
-	// Fetch transaction in transaction store or retrieve it from the canonical
-	// mint.
+	mustCommit := false
 	if txStore.Get(ctx, e.ID) != nil {
 		// If we find the transaction in the txStore, we also reuse the
 		// underlying db.Transaction so that the whole transaction is run on

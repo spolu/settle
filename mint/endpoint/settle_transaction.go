@@ -113,6 +113,10 @@ func (e *SettleTransaction) ExecuteCanonical(
 	ctx = db.Begin(ctx)
 	defer db.LoggedRollback(ctx)
 
+	// No need to lock the transaction here as we are the only mint to know its
+	// secret before it propagates (also, settlement propagates back to us).
+	txStore.Init(ctx, e.ID)
+
 	tx, err := model.LoadCanonicalTransactionByOwnerToken(ctx,
 		e.Owner, e.Token)
 	if err != nil {
@@ -169,8 +173,26 @@ func (e *SettleTransaction) ExecuteCanonical(
 func (e *SettleTransaction) ExecutePropagated(
 	ctx context.Context,
 ) (*int, *svc.Resp, error) {
-	mustCommit := false
+	txStore.Init(ctx, e.ID)
 
+	// This is used to be sure to unlock only once even if we use defer and
+	// unlock explicitely before propagation.
+	u := false
+	unlock := func() {
+		if !u {
+			u = true
+			txStore.Unlock(ctx, e.ID)
+		}
+	}
+	lock := func() {
+		u = false
+		txStore.Lock(ctx, e.ID)
+	}
+
+	lock()
+	defer unlock()
+
+	mustCommit := false
 	if txStore.Get(ctx, e.ID) != nil {
 		// If we find the transaction in the txStore, we also reuse the
 		// underlying db.Transaction so that the whole settlement is run on
@@ -231,6 +253,9 @@ func (e *SettleTransaction) ExecutePropagated(
 	}
 	e.Plan = plan
 
+	// We unlock the tranaction before propagating.
+	unlock()
+
 	err = e.Propagate(ctx)
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
@@ -239,6 +264,9 @@ func (e *SettleTransaction) ExecutePropagated(
 			e.ID,
 		))
 	}
+
+	// Reacquire the lock for final settlement.
+	lock()
 
 	err = e.Settle(ctx)
 	if err != nil {
@@ -273,6 +301,16 @@ func (e *SettleTransaction) Settle(
 	}
 
 	a := e.Plan.Actions[e.Hop]
+	if a.IsExecuted {
+		mint.Logf(ctx,
+			"Skipping action: hop=%d", e.Hop)
+		return nil
+	}
+
+	// We have the transaction lock so this is safe to write. Also we can mark
+	// it as executed right away since everything gets canceled in case of
+	// error.
+	a.IsExecuted = true
 
 	switch a.Type {
 	case TxActTpOperation:
