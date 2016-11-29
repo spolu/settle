@@ -179,6 +179,25 @@ VALUES
 	return &operation, nil
 }
 
+// Save updates the object database representation with the in-memory values.
+func (o *Operation) Save(
+	ctx context.Context,
+) error {
+	ext := db.Ext(ctx)
+	_, err := sqlx.NamedExec(ext, `
+UPDATE operations
+SET status = :status
+WHERE user = :user
+  AND owner = :owner
+  AND token = :token
+`, o)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	return nil
+}
+
 // LoadCanonicalOperationByOwnerToken attempts to load the canonical operation
 // for the given owner and token.
 func LoadCanonicalOperationByOwnerToken(
@@ -199,6 +218,39 @@ FROM operations
 WHERE owner = :owner
   AND token = :token
   AND propagation = :propagation
+`, operation); err != nil {
+		return nil, errors.Trace(err)
+	} else if !rows.Next() {
+		return nil, nil
+	} else if err := rows.StructScan(&operation); err != nil {
+		defer rows.Close()
+		return nil, errors.Trace(err)
+	} else if err := rows.Close(); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &operation, nil
+}
+
+// LoadCanonicalOperationByTransactionHop attempts to load the canonical
+// operation for the given transaction and hop.
+func LoadCanonicalOperationByTransactionHop(
+	ctx context.Context,
+	transaction string,
+	hop int8,
+) (*Operation, error) {
+	operation := Operation{
+		Transaction: &transaction,
+		Hop:         &hop,
+		Propagation: mint.PgTpCanonical,
+	}
+
+	ext := db.Ext(ctx)
+	if rows, err := sqlx.NamedQuery(ext, `
+SELECT *
+FROM operations
+WHERE txn = :txn
+  AND hop = :hop
 `, operation); err != nil {
 		return nil, errors.Trace(err)
 	} else if !rows.Next() {

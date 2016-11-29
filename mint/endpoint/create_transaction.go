@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
-	"strconv"
 	"time"
 
 	"goji.io/pat"
@@ -84,16 +83,12 @@ func (e *CreateTransaction) Validate(
 		e.ID = *id
 		e.Owner = *owner
 
-		hop, err := strconv.ParseInt(r.PostFormValue("hop"), 10, 8)
+		// Validate hop.
+		hop, err := ValidateHop(ctx, r.PostFormValue("hop"))
 		if err != nil {
-			return errors.Trace(errors.NewUserErrorf(err,
-				400, "hop_invalid",
-				"The transaction hop provided is invalid: %s. Transaction "+
-					"hops must be 8bits integers.",
-				r.PostFormValue("hop"),
-			))
+			return errors.Trace(err)
 		}
-		e.Hop = int8(hop)
+		e.Hop = *hop
 
 		return nil
 	}
@@ -352,7 +347,7 @@ func (e *CreateTransaction) ExecutePropagated(
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 			402, "transaction_failed",
-			"The transaction failed to propagate to all required mints: %s.",
+			"The transaction failed to propagate to required mints: %s.",
 			e.ID,
 		))
 	}
@@ -450,7 +445,7 @@ func (e *CreateTransaction) ExecutePlan(
 		txStore.StoreOperation(ctx, e.ID, op)
 
 		// Check the balances but only update the source balance. The
-		// destination balance will get updated when the operation is confirmed
+		// destination balance will get updated when the operation is settled
 		// and the source balance will get reverted if it cancels.
 
 		if dstBalance != nil {
@@ -524,8 +519,11 @@ func (e *CreateTransaction) ExecutePlan(
 			return errors.Trace(errors.Newf(
 				"Invalid resulting remainder: %s", b.String()))
 		}
-		// Do not set the offer as consumed (if remainder is 0) as this is just
-		// a reservation.
+		// Set the offer as consumed if all funds are reserved. If the
+		// transaction gets canceled, it'll get reverted.
+		if b.Cmp(new(big.Int)) == 0 {
+			offer.Status = mint.OfStConsumed
+		}
 
 		err = offer.Save(ctx)
 		if err != nil {

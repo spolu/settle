@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/big"
 	"regexp"
+	"strconv"
 
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/mint"
@@ -132,4 +133,39 @@ func ValidateID(
 	}
 
 	return &id, &owner, &token, nil
+}
+
+// ValidateSecret validates a secret.
+func ValidateSecret(
+	ctx context.Context,
+	secret string,
+) (*string, error) {
+	if len(secret) != 16 {
+		return nil, errors.Trace(errors.NewUserErrorf(nil,
+			400, "secret_invalid",
+			"The secret you provided is structurally invalid: %s.",
+			secret,
+		))
+	}
+
+	return &secret, nil
+}
+
+// ValidateHop validates a hop.
+func ValidateHop(
+	ctx context.Context,
+	hop string,
+) (*int8, error) {
+	h, err := strconv.ParseInt(hop, 10, 8)
+	if err != nil || h < 0 {
+		return nil, errors.Trace(errors.NewUserErrorf(err,
+			400, "hop_invalid",
+			"The transaction hop provided is invalid: %s. Transaction "+
+				"hops must be 8 bits positive integers.",
+			hop,
+		))
+	}
+	converted := int8(h)
+
+	return &converted, nil
 }

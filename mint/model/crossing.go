@@ -99,6 +99,57 @@ VALUES
 	return &crossing, nil
 }
 
+// Save updates the object database representation with the in-memory values.
+func (c *Crossing) Save(
+	ctx context.Context,
+) error {
+	ext := db.Ext(ctx)
+	_, err := sqlx.NamedExec(ext, `
+UPDATE crossings
+SET status = :status
+WHERE user = :user
+  AND owner = :owner
+  AND token = :token
+`, c)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	return nil
+}
+
+// LoadCrossingByTransactionHop attempts to load the crossing for the given
+// transaction and hop.
+func LoadCrossingByTransactionHop(
+	ctx context.Context,
+	transaction string,
+	hop int8,
+) (*Crossing, error) {
+	crossing := Crossing{
+		Transaction: transaction,
+		Hop:         hop,
+	}
+
+	ext := db.Ext(ctx)
+	if rows, err := sqlx.NamedQuery(ext, `
+SELECT *
+FROM crossings
+WHERE txn = :txn
+  AND hop = :hop
+`, crossing); err != nil {
+		return nil, errors.Trace(err)
+	} else if !rows.Next() {
+		return nil, nil
+	} else if err := rows.StructScan(&crossing); err != nil {
+		defer rows.Close()
+		return nil, errors.Trace(err)
+	} else if err := rows.Close(); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &crossing, nil
+}
+
 // LoadCrossingsByTransaction loads all crossings that are associated with the
 // specified transaction.
 func LoadCrossingsByTransaction(

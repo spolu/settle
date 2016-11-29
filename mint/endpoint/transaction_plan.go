@@ -62,7 +62,6 @@ func ComputePlan(
 			if err != nil {
 				return errors.Trace(err)
 			}
-
 			// TODO(stan): validate that the offer owner owns the base asset.
 
 			offers[i] = *offer
@@ -185,12 +184,9 @@ func ComputePlan(
 		plan.Actions[2*i].Amount = amount
 		plan.Actions[2*i+1].Amount = amount
 
-		if amount.Cmp(offers[i].Remainder) > 0 {
-			return nil, errors.Trace(errors.Newf(
-				"Insufficient remainder for offer %s: %s but needs %s.",
-				offers[i].ID, offers[i].Remainder.String(),
-				amount.String()))
-		}
+		// We don't check that the remainder is sufficient on the offer here as
+		// ComputePlan is used at settlement (where crossings have already been
+		// reserved)
 	}
 
 	logLine := fmt.Sprintf("Transaction plan for %s:", plan.Transaction)
@@ -232,6 +228,7 @@ func (p *TxPlan) Check(
 
 	switch action.Type {
 	case TxActTpOperation:
+
 		operation := (*mint.OperationResource)(nil)
 		for _, op := range transaction.Operations {
 			op := op
@@ -267,7 +264,9 @@ func (p *TxPlan) Check(
 				"%s expected %s",
 				hop, operation.Destination, *action.OperationDestination)
 		}
+
 	case TxActTpCrossing:
+
 		crossing := (*mint.CrossingResource)(nil)
 		for _, cr := range transaction.Crossings {
 			cr := cr

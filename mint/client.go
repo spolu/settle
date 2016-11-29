@@ -252,19 +252,77 @@ func (c *Client) RetrieveTransaction(
 	return &transaction, nil
 }
 
-// PropagateTransaction propagates an offer to the `destination` mint.
+// PropagateTransaction propagates a transaction to the specified mint.
 func (c *Client) PropagateTransaction(
 	ctx context.Context,
 	id string,
 	hop int8,
-	host string,
+	mint string,
 ) (*TransactionResource, error) {
 	req, err := http.NewRequest("POST",
-		FullMintURL(ctx, host,
+		FullMintURL(ctx, mint,
 			fmt.Sprintf("/transactions/%s", id)).String(),
 		strings.NewReader(url.Values{
 			"hop": {fmt.Sprintf("%d", hop)},
 		}.Encode()))
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	r, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	defer r.Body.Close()
+
+	var raw svc.Resp
+	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	var transaction TransactionResource
+	if err := raw.Extract("transaction", &transaction); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &transaction, nil
+}
+
+// SettleTransaction settles a transaction. If hop, secret, mint are specified
+// it settles on the specified mint using the specified hop and secret,
+// otherwise it attempts to settle on the canonical mint.
+func (c *Client) SettleTransaction(
+	ctx context.Context,
+	id string,
+	hop *int8,
+	secret *string,
+	mint *string,
+) (*TransactionResource, error) {
+	if mint == nil {
+		owner, _, err := NormalizedOwnerAndTokenFromID(ctx, id)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		_, host, err := UsernameAndMintHostFromAddress(ctx, owner)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		mint = &host
+	}
+
+	body := url.Values{}
+	if hop != nil {
+		body["hop"] = []string{fmt.Sprintf("%d", *hop)}
+	}
+	if secret != nil {
+		body["secret"] = []string{*secret}
+	}
+
+	req, err := http.NewRequest("POST",
+		FullMintURL(ctx, *mint,
+			fmt.Sprintf("/transactions/%s/settle", id)).String(),
+		strings.NewReader(body.Encode()))
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
