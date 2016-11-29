@@ -80,8 +80,6 @@ func TestSettleTransactionWith2Offers(
 		t.Fatal(err)
 	}
 
-	fmt.Printf("\n>>>>>>>>>>>>>>>>\n\n")
-
 	status, raw = u[0].Post(t,
 		fmt.Sprintf("/transactions/%s/settle", tx.ID),
 		url.Values{})
@@ -90,6 +88,50 @@ func TestSettleTransactionWith2Offers(
 	if err := raw.Extract("transaction", &tx0); err != nil {
 		t.Fatal(err)
 	}
+
+	assert.Equal(t, 200, status)
+	assert.Equal(t, mint.TxStSettled, tx0.Status)
+	assert.Equal(t, 1, len(tx0.Operations))
+	assert.Equal(t, []mint.CrossingResource{}, tx0.Crossings)
+
+	assert.Equal(t, mint.TxStSettled, tx0.Operations[0].Status)
+
+	// Check transaction on m[1].
+	status, raw = u[1].Get(t, fmt.Sprintf("/transactions/%s", tx0.ID))
+
+	var tx1 mint.TransactionResource
+	if err := raw.Extract("transaction", &tx1); err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, 200, status)
+	assert.Equal(t, mint.TxStSettled, tx1.Status)
+	assert.Equal(t, 1, len(tx1.Operations))
+	assert.Equal(t, 1, len(tx1.Crossings))
+
+	assert.Equal(t, mint.TxStSettled, tx1.Crossings[0].Status)
+	assert.Equal(t, mint.TxStSettled, tx1.Operations[0].Status)
+
+	// Check transaction on m[2].
+	status, raw = u[2].Get(t, fmt.Sprintf("/transactions/%s", tx0.ID))
+
+	var tx2 mint.TransactionResource
+	if err := raw.Extract("transaction", &tx2); err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, 200, status)
+	assert.Equal(t, mint.TxStSettled, tx2.Status)
+	assert.Equal(t, 1, len(tx2.Operations))
+	assert.Equal(t, 1, len(tx2.Crossings))
+
+	assert.Equal(t, mint.TxStSettled, tx2.Crossings[0].Status)
+	assert.Equal(t, mint.TxStSettled, tx2.Operations[0].Status)
+
+	// Check that re-settling does not trigger an error.
+	status, _ = u[0].Post(t,
+		fmt.Sprintf("/transactions/%s/settle", tx.ID),
+		url.Values{})
 
 	assert.Equal(t, 200, status)
 }

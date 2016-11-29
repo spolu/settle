@@ -193,6 +193,24 @@ VALUES
 	return &transaction, nil
 }
 
+// Save updates the object database representation with the in-memory values.
+func (t *Transaction) Save(
+	ctx context.Context,
+) error {
+	ext := db.Ext(ctx)
+	_, err := sqlx.NamedExec(ext, `
+UPDATE transactions
+SET status = :status
+WHERE owner = :owner
+  AND token = :token
+`, t)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	return nil
+}
+
 // LoadCanonicalTransactionByOwnerToken attempts to load the canonical
 // transaction for the given owner and token.
 func LoadCanonicalTransactionByOwnerToken(

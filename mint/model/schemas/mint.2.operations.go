@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS operations(
   txn VARCHAR(256),                  -- transaction id
   hop SMALLINT,                      -- transaction hop
 
-  PRIMARY KEY(user, owner, token),
+  PRIMARY KEY(owner, token),
   CONSTRAINT operations_user_fk FOREIGN KEY (user) REFERENCES users(token)
 );
 `

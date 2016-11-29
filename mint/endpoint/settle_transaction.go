@@ -199,6 +199,23 @@ func (e *SettleTransaction) ExecutePropagated(
 		}
 		e.Tx = tx
 
+		// If the transaction is already settled in database, we can simply
+		// return 200 here.
+		if e.Tx.Status == mint.TxStSettled {
+			ops, err := model.LoadCanonicalOperationsByTransaction(ctx, e.ID)
+			if err != nil {
+				return nil, nil, errors.Trace(err) // 500
+			}
+			crs, err := model.LoadCrossingsByTransaction(ctx, e.ID)
+			if err != nil {
+				return nil, nil, errors.Trace(err) // 500
+			}
+			return ptr.Int(http.StatusOK), &svc.Resp{
+				"transaction": format.JSONPtr(model.NewTransactionResource(ctx,
+					e.Tx, ops, crs)),
+			}, nil
+		}
+
 		// Store the transcation in memory so that it's latest version is available
 		// through API before we commit.
 		txStore.Store(ctx, e.ID, tx)
@@ -318,7 +335,7 @@ func (e *SettleTransaction) Settle(
 		txStore.StoreOperation(ctx, e.ID, op)
 
 		mint.Logf(ctx,
-			"Reserved operation: user=%s id=%s[%s] created=%q propagation=%s "+
+			"Settled operation: user=%s id=%s[%s] created=%q propagation=%s "+
 				"asset=%s source=%s destination=%s amount=%s "+
 				"status=%s transaction=%s",
 			*op.User, op.Owner, op.Token, op.Created, op.Propagation,
@@ -352,6 +369,12 @@ func (e *SettleTransaction) Settle(
 			cr.User, cr.Owner, cr.Token, cr.Created,
 			cr.Offer, (*big.Int)(&cr.Amount).String(),
 			cr.Status, cr.Transaction)
+	}
+
+	e.Tx.Status = mint.TxStSettled
+	err := e.Tx.Save(ctx)
+	if err != nil {
+		return errors.Trace(err)
 	}
 
 	return nil

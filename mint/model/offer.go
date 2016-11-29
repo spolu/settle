@@ -181,9 +181,8 @@ func (o *Offer) Save(
 	ext := db.Ext(ctx)
 	_, err := sqlx.NamedExec(ext, `
 UPDATE offers
-SET status = :status
-WHERE user = :user
-  AND owner = :owner
+SET status = :status, remainder = :remainder
+WHERE owner = :owner
   AND token = :token
 `, o)
 	if err != nil {

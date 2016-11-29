@@ -80,8 +80,7 @@ func (b *Balance) Save(
 	_, err := sqlx.NamedExec(ext, `
 UPDATE balances
 SET value = :value
-WHERE user = :user
-  AND owner = :owner
+WHERE owner = :owner
   AND token = :token
 `, b)
 	if err != nil {

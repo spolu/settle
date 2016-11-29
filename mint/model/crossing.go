@@ -107,8 +107,7 @@ func (c *Crossing) Save(
 	_, err := sqlx.NamedExec(ext, `
 UPDATE crossings
 SET status = :status
-WHERE user = :user
-  AND owner = :owner
+WHERE owner = :owner
   AND token = :token
 `, c)
 	if err != nil {

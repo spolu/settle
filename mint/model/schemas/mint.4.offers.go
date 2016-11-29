@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS offers(
   status VARCHAR(32) NOT NULL,       -- status (active, closed, consumed)
   remainder VARCHAR(64) NOT NULL,    -- remainder amount of quote asset asked
 
-  PRIMARY KEY(user, owner, token),
+  PRIMARY KEY(owner, token),
   CONSTRAINT offers_user_fk FOREIGN KEY (user) REFERENCES users(token)
 );
 `

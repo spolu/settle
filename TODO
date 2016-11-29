@@ -1,6 +1,7 @@
 # mint
 
- [ ] figure out when to set the offer as consumed (multiple crossings my be reserved)
+ [ ] secure concurrent transaction creation and settlement
+ [ ] figure out when to set the offer as consumed (multiple crossings might be reserved)
  [ ] propagation protocol for both operations and offers (need to learn more)
  [ ] attempt to use Amount everywhere?
  [ ] pass DSN for DB, support Postgres
@@ -19,6 +20,7 @@
 
   # test
 
+    [ ] concurrent call to settlement
     [ ] test that consumes an offer entirely (check status)
     [ ] transaction tests with misbehaving mint
     [x] test transaction that uses the same user twice

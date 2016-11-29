@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS crossings(
   txn VARCHAR(256) NOT NULL,         -- transaction id
   hop SMALLINT NOT NULL,             -- transaction hop
 
-  PRIMARY KEY(user, owner, token),
+  PRIMARY KEY(owner, token),
   CONSTRAINT crossings_user_fk FOREIGN KEY (user) REFERENCES users(token)
 );
 `

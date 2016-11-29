@@ -187,8 +187,7 @@ func (o *Operation) Save(
 	_, err := sqlx.NamedExec(ext, `
 UPDATE operations
 SET status = :status
-WHERE user = :user
-  AND owner = :owner
+WHERE owner = :owner
   AND token = :token
 `, o)
 	if err != nil {
