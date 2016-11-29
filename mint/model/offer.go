@@ -4,6 +4,8 @@ package model
 
 import (
 	"context"
+	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -12,30 +14,53 @@ import (
 	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/token"
+	"github.com/spolu/settle/mint"
 )
 
 // Offer represents an offer for an asset pair.
 // - Offers are always represented as asks
-//   (ask on pair A/B offer to sell A for B).
+//   (ask on pair A/B offer to sell A (base asset) for B (quote asset)).
+//   Amounts are expressed in quote asset.
 // - Canonical offers are stored on the mint of the offer's owner (which acts
 //   as source of truth on its state).
 // - Propagated offers are indicatively stored on the mints of the offers's
 //   assets, to compute order books.
 type Offer struct {
-	User        string
+	User        *string
 	Owner       string
 	Token       string
 	Created     time.Time
-	Propagation PgType
-
-	Status OfStatus
+	Propagation mint.PgType
 
 	BaseAsset  string `db:"base_asset"`  // BaseAsset name.
 	QuoteAsset string `db:"quote_asset"` // QuoteAsset name.
-
 	BasePrice  Amount `db:"base_price"`
 	QuotePrice Amount `db:"quote_price"`
 	Amount     Amount
+
+	Status    mint.OfStatus
+	Remainder Amount
+}
+
+// NewOfferResource generates a new resource.
+func NewOfferResource(
+	ctx context.Context,
+	offer *Offer,
+) mint.OfferResource {
+	return mint.OfferResource{
+		ID: fmt.Sprintf(
+			"%s[%s]", offer.Owner, offer.Token),
+		Created: offer.Created.UnixNano() / mint.TimeResolutionNs,
+		Owner:   offer.Owner,
+		Pair:    fmt.Sprintf("%s/%s", offer.BaseAsset, offer.QuoteAsset),
+		Price: fmt.Sprintf(
+			"%s/%s",
+			(*big.Int)(&offer.BasePrice).String(),
+			(*big.Int)(&offer.QuotePrice).String()),
+		Amount:    (*big.Int)(&offer.Amount),
+		Status:    offer.Status,
+		Remainder: (*big.Int)(&offer.Remainder),
+	}
 }
 
 // CreateCanonicalOffer creates and stores a new canonical Offer object.
@@ -48,31 +73,34 @@ func CreateCanonicalOffer(
 	basePrice Amount,
 	quotePrice Amount,
 	amount Amount,
-	status OfStatus,
+	status mint.OfStatus,
+	remainder Amount,
 ) (*Offer, error) {
 	offer := Offer{
-		User:        user,
+		User:        &user,
 		Owner:       owner,
 		Token:       token.New("offer"),
 		Created:     time.Now(),
-		Propagation: PgTpCanonical,
+		Propagation: mint.PgTpCanonical,
 
 		BaseAsset:  baseAsset,
 		QuoteAsset: quoteAsset,
 		BasePrice:  basePrice,
 		QuotePrice: quotePrice,
 		Amount:     amount,
-		Status:     status,
+
+		Status:    status,
+		Remainder: remainder,
 	}
 
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO offers
   (user, owner, token, created, propagation, base_asset, quote_asset,
-   base_price, quote_price, amount, status)
+   base_price, quote_price, amount, status, remainder)
 VALUES
   (:user, :owner, :token, :created, :propagation, :base_asset, :quote_asset,
-   :base_price, :quote_price, :amount, :status)
+   :base_price, :quote_price, :amount, :status, :remainder)
 `, offer); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:
@@ -93,7 +121,6 @@ VALUES
 // CreatePropagatedOffer creates and stores a new propagated Offer object.
 func CreatePropagatedOffer(
 	ctx context.Context,
-	user string,
 	owner string,
 	token string,
 	created time.Time,
@@ -102,21 +129,24 @@ func CreatePropagatedOffer(
 	basePrice Amount,
 	quotePrice Amount,
 	amount Amount,
-	status OfStatus,
+	status mint.OfStatus,
+	remainder Amount,
 ) (*Offer, error) {
 	offer := Offer{
-		User:        user,
+		User:        nil,
 		Owner:       owner,
 		Token:       token,
 		Created:     created,
-		Propagation: PgTpPropagated,
+		Propagation: mint.PgTpPropagated,
 
 		BaseAsset:  baseAsset,
 		QuoteAsset: quoteAsset,
 		BasePrice:  basePrice,
 		QuotePrice: quotePrice,
 		Amount:     amount,
-		Status:     status,
+
+		Status:    status,
+		Remainder: remainder,
 	}
 
 	ext := db.Ext(ctx)
@@ -126,7 +156,7 @@ INSERT INTO offers
    base_price, quote_price, amount, status)
 VALUES
   (:user, :owner, :token, :created, :propagation, :base_asset, :quote_asset,
-   :base_price, :quote_price, :amount, :status)
+   :base_price, :quote_price, :amount, :status, :remainder)
 `, offer); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:
@@ -151,9 +181,8 @@ func (o *Offer) Save(
 	ext := db.Ext(ctx)
 	_, err := sqlx.NamedExec(ext, `
 UPDATE offers
-SET status = :status
-WHERE user = :user
-  AND owner = :owner
+SET status = :status, remainder = :remainder
+WHERE owner = :owner
   AND token = :token
 `, o)
 	if err != nil {
@@ -173,7 +202,7 @@ func LoadCanonicalOfferByOwnerToken(
 	offer := Offer{
 		Owner:       owner,
 		Token:       token,
-		Propagation: PgTpCanonical,
+		Propagation: mint.PgTpCanonical,
 	}
 
 	ext := db.Ext(ctx)
@@ -195,4 +224,17 @@ WHERE owner = :owner
 	}
 
 	return &offer, nil
+}
+
+// LoadCanonicalOfferByID attempts to load the canonical offer for the given
+// id.
+func LoadCanonicalOfferByID(
+	ctx context.Context,
+	id string,
+) (*Offer, error) {
+	owner, token, err := mint.NormalizedOwnerAndTokenFromID(ctx, id)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	return LoadCanonicalOfferByOwnerToken(ctx, owner, token)
 }

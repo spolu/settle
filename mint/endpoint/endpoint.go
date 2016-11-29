@@ -1,11 +1,16 @@
 package endpoint
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/respond"
 	"github.com/spolu/settle/lib/svc"
+)
+
+const (
+	defaultMaxMemory = 32 << 20 // 32 MB
 )
 
 // EndPtName reprensents an endpoint name.
@@ -21,7 +26,7 @@ type Endpoint interface {
 	) error
 
 	Execute(
-		r *http.Request,
+		ctx context.Context,
 	) (*int, *svc.Resp, error)
 }
 
@@ -50,7 +55,7 @@ func HandlerFor(
 			return
 		}
 
-		status, resp, err := endpt.Execute(r)
+		status, resp, err := endpt.Execute(r.Context())
 		if err != nil {
 			respond.Error(ctx, w, errors.Trace(err))
 			return

@@ -1,6 +1,7 @@
 package endpoint
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -78,10 +79,8 @@ func (e *CreateAsset) Validate(
 
 // Execute executes the endpoint.
 func (e *CreateAsset) Execute(
-	r *http.Request,
+	ctx context.Context,
 ) (*int, *svc.Resp, error) {
-	ctx := r.Context()
-
 	ctx = db.Begin(ctx)
 	defer db.LoggedRollback(ctx)
 
@@ -105,6 +104,6 @@ func (e *CreateAsset) Execute(
 	db.Commit(ctx)
 
 	return ptr.Int(http.StatusCreated), &svc.Resp{
-		"asset": format.JSONPtr(mint.NewAssetResource(ctx, asset)),
+		"asset": format.JSONPtr(model.NewAssetResource(ctx, asset)),
 	}, nil
 }

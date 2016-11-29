@@ -5,32 +5,13 @@ package model
 import (
 	"database/sql/driver"
 	"math/big"
+	"strings"
 
 	"github.com/spolu/settle/lib/errors"
 )
 
 // Amount extends big.Int to implement sql.Scanner and driver.Valuer.
 type Amount big.Int
-
-// PgType is the propagation type of an object.
-type PgType string
-
-const (
-	//PgTpCanonical is an offer owned by this mint.
-	PgTpCanonical PgType = "canonical"
-	//PgTpPropagated is an offer propagated to this mint.
-	PgTpPropagated PgType = "propagated"
-)
-
-// OfStatus is the status of an offer.
-type OfStatus string
-
-const (
-	//OfStActive is used to mark an offer as active.
-	OfStActive OfStatus = "active"
-	//OfStClosed is used to mark an offer as closed.
-	OfStClosed OfStatus = "closed"
-)
 
 // Value implements driver.Valuer.
 func (b Amount) Value() (value driver.Value, err error) {
@@ -57,41 +38,24 @@ func (b *Amount) Scan(src interface{}) error {
 	return nil
 }
 
-// Value implements driver.Valuer
-func (s PgType) Value() (value driver.Value, err error) {
-	return string(s), nil
-}
-
-// Scan implements sql.Scanner.
-func (s *PgType) Scan(src interface{}) error {
-	switch src := src.(type) {
-	case []byte:
-		*s = PgType(src)
-	case string:
-		*s = PgType(src)
-	default:
-		return errors.Newf(
-			"Incompatible type for PgType with value: %q", src)
-	}
-
-	return nil
-}
+// OfPath is an offer path and implemets sql.Scanner and dirver.Valuer for easy
+// serialization.
+type OfPath []string
 
 // Value implements driver.Valuer.
-func (s OfStatus) Value() (value driver.Value, err error) {
-	return string(s), nil
+func (p OfPath) Value() (value driver.Value, err error) {
+	return strings.Join([]string(p), "/"), nil
 }
 
 // Scan implements sql.Scanner.
-func (s *OfStatus) Scan(src interface{}) error {
+func (p *OfPath) Scan(src interface{}) error {
 	switch src := src.(type) {
 	case []byte:
-		*s = OfStatus(src)
+		*p = strings.Split(string(src), "/")
 	case string:
-		*s = OfStatus(src)
+		*p = strings.Split(src, "/")
 	default:
-		return errors.Newf(
-			"Incompatible status for OfStatus with value: %q", src)
+		return errors.Newf("Incompatible type for OfPath with value: %q", src)
 	}
 
 	return nil

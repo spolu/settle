@@ -1,6 +1,7 @@
 package endpoint
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 	"net/http"
@@ -37,11 +38,11 @@ func init() {
 type CreateOperation struct {
 	Client *mint.Client
 
-	Owner      string
-	Asset      mint.AssetResource
-	Amount     big.Int
-	SrcAddress *string
-	DstAddress *string
+	Owner       string
+	Asset       mint.AssetResource
+	Amount      big.Int
+	Source      string
+	Destination string
 }
 
 // NewCreateOperation constructs and initialiezes the endpoint.
@@ -80,96 +81,57 @@ func (e *CreateOperation) Validate(
 			pat.Param(r, "asset"),
 		))
 	}
-	username, host, err := mint.UsernameAndMintHostFromAddress(ctx, a.Owner)
-	if err != nil {
-		return errors.Trace(errors.NewUserErrorf(err,
-			400, "asset_invalid",
-			"The asset name you provided has an invalid issuer address: %s.",
-			a.Owner,
-		))
-	}
 	e.Asset = *a
 
 	// Validate that the issuer is attempting to create the operation.
-	if host != env.Get(ctx).Config[mint.EnvCfgMintHost] ||
-		username != authentication.Get(ctx).User.Username {
+	if e.Owner != a.Owner {
 		return errors.Trace(errors.NewUserErrorf(nil,
 			400, "operation_not_authorized",
 			"You can only create operations for assets created by the "+
-				"account you are currently authenticated with: %s@%s. This "+
-				"operation's asset was created by: %s@%s. If you own %s, "+
+				"account you are currently authenticated with: %s. This "+
+				"operation's asset was created by: %s. If you own %s, "+
 				"and wish to transfer some of it, you should create a "+
-				"transaction directly from your mint instead.",
-			authentication.Get(ctx).User.Username,
-			env.Get(ctx).Config[mint.EnvCfgMintHost],
-			username, host, a.Name,
+				"transaction from your mint instead.",
+			e.Owner, a.Owner, a.Name,
 		))
 	}
 
 	// Validate amount.
-	var amount big.Int
-	_, success := amount.SetString(r.PostFormValue("amount"), 10)
-	if !success ||
-		amount.Cmp(new(big.Int)) < 0 ||
-		amount.Cmp(model.MaxAssetAmount) >= 0 {
+	amount, err := ValidateAmount(ctx, r.PostFormValue("amount"))
+	if err != nil {
+		return errors.Trace(err)
+	}
+	e.Amount = *amount
+
+	// Validate source.
+	srcAddress, err := mint.NormalizedAddress(ctx, r.PostFormValue("source"))
+	if err != nil {
 		return errors.Trace(errors.NewUserErrorf(err,
-			400, "amount_invalid",
-			"The amount you provided is invalid: %s. Amounts must be "+
-				"integers between 0 and 2^128.",
-			r.PostFormValue("amount"),
+			400, "source_invalid",
+			"The source address you provided is invalid: %s.",
+			srcAddress,
 		))
 	}
-	e.Amount = amount
+	e.Source = srcAddress
 
-	// Validate source
-	var srcAddress *string
-	if r.PostFormValue("source") != "" {
-		addr, err := mint.NormalizedAddress(ctx, r.PostFormValue("source"))
-		if err != nil {
-			return errors.Trace(errors.NewUserErrorf(err,
-				400, "source_invalid",
-				"The source address you provided is invalid: %s.",
-				*srcAddress,
-			))
-		}
-		srcAddress = &addr
-	}
-	e.SrcAddress = srcAddress
-
-	// Validate destination
-	var dstAddress *string
-	if r.PostFormValue("destination") != "" {
-		addr, err := mint.NormalizedAddress(ctx, r.PostFormValue("destination"))
-		if err != nil {
-			return errors.Trace(errors.NewUserErrorf(err,
-				400, "destination_invalid",
-				"The destination address you provided is invalid: %s.",
-				*dstAddress,
-			))
-		}
-		dstAddress = &addr
-	}
-	e.DstAddress = dstAddress
-
-	if srcAddress == nil && dstAddress == nil {
+	// Validate destination.
+	dstAddress, err := mint.NormalizedAddress(ctx, r.PostFormValue("destination"))
+	if err != nil {
 		return errors.Trace(errors.NewUserErrorf(err,
-			400, "operation_invalid",
-			"The operation has no source and no destination. You must "+
-				"specify at least one of them (no source: issuance; no "+
-				"destination: annihilation; source and destination: "+
-				"transfer).",
+			400, "destination_invalid",
+			"The destination address you provided is invalid: %s.",
+			dstAddress,
 		))
 	}
+	e.Destination = dstAddress
 
 	return nil
 }
 
 // Execute executes the endpoint.
 func (e *CreateOperation) Execute(
-	r *http.Request,
+	ctx context.Context,
 ) (*int, *svc.Resp, error) {
-	ctx := r.Context()
-
 	ctx = db.Begin(ctx)
 	defer db.LoggedRollback(ctx)
 
@@ -185,52 +147,45 @@ func (e *CreateOperation) Execute(
 			e.Asset.Name,
 		))
 	}
-	assetName := fmt.Sprintf(
-		"%s[%s.%d]",
-		asset.Owner, asset.Code, asset.Scale)
-
-	balances := []*model.Balance{}
 
 	var srcBalance *model.Balance
-	if e.SrcAddress != nil {
+	if e.Asset.Owner != e.Source {
 		srcBalance, err = model.LoadBalanceByAssetHolder(ctx,
-			assetName, *e.SrcAddress)
+			e.Asset.Name, e.Source)
 		if err != nil {
 			return nil, nil, errors.Trace(err) // 500
 		} else if srcBalance == nil {
 			return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
 				400, "source_invalid",
 				"The source address you provided has no existing balance: %s.",
-				*e.SrcAddress,
+				e.Source,
 			))
 		}
-		balances = append(balances, srcBalance)
 	}
 
 	var dstBalance *model.Balance
-	if e.DstAddress != nil {
+	if e.Asset.Owner != e.Destination {
 		dstBalance, err = model.LoadOrCreateBalanceByAssetHolder(ctx,
 			authentication.Get(ctx).User.Token,
 			e.Owner,
-			assetName, *e.DstAddress)
+			e.Asset.Name, e.Destination)
 		if err != nil {
 			return nil, nil, errors.Trace(err) // 500
 		}
-
-		balances = append(balances, dstBalance)
 	}
 
-	operation, err := model.CreateCanonicalOperation(ctx,
+	op, err := model.CreateCanonicalOperation(ctx,
 		authentication.Get(ctx).User.Token,
 		e.Owner,
-		assetName, e.SrcAddress, e.DstAddress, model.Amount(e.Amount))
+		e.Asset.Name, e.Source, e.Destination, model.Amount(e.Amount),
+		mint.TxStSettled, nil, nil)
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
 	}
 
 	if dstBalance != nil {
 		(*big.Int)(&dstBalance.Value).Add(
-			(*big.Int)(&dstBalance.Value), (*big.Int)(&operation.Amount))
+			(*big.Int)(&dstBalance.Value), (*big.Int)(&op.Amount))
 
 		// Checks if the dstBalance is positive and not overflown.
 		b := (*big.Int)(&dstBalance.Value)
@@ -252,13 +207,13 @@ func (e *CreateOperation) Execute(
 
 	if srcBalance != nil {
 		(*big.Int)(&srcBalance.Value).Sub(
-			(*big.Int)(&srcBalance.Value), (*big.Int)(&operation.Amount))
+			(*big.Int)(&srcBalance.Value), (*big.Int)(&op.Amount))
 
 		// Checks if the srcBalance is positive and not overflown.
 		b := (*big.Int)(&srcBalance.Value)
 		if new(big.Int).Abs(b).Cmp(model.MaxAssetAmount) >= 0 ||
 			b.Cmp(new(big.Int)) < 0 {
-			return nil, nil, errors.Trace(errors.NewUserErrorf(err,
+			return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
 				400, "amount_invalid",
 				"The resulting source balance is invalid: %s. The "+
 					"balance must be an integer between 0 and 2^128.",
@@ -272,12 +227,18 @@ func (e *CreateOperation) Execute(
 		}
 	}
 
+	mint.Logf(ctx,
+		"Settled operation: user=%s id=%s[%s] created=%q propagation=%s "+
+			"asset=%s source=%s destination=%s amount=%s status=%s",
+		op.User, op.Owner, op.Token, op.Owner, op.Created, op.Propagation,
+		op.Asset, op.Source, op.Destination, op.Amount,
+		(*big.Int)(&op.Amount).String(), op.Status)
+
 	db.Commit(ctx)
 
 	// TODO(stan): propagation
 
 	return ptr.Int(http.StatusCreated), &svc.Resp{
-		"operation": format.JSONPtr(mint.NewOperationResource(ctx,
-			operation, asset)),
+		"operation": format.JSONPtr(model.NewOperationResource(ctx, op)),
 	}, nil
 }

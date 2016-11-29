@@ -2,8 +2,10 @@ package mint
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/spolu/settle/lib/env"
+	"github.com/spolu/settle/lib/logging"
 )
 
 const (
@@ -16,4 +18,13 @@ func GetMintHost(
 	ctx context.Context,
 ) string {
 	return env.Get(ctx).Config[EnvCfgMintHost]
+}
+
+// Logf shells out to logging.Logf adding the mint host as prefix.
+func Logf(
+	ctx context.Context,
+	format string,
+	v ...interface{},
+) {
+	logging.Logf(ctx, fmt.Sprintf("[%s] ", GetMintHost(ctx))+format, v...)
 }

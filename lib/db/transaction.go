@@ -42,6 +42,11 @@ func Begin(
 	if ctx.Value(dbKey) == nil || GetDB(ctx) == nil {
 		panic("db: no DB in context")
 	}
+	//if ctx.Value(transactionKey) != nil && GetTransaction(ctx).Tx != nil {
+	//	Logging.Logf(ctx,
+	//		"Transaction: already begun %s.", GetTransaction(ctx).Token)
+	//	return ctx
+	//}
 	token := token.New("tx")
 	logging.Logf(ctx,
 		"Transaction: begin %s.", token)

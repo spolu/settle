@@ -6,8 +6,8 @@ import (
 	"regexp"
 
 	"github.com/spolu/settle/lib/errors"
-	"github.com/spolu/settle/lib/logging"
 	"github.com/spolu/settle/lib/respond"
+	"github.com/spolu/settle/mint"
 	"github.com/spolu/settle/mint/model"
 )
 
@@ -67,6 +67,9 @@ type SkipRule struct {
 // SkipList is the list of endpoints that do not require authentication.
 var SkipList = []*SkipRule{
 	&SkipRule{"GET", regexp.MustCompile("^/offers/[a-zA-Z0-9_\\+:@\\.\\[\\]]+$")},
+	&SkipRule{"GET", regexp.MustCompile("^/transactions/[a-zA-Z0-9_\\+:@\\.\\[\\]]+$")},
+	&SkipRule{"POST", regexp.MustCompile("^/transactions/[a-zA-Z0-9_\\+:@\\.\\[\\]]+$")},
+	&SkipRule{"POST", regexp.MustCompile("^/transactions/[a-zA-Z0-9_\\+:@\\.\\[\\]]+/settle$")},
 }
 
 // ServeHTTP handles incoming HTTP requests and attempt to authenticate them.
@@ -80,7 +83,7 @@ func (m middleware) ServeHTTP(
 	username, password, _ := r.BasicAuth()
 	skip := false
 	for _, s := range SkipList {
-		if s.Method == r.Method && s.Pattern.MatchString(r.URL.EscapedPath()) {
+		if s.Method == r.Method && s.Pattern.MatchString(r.URL.Path) {
 			skip = true
 		}
 	}
@@ -90,13 +93,13 @@ func (m middleware) ServeHTTP(
 	failedAuth := func(err error) {
 		if skip {
 			withStatus = With(ctx, Status{AutStSkipped, nil})
-			logging.Logf(ctx,
+			mint.Logf(ctx,
 				"Authentication: status=%q username=%q",
 				Get(withStatus).Status, username)
 			m.Handler.ServeHTTP(w, r.WithContext(withStatus))
 		} else {
 			withStatus = With(ctx, Status{AutStFailed, nil})
-			logging.Logf(ctx,
+			mint.Logf(ctx,
 				"Authentication: status=%q username=%q",
 				Get(withStatus).Status, username)
 			respond.Error(withStatus, w, errors.Trace(err))
@@ -124,7 +127,7 @@ func (m middleware) ServeHTTP(
 	}
 
 	withStatus = With(ctx, Status{AutStSucceeded, user})
-	logging.Logf(ctx,
+	mint.Logf(ctx,
 		"Authentication: status=%q user=%q username=%q",
 		Get(withStatus).Status, Get(withStatus).User.Token,
 		username)

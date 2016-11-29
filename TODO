@@ -1,17 +1,40 @@
 # mint
 
- [ ] transaction protocol
+ [ ] secure concurrent transaction creation and settlement
+ [ ] figure out when to set the offer as consumed (multiple crossings might be reserved)
  [ ] propagation protocol for both operations and offers (need to learn more)
+ [ ] attempt to use Amount everywhere?
  [ ] pass DSN for DB, support Postgres
+ [x] transaction settlement
+ [x] transaction locks
+ [x] transaction creation
+ [x] replace 1000*1000 by protocol constant
+ [x] log prefix (mint)
+ [x] make user optional for propagated transactions (or other objects)
+ [x] move status values to protocol
+ [x] move Execute to ctx
+ [x] remove nil from creation operation, prevent issuer from owning balance
  [x] rename Normalized something Address to Owner
  [x] split controller into endpoint.CreateXXX object with Execute and Validate
  [x] move mint host to context
 
   # test
 
+    [ ] concurrent call to settlement
+    [ ] test that consumes an offer entirely (check status)
+    [ ] transaction tests with misbehaving mint
+    [x] test transaction that uses the same user twice
+    [x] test transaction that uses more than what is left on an offer
     [x] make the DB a context value that can be created independently for tests
     [x] find a way to set the MintHost after start or set the mux after creating the httptest.Server
     [x] support in memory db
+
+  # async processes
+
+    [ ] transaction cancelation
+    [ ] offer propagation
+    [ ] operation propagation
+    [ ] crossing propagation
 
 # site
 
@@ -22,19 +45,21 @@
   # offers and operations
 
   - the canonical mint has the truth so no need for a 2 step commit or blocking
-    on other mints, just rely on best effort propagation
+    on other mints, just rely on best effort propagation (hence protocol
+    necessarily different from transactions)
   - mints are eventually consistent on operations and offers
-  - propagation happens asynchronously and is retried
+  - propagation happens asynchronously and can be (is?) triggered by clients
 
   # transactions
 
   - the chain of calls include
     - operation
-    - offer
+    - crossing
     - operation
-    - offer
+    - crossing
     - operation
 
-  - each element of the chain commit to performing the operation if provided
-    with the lock. The operation/offer updates are propagated (best-effort)
-    only once they are committed
+  - each element of the chain commit to performing the operation/crossing if
+    provided with the lock. The operation/offer updates are propagated
+    (best-effort) only once they are committed
+

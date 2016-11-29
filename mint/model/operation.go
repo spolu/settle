@@ -4,6 +4,7 @@ package model
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/token"
+	"github.com/spolu/settle/mint"
 )
 
 // MaxAssetAmount is the maximum amount for an asset (2^128).
@@ -20,23 +22,50 @@ var MaxAssetAmount = new(big.Int).Exp(
 	new(big.Int).SetInt64(2), new(big.Int).SetInt64(128), nil)
 
 // Operation represents a movement of an asset, either from an account to
-// another, or to an account only in the case of issuance. Amount is
-// represented as a Amount and store in database as a NUMERIC(39).
+// another. Asset owners can hold a balance in their own assets so operations
+// referring to the asset owner are either issuing or annihilating the asset.
 // - Canonical operations are stored on the mint of the operation's owner
 //   (which acts as source of truth on its state).
 // - Propagated operations are stored on the mints of the operation's source or
 //   destination, for retrieval by impacted users.
+// - When part of a transaction, an operation refers the transaction. Operation
+//   created out of a transaction are created `settled`.
+// - Only settled operation are propagated.
 type Operation struct {
-	User        string
+	User        *string
 	Owner       string // Owner address.
 	Token       string
 	Created     time.Time
-	Propagation PgType
+	Propagation mint.PgType
 
-	Asset       string  // Asset name.
-	Source      *string // Source address (if nil issuance).
-	Destination *string // Destination addres (if nil annihilation).
+	Asset       string // Asset name.
+	Source      string // Source address (if owner, issuance).
+	Destination string // Destination addres (if owner, annihilation).
 	Amount      Amount
+
+	Status      mint.TxStatus
+	Transaction *string `db:"txn"`
+	Hop         *int8   `db:"hop"`
+}
+
+// NewOperationResource generates a new resource.
+func NewOperationResource(
+	ctx context.Context,
+	operation *Operation,
+) mint.OperationResource {
+	return mint.OperationResource{
+		ID: fmt.Sprintf(
+			"%s[%s]", operation.Owner, operation.Token),
+		Created:        operation.Created.UnixNano() / mint.TimeResolutionNs,
+		Owner:          operation.Owner,
+		Asset:          operation.Asset,
+		Source:         operation.Source,
+		Destination:    operation.Destination,
+		Amount:         (*big.Int)(&operation.Amount),
+		Status:         operation.Status,
+		Transaction:    operation.Transaction,
+		TransactionHop: operation.Hop,
+	}
 }
 
 // CreateCanonicalOperation creates and stores a new Operation.
@@ -45,31 +74,38 @@ func CreateCanonicalOperation(
 	user string,
 	owner string,
 	asset string,
-	source *string,
-	destination *string,
+	source string,
+	destination string,
 	amount Amount,
+	status mint.TxStatus,
+	transaction *string,
+	hop *int8,
 ) (*Operation, error) {
 	operation := Operation{
-		User:        user,
+		User:        &user,
 		Owner:       owner,
 		Token:       token.New("operation"),
 		Created:     time.Now(),
-		Propagation: PgTpCanonical,
+		Propagation: mint.PgTpCanonical,
 
 		Asset:       asset,
 		Source:      source,
 		Destination: destination,
 		Amount:      amount,
+
+		Status:      status,
+		Transaction: transaction,
+		Hop:         hop,
 	}
 
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO operations
   (user, owner, token, created, propagation, asset, source, destination,
-   amount)
+   amount, status, txn, hop)
 VALUES
   (:user, :owner, :token, :created, :propagation, :asset, :source, :destination,
-   :amount)
+   :amount, :status, :txn, :hop)
 `, operation); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:
@@ -90,36 +126,42 @@ VALUES
 // CreatePropagatedOperation creates and stores a new Operation.
 func CreatePropagatedOperation(
 	ctx context.Context,
-	user string,
 	token string,
 	created time.Time,
 	owner string,
 	asset string,
-	source *string,
-	destination *string,
+	source string,
+	destination string,
 	amount Amount,
+	status mint.TxStatus,
+	transaction *string,
+	hop *int8,
 ) (*Operation, error) {
 	operation := Operation{
-		User:        user,
+		User:        nil,
 		Owner:       owner,
 		Token:       token,
 		Created:     created,
-		Propagation: PgTpPropagated,
+		Propagation: mint.PgTpPropagated,
 
 		Asset:       asset,
 		Source:      source,
 		Destination: destination,
 		Amount:      amount,
+
+		Status:      status,
+		Transaction: transaction,
+		Hop:         hop,
 	}
 
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO operations
   (user, owner, token, created, propagation, asset, source, destination,
-   amount)
+   amount, status, txn, hop)
 VALUES
   (:user, :owner, :token, :created, :propagation, :asset, :source, :destination,
-   :amount)
+   :amount, :status, :txn, :hop)
 `, operation); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:
@@ -137,6 +179,24 @@ VALUES
 	return &operation, nil
 }
 
+// Save updates the object database representation with the in-memory values.
+func (o *Operation) Save(
+	ctx context.Context,
+) error {
+	ext := db.Ext(ctx)
+	_, err := sqlx.NamedExec(ext, `
+UPDATE operations
+SET status = :status
+WHERE owner = :owner
+  AND token = :token
+`, o)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	return nil
+}
+
 // LoadCanonicalOperationByOwnerToken attempts to load the canonical operation
 // for the given owner and token.
 func LoadCanonicalOperationByOwnerToken(
@@ -147,7 +207,7 @@ func LoadCanonicalOperationByOwnerToken(
 	operation := Operation{
 		Owner:       owner,
 		Token:       token,
-		Propagation: PgTpCanonical,
+		Propagation: mint.PgTpCanonical,
 	}
 
 	ext := db.Ext(ctx)
@@ -169,4 +229,74 @@ WHERE owner = :owner
 	}
 
 	return &operation, nil
+}
+
+// LoadCanonicalOperationByTransactionHop attempts to load the canonical
+// operation for the given transaction and hop.
+func LoadCanonicalOperationByTransactionHop(
+	ctx context.Context,
+	transaction string,
+	hop int8,
+) (*Operation, error) {
+	operation := Operation{
+		Transaction: &transaction,
+		Hop:         &hop,
+		Propagation: mint.PgTpCanonical,
+	}
+
+	ext := db.Ext(ctx)
+	if rows, err := sqlx.NamedQuery(ext, `
+SELECT *
+FROM operations
+WHERE txn = :txn
+  AND hop = :hop
+`, operation); err != nil {
+		return nil, errors.Trace(err)
+	} else if !rows.Next() {
+		return nil, nil
+	} else if err := rows.StructScan(&operation); err != nil {
+		defer rows.Close()
+		return nil, errors.Trace(err)
+	} else if err := rows.Close(); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &operation, nil
+}
+
+// LoadCanonicalOperationsByTransaction loads all operations that are
+// associated with the specified transaction.
+func LoadCanonicalOperationsByTransaction(
+	ctx context.Context,
+	transaction string,
+) ([]*Operation, error) {
+	query := Operation{
+		Transaction: &transaction,
+		Propagation: mint.PgTpCanonical,
+	}
+
+	ext := db.Ext(ctx)
+	rows, err := sqlx.NamedQuery(ext, `
+SELECT *
+FROM operations
+WHERE txn = :txn
+  AND propagation = :propagation
+`, query)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	operations := []*Operation{}
+
+	defer rows.Close()
+	for rows.Next() {
+		op := Operation{}
+		err := rows.StructScan(&op)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		operations = append(operations, &op)
+	}
+
+	return operations, nil
 }

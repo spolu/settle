@@ -49,7 +49,7 @@ func NewSqlite3DBInMemory(
 ) (*sqlx.DB, error) {
 	err := error(nil)
 
-	mintDB, err := sqlx.Connect("sqlite3", ":memory:")
+	mintDB, err := sqlx.Connect("sqlite3", ":memory:?_txlock=exclusive")
 	if err != nil {
 		return nil, err
 	}

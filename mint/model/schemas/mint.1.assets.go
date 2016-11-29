@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS assets(
   code VARCHAR(64) NOT NULL,    -- the code of the asset
   scale SMALLINT,               -- factor by which the asset native is scaled
 
-  PRIMARY KEY(user, owner, token),
+  PRIMARY KEY(owner, token),
   CONSTRAINT assets_user_fk FOREIGN KEY (user) REFERENCES users(token),
   CONSTRAINT assets_owner_code_u UNIQUE (owner, code) -- not propagated
 );

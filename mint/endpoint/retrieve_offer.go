@@ -1,6 +1,7 @@
 package endpoint
 
 import (
+	"context"
 	"net/http"
 
 	"goji.io/pat"
@@ -10,7 +11,6 @@ import (
 	"github.com/spolu/settle/lib/format"
 	"github.com/spolu/settle/lib/ptr"
 	"github.com/spolu/settle/lib/svc"
-	"github.com/spolu/settle/mint"
 	"github.com/spolu/settle/mint/model"
 )
 
@@ -45,32 +45,22 @@ func (e *RetrieveOffer) Validate(
 ) error {
 	ctx := r.Context()
 
-	id := pat.Param(r, "offer")
-
 	// Validate id.
-	owner, token, err := mint.NormalizedOwnerAndTokenFromID(ctx, id)
+	id, owner, token, err := ValidateID(ctx, pat.Param(r, "offer"))
 	if err != nil {
-		return errors.Trace(errors.NewUserErrorf(err,
-			400, "id_invalid",
-			"The offer id you provided is invalid: %s. Offer ids must have "+
-				"the form kgodel@princeton.edu[offer_*]",
-			id,
-		))
+		return errors.Trace(err)
 	}
-
-	e.ID = id
-	e.Token = token
-	e.Owner = owner
+	e.ID = *id
+	e.Token = *token
+	e.Owner = *owner
 
 	return nil
 }
 
 // Execute executes the endpoint.
 func (e *RetrieveOffer) Execute(
-	r *http.Request,
+	ctx context.Context,
 ) (*int, *svc.Resp, error) {
-	ctx := r.Context()
-
 	ctx = db.Begin(ctx)
 	defer db.LoggedRollback(ctx)
 
@@ -88,6 +78,6 @@ func (e *RetrieveOffer) Execute(
 	db.Commit(ctx)
 
 	return ptr.Int(http.StatusOK), &svc.Resp{
-		"offer": format.JSONPtr(mint.NewOfferResource(ctx, offer)),
+		"offer": format.JSONPtr(model.NewOfferResource(ctx, offer)),
 	}, nil
 }

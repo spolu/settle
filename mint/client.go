@@ -13,7 +13,6 @@ import (
 	"github.com/spolu/settle/lib/env"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/svc"
-	"github.com/spolu/settle/mint/model"
 )
 
 var defaultHTTPClient = (*http.Client)(nil)
@@ -178,24 +177,6 @@ func FullMintURL(
 	return &url
 }
 
-// PropagateOperation propagates an operation to the `destination` mint.
-func (c *Client) PropagateOperation(
-	ctx context.Context,
-	operation *model.Operation,
-	destination string,
-) error {
-	return nil
-}
-
-// PropagateOffer propagates an offer to the `destination` mint.
-func (c *Client) PropagateOffer(
-	ctx context.Context,
-	operation *model.Offer,
-	destination string,
-) error {
-	return nil
-}
-
 // RetrieveOffer retrieves an offer given its ID by extracting the mint and
 // retrieving it from there.
 func (c *Client) RetrieveOffer(
@@ -229,4 +210,139 @@ func (c *Client) RetrieveOffer(
 	}
 
 	return &offer, nil
+}
+
+// RetrieveTransaction retrieves a transaction given its ID by extracting the
+// mint and retrieving it from there. If host is specified, it attempts to
+// retrrieve the transaction from this host instead of the canonical host.
+func (c *Client) RetrieveTransaction(
+	ctx context.Context,
+	id string,
+	mint *string,
+) (*TransactionResource, error) {
+	if mint == nil {
+		owner, _, err := NormalizedOwnerAndTokenFromID(ctx, id)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		_, host, err := UsernameAndMintHostFromAddress(ctx, owner)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		mint = &host
+	}
+
+	r, err := c.httpClient.Get(
+		FullMintURL(ctx, *mint, fmt.Sprintf("/transactions/%s", id)).String())
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	defer r.Body.Close()
+
+	var raw svc.Resp
+	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	var transaction TransactionResource
+	if err := raw.Extract("transaction", &transaction); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &transaction, nil
+}
+
+// PropagateTransaction propagates a transaction to the specified mint.
+func (c *Client) PropagateTransaction(
+	ctx context.Context,
+	id string,
+	hop int8,
+	mint string,
+) (*TransactionResource, error) {
+	req, err := http.NewRequest("POST",
+		FullMintURL(ctx, mint,
+			fmt.Sprintf("/transactions/%s", id)).String(),
+		strings.NewReader(url.Values{
+			"hop": {fmt.Sprintf("%d", hop)},
+		}.Encode()))
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	r, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	defer r.Body.Close()
+
+	var raw svc.Resp
+	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	var transaction TransactionResource
+	if err := raw.Extract("transaction", &transaction); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &transaction, nil
+}
+
+// SettleTransaction settles a transaction. If hop, secret, mint are specified
+// it settles on the specified mint using the specified hop and secret,
+// otherwise it attempts to settle on the canonical mint.
+func (c *Client) SettleTransaction(
+	ctx context.Context,
+	id string,
+	hop *int8,
+	secret *string,
+	mint *string,
+) (*TransactionResource, error) {
+	if mint == nil {
+		owner, _, err := NormalizedOwnerAndTokenFromID(ctx, id)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		_, host, err := UsernameAndMintHostFromAddress(ctx, owner)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		mint = &host
+	}
+
+	body := url.Values{}
+	if hop != nil {
+		body["hop"] = []string{fmt.Sprintf("%d", *hop)}
+	}
+	if secret != nil {
+		body["secret"] = []string{*secret}
+	}
+
+	req, err := http.NewRequest("POST",
+		FullMintURL(ctx, *mint,
+			fmt.Sprintf("/transactions/%s/settle", id)).String(),
+		strings.NewReader(body.Encode()))
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	r, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	defer r.Body.Close()
+
+	var raw svc.Resp
+	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	var transaction TransactionResource
+	if err := raw.Extract("transaction", &transaction); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &transaction, nil
 }

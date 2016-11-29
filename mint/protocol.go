@@ -1,11 +1,50 @@
 package mint
 
-import (
-	"context"
-	"fmt"
-	"math/big"
+import "math/big"
 
-	"github.com/spolu/settle/mint/model"
+const (
+	// Version is the current protocol version.
+	Version string = "0"
+	// TimeResolutionNs is the resolution of our time variables in nanoseconds
+	// (aka resolution in milliseconds).
+	TimeResolutionNs int64 = 1000 * 1000
+)
+
+// PgType is the propagation type of an object.
+type PgType string
+
+const (
+	// PgTpCanonical is an offer owned by this mint.
+	PgTpCanonical PgType = "canonical"
+	// PgTpPropagated is an offer propagated to this mint.
+	PgTpPropagated PgType = "propagated"
+)
+
+// OfStatus is the status of an offer.
+type OfStatus string
+
+const (
+	// OfStActive is used to mark an offer as active.
+	OfStActive OfStatus = "active"
+	// OfStClosed is used to mark an offer as closed.
+	OfStClosed OfStatus = "closed"
+	// OfStConsumed is used to mark an offer as consumed.
+	OfStConsumed OfStatus = "consumed"
+)
+
+// TxStatus is the status of a transaction, operation or crossing.
+type TxStatus string
+
+const (
+	// TxStReserved is used to mark an action (operation or crossing) as
+	// reserved.
+	TxStReserved TxStatus = "reserved"
+	// TxStSettled is used to mark an action (operation or crossing) as
+	// settled.
+	TxStSettled TxStatus = "settled"
+	// TxStCanceled is used to mark an action (operation or crossing) as
+	// canceled.
+	TxStCanceled TxStatus = "canceled"
 )
 
 // AssetResource is the representation of an asset in the mint API.
@@ -19,53 +58,20 @@ type AssetResource struct {
 	Scale int8   `json:"scale"`
 }
 
-// NewAssetResource generates a new resource.
-func NewAssetResource(
-	ctx context.Context,
-	asset *model.Asset,
-) AssetResource {
-	return AssetResource{
-		ID: fmt.Sprintf(
-			"%s[%s]", asset.Owner, asset.Token),
-		Created: asset.Created.UnixNano() / (1000 * 1000),
-		Owner:   asset.Owner,
-		Name: fmt.Sprintf(
-			"%s[%s.%d]",
-			asset.Owner, asset.Code, asset.Scale,
-		),
-		Code:  asset.Code,
-		Scale: asset.Scale,
-	}
-}
-
 // OperationResource is the representation of an operation in the mint API.
 type OperationResource struct {
 	ID      string `json:"id"`
 	Created int64  `json:"created"`
 	Owner   string `json:"owner"`
 
-	Asset       AssetResource `json:"asset"`
-	Source      *string       `json:"source"`
-	Destination *string       `json:"destination"`
-	Amount      *big.Int      `json:"amount"`
-}
+	Asset       string   `json:"asset"`
+	Source      string   `json:"source"`
+	Destination string   `json:"destination"`
+	Amount      *big.Int `json:"amount"`
 
-// NewOperationResource generates a new resource.
-func NewOperationResource(
-	ctx context.Context,
-	operation *model.Operation,
-	asset *model.Asset,
-) OperationResource {
-	return OperationResource{
-		ID: fmt.Sprintf(
-			"%s[%s]", operation.Owner, operation.Token),
-		Created:     operation.Created.UnixNano() / (1000 * 1000),
-		Owner:       operation.Owner,
-		Asset:       NewAssetResource(ctx, asset),
-		Source:      operation.Source,
-		Destination: operation.Destination,
-		Amount:      (*big.Int)(&operation.Amount),
-	}
+	Status         TxStatus `json:"status"`
+	Transaction    *string  `json:"transaction"`
+	TransactionHop *int8    `json:"transaction_hop"`
 }
 
 // OfferResource is the representation of an offer in the mint API.
@@ -77,25 +83,39 @@ type OfferResource struct {
 	Pair   string   `json:"pair"`
 	Price  string   `json:"price"`
 	Amount *big.Int `json:"amount"`
-	Status string   `json:"status"`
+
+	Status    OfStatus `json:"status"`
+	Remainder *big.Int `json:"remainder"`
 }
 
-// NewOfferResource generates a new resource.
-func NewOfferResource(
-	ctx context.Context,
-	offer *model.Offer,
-) OfferResource {
-	return OfferResource{
-		ID: fmt.Sprintf(
-			"%s[%s]", offer.Owner, offer.Token),
-		Created: offer.Created.UnixNano() / (1000 * 1000),
-		Owner:   offer.Owner,
-		Pair:    fmt.Sprintf("%s/%s", offer.BaseAsset, offer.QuoteAsset),
-		Price: fmt.Sprintf(
-			"%s/%s",
-			(*big.Int)(&offer.BasePrice).String(),
-			(*big.Int)(&offer.QuotePrice).String()),
-		Amount: (*big.Int)(&offer.Amount),
-		Status: string(offer.Status),
-	}
+// CrossingResource is the representation of a crossing in the mint API.
+type CrossingResource struct {
+	ID      string `json:"id"`
+	Created int64  `json:"created"`
+	Owner   string `json:"owner"`
+
+	Offer  string   `json:"offer"`
+	Amount *big.Int `json:"amount"`
+
+	Status         TxStatus `json:"status"`
+	Transaction    string   `json:"transaction"`
+	TransactionHop int8     `json:"transaction_hop"`
+}
+
+// TransactionResource is the representation of a transaction in the mint API.
+type TransactionResource struct {
+	ID      string `json:"id"`
+	Created int64  `json:"created"`
+	Owner   string `json:"owner"`
+
+	Pair        string   `json:"pair"`
+	Amount      *big.Int `json:"amount"`
+	Destination string   `json:"destination"`
+	Path        []string `json:"path"`
+
+	Status TxStatus `json:"status"`
+	Lock   string   `json:"lock"`
+
+	Operations []OperationResource `json:"operations"`
+	Crossings  []CrossingResource  `json:"crossings"`
 }

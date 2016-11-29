@@ -1,10 +1,12 @@
+// OWNER: stan
+
 package endpoint
 
 import (
+	"context"
 	"fmt"
 	"math/big"
 	"net/http"
-	"regexp"
 
 	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/env"
@@ -18,7 +20,7 @@ import (
 )
 
 const (
-	// EndPtCreateOffer creates a new assset.
+	// EndPtCreateOffer creates a new offer.
 	EndPtCreateOffer EndPtName = "CreateOffer"
 )
 
@@ -27,7 +29,9 @@ func init() {
 }
 
 // CreateOffer creates a new canonical offer and triggers its propagation to
-// all the mints involved.
+// all the mints involved. Offer are represented as asks: base asset (left) is
+// offered in exchange for quote asset (right) for specified amount (of quote
+// asset) at specified price.
 type CreateOffer struct {
 	Client *mint.Client
 
@@ -54,10 +58,6 @@ func NewCreateOffer(
 	}, nil
 }
 
-// OfferPriceRegexp is used to validate and parse an offer price.
-var OfferPriceRegexp = regexp.MustCompile(
-	"^([0-9]+)\\/([0-9]+)$")
-
 // Validate validates the input parameters.
 func (e *CreateOffer) Validate(
 	r *http.Request,
@@ -69,79 +69,45 @@ func (e *CreateOffer) Validate(
 		env.Get(ctx).Config[mint.EnvCfgMintHost])
 
 	// Validate asset pair.
-	pair, err := mint.AssetResourcesFromPair(ctx, r.PostFormValue("pair"))
+	pair, err := ValidateAssetPair(ctx, r.PostFormValue("pair"))
 	if err != nil {
-		return errors.Trace(errors.NewUserErrorf(err,
-			400, "pair_invalid",
-			"The asset pair you provided is invalid: %s.",
-			r.PostFormValue("pair"),
-		))
+		return errors.Trace(err) // 400
 	}
 	e.Pair = pair
 
-	// Validate price.
-	m := OfferPriceRegexp.FindStringSubmatch(r.PostFormValue("price"))
-	if len(m) == 0 {
-		return errors.Trace(errors.NewUserErrorf(err,
-			400, "price_invalid",
-			"The offer price you provided is invalid: %s. Prices must have "+
-				"the form 'pB/pQ' where pB is the base asset price and pQ "+
-				"is the quote asset price.",
-			r.PostFormValue("price"),
+	// Validate that the base asset's owner matches the offer owner
+	if e.Pair[0].Owner != e.Owner {
+		return errors.Trace(errors.NewUserErrorf(nil,
+			400, "offer_not_authorized",
+			"You can only create offers whose base asset were created by the "+
+				"account you are currently authenticated with: %s. This "+
+				"offer base asset was created by: %s.",
+			e.Owner, e.Pair[0].Owner,
 		))
 	}
-	var basePrice big.Int
-	_, success := basePrice.SetString(m[1], 10)
-	if !success ||
-		basePrice.Cmp(new(big.Int)) < 0 ||
-		basePrice.Cmp(model.MaxAssetAmount) >= 0 {
-		return errors.Trace(errors.NewUserErrorf(err,
-			400, "price_invalid",
-			"The base asset price you provided is invalid: %s. Asset prices "+
-				"must be integers between 0 and 2^128.",
-			m[1],
-		))
-	}
-	e.BasePrice = basePrice
 
-	var quotePrice big.Int
-	_, success = quotePrice.SetString(m[2], 10)
-	if !success ||
-		quotePrice.Cmp(new(big.Int)) < 0 ||
-		quotePrice.Cmp(model.MaxAssetAmount) >= 0 {
-		return errors.Trace(errors.NewUserErrorf(err,
-			400, "price_invalid",
-			"The quote asset price you provided is invalid: %s. Asset prices "+
-				"must be integers between 0 and 2^128.",
-			m[2],
-		))
+	// Validate price.
+	basePrice, quotePrice, err := ValidatePrice(ctx, r.PostFormValue("price"))
+	if err != nil {
+		return errors.Trace(err) // 400
 	}
-	e.QuotePrice = quotePrice
+	e.BasePrice = *basePrice
+	e.QuotePrice = *quotePrice
 
 	// Validate amount.
-	var amount big.Int
-	_, success = amount.SetString(r.PostFormValue("amount"), 10)
-	if !success ||
-		amount.Cmp(new(big.Int)) < 0 ||
-		amount.Cmp(model.MaxAssetAmount) >= 0 {
-		return errors.Trace(errors.NewUserErrorf(err,
-			400, "amount_invalid",
-			"The amount you provided is invalid: %s. Amounts must be "+
-				"integers between 0 and 2^128.",
-			r.PostFormValue("amount"),
-		))
+	amount, err := ValidateAmount(ctx, r.PostFormValue("amount"))
+	if err != nil {
+		return errors.Trace(err) // 400
 	}
-	e.Amount = amount
+	e.Amount = *amount
 
 	return nil
 }
 
 // Execute executes the endpoint.
 func (e *CreateOffer) Execute(
-	r *http.Request,
+	ctx context.Context,
 ) (*int, *svc.Resp, error) {
-	ctx := r.Context()
-
 	ctx = db.Begin(ctx)
 	defer db.LoggedRollback(ctx)
 
@@ -151,7 +117,8 @@ func (e *CreateOffer) Execute(
 		e.Owner,
 		e.Pair[0].Name, e.Pair[1].Name,
 		model.Amount(e.BasePrice), model.Amount(e.QuotePrice),
-		model.Amount(e.Amount), model.OfStActive)
+		model.Amount(e.Amount),
+		mint.OfStActive, model.Amount(e.Amount))
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
 	}
@@ -161,6 +128,6 @@ func (e *CreateOffer) Execute(
 	// TODO(stan): propagation
 
 	return ptr.Int(http.StatusCreated), &svc.Resp{
-		"offer": format.JSONPtr(mint.NewOfferResource(ctx, offer)),
+		"offer": format.JSONPtr(model.NewOfferResource(ctx, offer)),
 	}, nil
 }

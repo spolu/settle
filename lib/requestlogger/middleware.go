@@ -27,8 +27,8 @@ func (m middleware) ServeHTTP(
 	url := *r.URL
 	wp := mutil.WrapWriter(w)
 
-	logging.Logf(ctx, "HTTP Request: method=%q url=%q remote=%q",
-		r.Method, url.String(), r.RemoteAddr)
+	logging.Logf(ctx, "HTTP Request: method=%q path=%q remote=%q",
+		r.Method, url.Path, r.RemoteAddr)
 
 	defer func() {
 		wp.WriteHeader(http.StatusOK)

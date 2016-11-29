@@ -4,6 +4,7 @@ package model
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/token"
+	"github.com/spolu/settle/mint"
 )
 
 const (
@@ -34,6 +36,25 @@ type Asset struct {
 
 	Code  string // Asset code.
 	Scale int8   // Asset scale.
+}
+
+// NewAssetResource generates a new resource.
+func NewAssetResource(
+	ctx context.Context,
+	asset *Asset,
+) mint.AssetResource {
+	return mint.AssetResource{
+		ID: fmt.Sprintf(
+			"%s[%s]", asset.Owner, asset.Token),
+		Created: asset.Created.UnixNano() / mint.TimeResolutionNs,
+		Owner:   asset.Owner,
+		Name: fmt.Sprintf(
+			"%s[%s.%d]",
+			asset.Owner, asset.Code, asset.Scale,
+		),
+		Code:  asset.Code,
+		Scale: asset.Scale,
+	}
 }
 
 // CreateAsset creates and stores a new Asset object.
@@ -110,4 +131,18 @@ WHERE owner = :owner
 	}
 
 	return &asset, nil
+}
+
+// LoadAssetByName attempts to load an asset by its name.
+func LoadAssetByName(
+	ctx context.Context,
+	name string,
+) (*Asset, error) {
+	r, err := mint.AssetResourceFromName(ctx, name)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return LoadAssetByOwnerCodeScale(ctx,
+		r.Owner, r.Code, r.Scale)
 }
