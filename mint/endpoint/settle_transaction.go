@@ -4,8 +4,11 @@ package endpoint
 
 import (
 	"context"
+	"encoding/base64"
 	"math/big"
 	"net/http"
+
+	"golang.org/x/crypto/scrypt"
 
 	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/errors"
@@ -248,6 +251,18 @@ func (e *SettleTransaction) ExecutePropagated(
 		defer txStore.Clear(ctx, e.ID)
 	}
 
+	h, err := scrypt.Key([]byte(e.Secret), []byte(e.Tx.Token), 16384, 8, 1, 64)
+	if err != nil {
+		return nil, nil, errors.Trace(err) // 500
+	}
+	if e.Tx.Lock != base64.StdEncoding.EncodeToString(h) {
+		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
+			402, "settlement_failed",
+			"The secret provided does not match the lock value for "+
+				"transaction: %s", e.ID,
+		))
+	}
+
 	e.Plan = txStore.GetPlan(ctx, e.ID)
 	if e.Plan == nil {
 		plan, err := ComputePlan(ctx, e.Client, e.Tx)
@@ -264,7 +279,7 @@ func (e *SettleTransaction) ExecutePropagated(
 	// We unlock the tranaction before propagating.
 	unlock()
 
-	err := e.Propagate(ctx)
+	err = e.Propagate(ctx)
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 			402, "settlement_failed",
