@@ -135,14 +135,18 @@ func (e *SettleTransaction) ExecuteCanonical(
 	txStore.Store(ctx, e.ID, tx)
 	defer txStore.Clear(ctx, e.ID)
 
-	plan, err := ComputePlan(ctx, e.Client, e.Tx)
-	if err != nil {
-		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
-			402, "settlement_failed",
-			"The plan computation for the transaction failed.",
-		))
+	e.Plan = txStore.GetPlan(ctx, e.ID)
+	if e.Plan == nil {
+		plan, err := ComputePlan(ctx, e.Client, e.Tx)
+		if err != nil {
+			return nil, nil, errors.Trace(errors.NewUserErrorf(err,
+				402, "settlement_failed",
+				"The plan computation for the transaction failed: %s", e.ID,
+			))
+		}
+		txStore.StorePlan(ctx, e.ID, plan)
+		e.Plan = plan
 	}
-	e.Plan = plan
 
 	// Set the Hop to the the length of the plan to call Settle
 	e.Hop = int8(len(e.Plan.Actions))
@@ -244,19 +248,23 @@ func (e *SettleTransaction) ExecutePropagated(
 		defer txStore.Clear(ctx, e.ID)
 	}
 
-	plan, err := ComputePlan(ctx, e.Client, e.Tx)
-	if err != nil {
-		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
-			402, "settlement_failed",
-			"The plan computation for the transaction failed.",
-		))
+	e.Plan = txStore.GetPlan(ctx, e.ID)
+	if e.Plan == nil {
+		plan, err := ComputePlan(ctx, e.Client, e.Tx)
+		if err != nil {
+			return nil, nil, errors.Trace(errors.NewUserErrorf(err,
+				402, "settlement_failed",
+				"The plan computation for the transaction failed: %s", e.ID,
+			))
+		}
+		txStore.StorePlan(ctx, e.ID, plan)
+		e.Plan = plan
 	}
-	e.Plan = plan
 
 	// We unlock the tranaction before propagating.
 	unlock()
 
-	err = e.Propagate(ctx)
+	err := e.Propagate(ctx)
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 			402, "settlement_failed",
