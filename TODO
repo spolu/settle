@@ -1,5 +1,6 @@
 # mint
 
+ [ ] remove user from records entirely?
  [ ] transaction starting from an asset not owned by owner
  [ ] figure out when to set the offer as consumed (multiple crossings might be reserved)
  [ ] propagation protocol for both operations and offers (need to learn more)

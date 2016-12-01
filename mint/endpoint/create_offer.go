@@ -9,7 +9,6 @@ import (
 	"net/http"
 
 	"github.com/spolu/settle/lib/db"
-	"github.com/spolu/settle/lib/env"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/format"
 	"github.com/spolu/settle/lib/ptr"
@@ -65,8 +64,7 @@ func (e *CreateOffer) Validate(
 	ctx := r.Context()
 
 	e.Owner = fmt.Sprintf("%s@%s",
-		authentication.Get(ctx).User.Username,
-		env.Get(ctx).Config[mint.EnvCfgMintHost])
+		authentication.Get(ctx).User.Username, mint.GetHost(ctx))
 
 	// Validate asset pair.
 	pair, err := ValidateAssetPair(ctx, r.PostFormValue("pair"))

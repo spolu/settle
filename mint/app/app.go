@@ -55,7 +55,7 @@ func BackgroundContextFromFlags(
 func Build(
 	ctx context.Context,
 ) (*goji.Mux, error) {
-	if env.Get(ctx).Config[mint.EnvCfgMintHost] == "" {
+	if mint.GetHost(ctx) == "" {
 		if env.Get(ctx).Environment == env.Production {
 			return nil, errors.Newf(
 				"You must set the flag `-mint_host` to an externally accessible hostname that other mints can use to contact this mint over HTTPS. If you're just testing and don't have an SSL certificate, please run with `-env=qa`",
@@ -74,7 +74,7 @@ func Build(
 	mux.Use(authentication.Middleware)
 
 	logging.Logf(ctx, "Initializing: environment=%s mint_host=%s",
-		env.Get(ctx).Environment, env.Get(ctx).Config[mint.EnvCfgMintHost])
+		env.Get(ctx).Environment, mint.GetHost(ctx))
 
 	(&Controller{}).Bind(mux)
 

@@ -9,7 +9,6 @@ import (
 	"goji.io/pat"
 
 	"github.com/spolu/settle/lib/db"
-	"github.com/spolu/settle/lib/env"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/format"
 	"github.com/spolu/settle/lib/ptr"
@@ -69,8 +68,7 @@ func (e *CreateOperation) Validate(
 	ctx := r.Context()
 
 	e.Owner = fmt.Sprintf("%s@%s",
-		authentication.Get(ctx).User.Username,
-		env.Get(ctx).Config[mint.EnvCfgMintHost])
+		authentication.Get(ctx).User.Username, mint.GetHost(ctx))
 
 	// Validate asset.
 	a, err := mint.AssetResourceFromName(ctx, pat.Param(r, "asset"))
