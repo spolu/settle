@@ -79,9 +79,8 @@ func TestSettleTransactionAttackPrepostSettlementOnSuccessor(
 		})
 
 	var tx mint.TransactionResource
-	if err := raw.Extract("transaction", &tx); err != nil {
-		t.Fatal(err)
-	}
+	err := raw.Extract("transaction", &tx)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 201, status)
 
@@ -129,26 +128,21 @@ func TestSettleTransactionAttackPrepostSettlementOnSuccessor(
 		url.Values{})
 
 	var tx0 mint.TransactionResource
-	if err := raw.Extract("transaction", &tx0); err != nil {
-		t.Fatal(err)
-	}
+	err = raw.Extract("transaction", &tx0)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 200, status)
 
 	// Check balance on m[0]
 	balance, err := model.LoadBalanceByAssetHolder(m[0].Ctx,
 		a[0].Name, u[1].Address)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.Nil(t, err)
 	assert.Equal(t, big.NewInt(10), (*big.Int)(&balance.Value))
 
 	// Check balance on m[1]
 	balance, err = model.LoadBalanceByAssetHolder(m[1].Ctx,
 		a[1].Name, u[2].Address)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.Nil(t, err)
 	assert.Equal(t, big.NewInt(10), (*big.Int)(&balance.Value))
 }
 
@@ -172,9 +166,8 @@ func TestSettleTransactionAttackPrepostSettlementSkippingHop(
 		})
 
 	var tx mint.TransactionResource
-	if err := raw.Extract("transaction", &tx); err != nil {
-		t.Fatal(err)
-	}
+	err := raw.Extract("transaction", &tx)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 201, status)
 
@@ -222,26 +215,21 @@ func TestSettleTransactionAttackPrepostSettlementSkippingHop(
 		url.Values{})
 
 	var tx0 mint.TransactionResource
-	if err := raw.Extract("transaction", &tx0); err != nil {
-		t.Fatal(err)
-	}
+	err = raw.Extract("transaction", &tx0)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 200, status)
 
 	// Check balance on m[0]
 	balance, err := model.LoadBalanceByAssetHolder(m[0].Ctx,
 		a[0].Name, u[1].Address)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.Nil(t, err)
 	assert.Equal(t, big.NewInt(10), (*big.Int)(&balance.Value))
 
 	// Check balance on m[1]
 	balance, err = model.LoadBalanceByAssetHolder(m[1].Ctx,
 		a[1].Name, u[2].Address)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.Nil(t, err)
 	assert.Equal(t, big.NewInt(10), (*big.Int)(&balance.Value))
 }
 
@@ -265,9 +253,8 @@ func TestSettleTransactionAttackPrepostSettlementOnWrongHost(
 		})
 
 	var tx mint.TransactionResource
-	if err := raw.Extract("transaction", &tx); err != nil {
-		t.Fatal(err)
-	}
+	err := raw.Extract("transaction", &tx)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 201, status)
 
@@ -315,25 +302,20 @@ func TestSettleTransactionAttackPrepostSettlementOnWrongHost(
 		url.Values{})
 
 	var tx0 mint.TransactionResource
-	if err := raw.Extract("transaction", &tx0); err != nil {
-		t.Fatal(err)
-	}
+	err = raw.Extract("transaction", &tx0)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 200, status)
 
 	// Check balance on m[0]
 	balance, err := model.LoadBalanceByAssetHolder(m[0].Ctx,
 		a[0].Name, u[1].Address)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.Nil(t, err)
 	assert.Equal(t, big.NewInt(10), (*big.Int)(&balance.Value))
 
 	// Check balance on m[1]
 	balance, err = model.LoadBalanceByAssetHolder(m[1].Ctx,
 		a[1].Name, u[2].Address)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.Nil(t, err)
 	assert.Equal(t, big.NewInt(10), (*big.Int)(&balance.Value))
 }

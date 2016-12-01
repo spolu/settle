@@ -54,9 +54,8 @@ func TestCreateNoopOperation(
 		})
 
 	var op mint.OperationResource
-	if err := raw.Extract("operation", &op); err != nil {
-		t.Fatal(err)
-	}
+	err := raw.Extract("operation", &op)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 201, status)
 	assert.Regexp(t, mint.IDRegexp, op.ID)
@@ -88,9 +87,8 @@ func TestCreateOperationIssuing(
 		})
 
 	var op mint.OperationResource
-	if err := raw.Extract("operation", &op); err != nil {
-		t.Fatal(err)
-	}
+	err := raw.Extract("operation", &op)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 201, status)
 	assert.Regexp(t, mint.IDRegexp, op.ID)
@@ -132,9 +130,8 @@ func TestCreateOperationAnnihilating(
 		})
 
 	var op mint.OperationResource
-	if err := raw.Extract("operation", &op); err != nil {
-		t.Fatal(err)
-	}
+	err := raw.Extract("operation", &op)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 201, status)
 	assert.Regexp(t, mint.IDRegexp, op.ID)
@@ -166,9 +163,8 @@ func TestCreateOperationWithNegativeAmount(
 		})
 
 	var e errors.ConcreteUserError
-	if err := raw.Extract("error", &e); err != nil {
-		t.Fatal(err)
-	}
+	err := raw.Extract("error", &e)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 400, status)
 	assert.Equal(t, "amount_invalid", e.ErrCode)
@@ -191,9 +187,8 @@ func TestCreateOperationWithInvalidAsset(
 		})
 
 	var e errors.ConcreteUserError
-	if err := raw.Extract("error", &e); err != nil {
-		t.Fatal(err)
-	}
+	err := raw.Extract("error", &e)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 400, status)
 	assert.Equal(t, "asset_invalid", e.ErrCode)
@@ -216,9 +211,8 @@ func TestCreateOperationWithInvalidAssetHostname(
 		})
 
 	var e errors.ConcreteUserError
-	if err := raw.Extract("error", &e); err != nil {
-		t.Fatal(err)
-	}
+	err := raw.Extract("error", &e)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 400, status)
 	assert.Equal(t, "operation_not_authorized", e.ErrCode)
@@ -242,9 +236,8 @@ func TestCreateOperationWithInvalidAssetUsername(
 		})
 
 	var e errors.ConcreteUserError
-	if err := raw.Extract("error", &e); err != nil {
-		t.Fatal(err)
-	}
+	err := raw.Extract("error", &e)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 400, status)
 	assert.Equal(t, "operation_not_authorized", e.ErrCode)
@@ -268,9 +261,8 @@ func TestCreateOperationWithUnknownAsset(
 		})
 
 	var e errors.ConcreteUserError
-	if err := raw.Extract("error", &e); err != nil {
-		t.Fatal(err)
-	}
+	err := raw.Extract("error", &e)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 400, status)
 	assert.Equal(t, "asset_not_found", e.ErrCode)
@@ -291,9 +283,8 @@ func TestCreateOperationWithNoSource(
 		})
 
 	var e errors.ConcreteUserError
-	if err := raw.Extract("error", &e); err != nil {
-		t.Fatal(err)
-	}
+	err := raw.Extract("error", &e)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 400, status)
 	assert.Equal(t, "source_invalid", e.ErrCode)
@@ -314,9 +305,8 @@ func TestCreateOperationWithNoDestination(
 		})
 
 	var e errors.ConcreteUserError
-	if err := raw.Extract("error", &e); err != nil {
-		t.Fatal(err)
-	}
+	err := raw.Extract("error", &e)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 400, status)
 	assert.Equal(t, "destination_invalid", e.ErrCode)
@@ -347,9 +337,8 @@ func TestCreateOperationWithInsufficientBalance(
 		})
 
 	var e errors.ConcreteUserError
-	if err := raw.Extract("error", &e); err != nil {
-		t.Fatal(err)
-	}
+	err := raw.Extract("error", &e)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 400, status)
 	assert.Equal(t, "amount_invalid", e.ErrCode)

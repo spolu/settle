@@ -1,11 +1,13 @@
 # mint
 
+ [ ] remove the ability to create an operation directly?
  [ ] remove user from records entirely?
  [ ] transaction starting from an asset not owned by owner
  [ ] figure out when to set the offer as consumed (multiple crossings might be reserved)
  [ ] propagation protocol for both operations and offers (need to learn more)
  [ ] attempt to use Amount everywhere?
  [ ] pass DSN for DB, support Postgres
+ [x] janitorial work on test extractions (assert instead of fatal)
  [x] enforce we handle hops in order (we handle them all)
  [x] enforce the hops belong to the right mint
  [x] secure concurrent transaction settlement

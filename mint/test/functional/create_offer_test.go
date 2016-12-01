@@ -59,9 +59,8 @@ func TestCreateOffer(
 		})
 
 	var offer mint.OfferResource
-	if err := raw.Extract("offer", &offer); err != nil {
-		t.Fatal(err)
-	}
+	err := raw.Extract("offer", &offer)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 201, status)
 	assert.Regexp(t, mint.IDRegexp, offer.ID)

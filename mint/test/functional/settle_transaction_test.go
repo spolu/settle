@@ -78,18 +78,16 @@ func TestSettleTransactionWith2Offers(
 	assert.Equal(t, 201, status)
 
 	var tx mint.TransactionResource
-	if err := raw.Extract("transaction", &tx); err != nil {
-		t.Fatal(err)
-	}
+	err := raw.Extract("transaction", &tx)
+	assert.Nil(t, err)
 
 	status, raw = u[0].Post(t,
 		fmt.Sprintf("/transactions/%s/settle", tx.ID),
 		url.Values{})
 
 	var tx0 mint.TransactionResource
-	if err := raw.Extract("transaction", &tx0); err != nil {
-		t.Fatal(err)
-	}
+	err = raw.Extract("transaction", &tx0)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 200, status)
 	assert.Equal(t, mint.TxStSettled, tx0.Status)
@@ -102,9 +100,8 @@ func TestSettleTransactionWith2Offers(
 	status, raw = u[1].Get(t, fmt.Sprintf("/transactions/%s", tx0.ID))
 
 	var tx1 mint.TransactionResource
-	if err := raw.Extract("transaction", &tx1); err != nil {
-		t.Fatal(err)
-	}
+	err = raw.Extract("transaction", &tx1)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 200, status)
 	assert.Equal(t, mint.TxStSettled, tx1.Status)
@@ -118,9 +115,8 @@ func TestSettleTransactionWith2Offers(
 	status, raw = u[2].Get(t, fmt.Sprintf("/transactions/%s", tx0.ID))
 
 	var tx2 mint.TransactionResource
-	if err := raw.Extract("transaction", &tx2); err != nil {
-		t.Fatal(err)
-	}
+	err = raw.Extract("transaction", &tx2)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 200, status)
 	assert.Equal(t, mint.TxStSettled, tx2.Status)
@@ -133,17 +129,13 @@ func TestSettleTransactionWith2Offers(
 	// Check balance on m[0]
 	balance, err := model.LoadBalanceByAssetHolder(m[0].Ctx,
 		a[0].Name, u[1].Address)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.Nil(t, err)
 	assert.Equal(t, big.NewInt(11), (*big.Int)(&balance.Value))
 
 	// Check balance on m[1]
 	balance, err = model.LoadBalanceByAssetHolder(m[1].Ctx,
 		a[1].Name, u[2].Address)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.Nil(t, err)
 	assert.Equal(t, big.NewInt(11), (*big.Int)(&balance.Value))
 
 	// Check that re-settling does not trigger an error.
@@ -176,9 +168,8 @@ func TestSettleTransactionWithWrongSecret(
 	assert.Equal(t, 201, status)
 
 	var tx mint.TransactionResource
-	if err := raw.Extract("transaction", &tx); err != nil {
-		t.Fatal(err)
-	}
+	err := raw.Extract("transaction", &tx)
+	assert.Nil(t, err)
 
 	status, raw = m[1].Post(t, nil,
 		fmt.Sprintf("/transactions/%s/settle", tx.ID),
@@ -188,9 +179,8 @@ func TestSettleTransactionWithWrongSecret(
 		})
 
 	var e errors.ConcreteUserError
-	if err := raw.Extract("error", &e); err != nil {
-		t.Fatal(err)
-	}
+	err = raw.Extract("error", &e)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 400, status)
 	assert.Equal(t, "secret_invalid", e.ErrCode)
