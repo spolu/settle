@@ -13,8 +13,8 @@ const (
 	EnvCfgMintHost env.ConfigKey = "mint_host"
 )
 
-// GetMintHost retrieves the current mint host from the given contest.
-func GetMintHost(
+// GetHost retrieves the current mint host from the given contest.
+func GetHost(
 	ctx context.Context,
 ) string {
 	return env.Get(ctx).Config[EnvCfgMintHost]
@@ -26,5 +26,5 @@ func Logf(
 	format string,
 	v ...interface{},
 ) {
-	logging.Logf(ctx, fmt.Sprintf("[%s] ", GetMintHost(ctx))+format, v...)
+	logging.Logf(ctx, fmt.Sprintf("[%s] ", GetHost(ctx))+format, v...)
 }

@@ -1,10 +1,15 @@
 # mint
 
- [ ] secure concurrent transaction creation and settlement
+ [ ] remove user from records entirely?
+ [ ] transaction starting from an asset not owned by owner
  [ ] figure out when to set the offer as consumed (multiple crossings might be reserved)
  [ ] propagation protocol for both operations and offers (need to learn more)
  [ ] attempt to use Amount everywhere?
  [ ] pass DSN for DB, support Postgres
+ [x] enforce we handle hops in order (we handle them all)
+ [x] enforce the hops belong to the right mint
+ [x] secure concurrent transaction settlement
+ [x] secure concurrent transaction creation and settlement
  [x] transaction settlement
  [x] transaction locks
  [x] transaction creation
@@ -20,9 +25,11 @@
 
   # test
 
-    [ ] concurrent call to settlement
     [ ] test that consumes an offer entirely (check status)
-    [ ] transaction tests with misbehaving mint
+    [~] transaction tests with misbehaving mint
+    [x] concurrent call to transaction settlement attack test
+    [x] test settlement with erroneous secret
+    [x] concurrent call to transaction creation attack test
     [x] test transaction that uses the same user twice
     [x] test transaction that uses more than what is left on an offer
     [x] make the DB a context value that can be created independently for tests

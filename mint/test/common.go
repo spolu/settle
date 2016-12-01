@@ -32,7 +32,7 @@ import (
 const (
 	// PostLatency is the expected latency between a test running an the created
 	// stamp of an object we created within a test.
-	PostLatency time.Duration = 100 * time.Millisecond
+	PostLatency time.Duration = 500 * time.Millisecond
 )
 
 var userIdx int
@@ -44,6 +44,7 @@ func init() {
 // Mint represents a test mint.
 type Mint struct {
 	Server  *httptest.Server
+	Mux     *goji.Mux
 	Env     *env.Env
 	DB      *sqlx.DB
 	Ctx     context.Context
@@ -88,6 +89,7 @@ func CreateMint(
 
 	m := Mint{
 		Server:  httptest.NewServer(mux),
+		Mux:     mux,
 		Env:     &mintEnv,
 		DB:      mintDB,
 		Ctx:     ctx,
@@ -157,7 +159,9 @@ func (m *Mint) Post(
 		t.Fatal(err)
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.SetBasicAuth(user.Username, user.Password)
+	if user != nil {
+		req.SetBasicAuth(user.Username, user.Password)
+	}
 
 	r, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -209,7 +213,7 @@ func (m *Mint) Get(
 	return r.StatusCode, raw
 }
 
-// Get posts to a specified endpoint on the mint.
+// Get gets a specified endpoint on the mint.
 func (u *MintUser) Get(
 	t *testing.T,
 	path string,
