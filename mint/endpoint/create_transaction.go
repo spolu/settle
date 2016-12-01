@@ -197,7 +197,8 @@ func (e *CreateTransaction) ExecuteCanonical(
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 			402, "transaction_failed",
-			"The plan execution for the transaction failed: %s", e.ID,
+			"The plan execution failed at hop %d for transaction: %s",
+			e.Hop, e.ID,
 		))
 	}
 
@@ -374,7 +375,8 @@ func (e *CreateTransaction) ExecutePropagated(
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 			402, "transaction_failed",
-			"The plan execution for the transaction failed: %s", e.ID,
+			"The plan execution failed at hop %d for transaction: %s",
+			e.Hop, e.ID,
 		))
 	}
 
@@ -512,7 +514,8 @@ func (e *CreateTransaction) ExecutePlan(
 			if new(big.Int).Abs(b).Cmp(model.MaxAssetAmount) >= 0 ||
 				b.Cmp(new(big.Int)) < 0 {
 				return errors.Trace(errors.Newf(
-					"Invalid resulting balance: %s", b.String()))
+					"Invalid resulting balance for %s: %s",
+					dstBalance.Holder, b.String()))
 			}
 		}
 
@@ -525,7 +528,8 @@ func (e *CreateTransaction) ExecutePlan(
 			if new(big.Int).Abs(b).Cmp(model.MaxAssetAmount) >= 0 ||
 				b.Cmp(new(big.Int)) < 0 {
 				return errors.Trace(errors.Newf(
-					"Invalid resulting balance: %s", b.String()))
+					"Invalid resulting balance for %s: %s",
+					srcBalance.Holder, b.String()))
 			}
 			err = srcBalance.Save(ctx)
 			if err != nil {

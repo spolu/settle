@@ -66,6 +66,9 @@ func Error(
 		for _, line := range errors.ErrorStack(err) {
 			logging.Logf(ctx, "  %s", line)
 		}
+		for _, line := range errors.ErrorStack(e.Cause()) {
+			logging.Logf(ctx, "    %s", line)
+		}
 
 		resp := errorResponse(ctx, errors.Build(e))
 		Respond(ctx, w, e.Status(), nil, resp)

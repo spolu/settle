@@ -384,7 +384,7 @@ func TestCreateTransactionWithRemoteBaseAsset(
 	defer tearDownCreateTransaction(t, m)
 
 	// Credit u[0] of u[1] USD.2
-	status, _ := u[1].Post(t,
+	status, raw := u[1].Post(t,
 		fmt.Sprintf("/transactions"),
 		url.Values{
 			"pair":        {fmt.Sprintf("%s[USD.2]/%s[USD.2]", u[1].Address, u[1].Address)},
@@ -395,8 +395,17 @@ func TestCreateTransactionWithRemoteBaseAsset(
 
 	assert.Equal(t, 201, status)
 
+	var tx mint.TransactionResource
+	err := raw.Extract("transaction", &tx)
+	assert.Nil(t, err)
+
+	status, _ = u[1].Post(t,
+		fmt.Sprintf("/transactions/%s/settle", tx.ID),
+		url.Values{})
+	assert.Equal(t, 200, status)
+
 	// Attempt to create
-	status, raw := u[0].Post(t,
+	status, raw = u[0].Post(t,
 		fmt.Sprintf("/transactions"),
 		url.Values{
 			"pair":        {fmt.Sprintf("%s[USD.2]/%s[USD.2]", u[1].Address, u[2].Address)},
@@ -408,7 +417,7 @@ func TestCreateTransactionWithRemoteBaseAsset(
 		})
 
 	var tx0 mint.TransactionResource
-	err := raw.Extract("transaction", &tx0)
+	err = raw.Extract("transaction", &tx0)
 	assert.Nil(t, err)
 
 	assert.Equal(t, 201, status)
@@ -426,31 +435,35 @@ func TestCreateTransactionWithRemoteBaseAsset(
 	assert.Equal(t, 200, status)
 	assert.Equal(t, 0, len(tx1.Crossings))
 	assert.Equal(t, 1, len(tx1.Operations))
-	assert.Equal(t, big.NewInt(11), tx1.Operations[0].Amount)
+
 	assert.Equal(t, fmt.Sprintf("%s[USD.2]", u[1].Address), tx1.Operations[0].Asset)
+	assert.Equal(t, u[0].Address, tx1.Operations[0].Source)
 	assert.Equal(t, u[2].Address, tx1.Operations[0].Destination)
-	assert.Equal(t, u[1].Address, tx1.Operations[0].Source)
+	assert.Equal(t, big.NewInt(11), tx1.Operations[0].Amount)
 	assert.Equal(t, mint.TxStReserved, tx1.Operations[0].Status)
 	assert.Equal(t, tx1.ID, *tx1.Operations[0].Transaction)
-	assert.Equal(t, int8(0), *tx1.Operations[0].TransactionHop)
+	assert.Equal(t, int8(1), *tx1.Operations[0].TransactionHop)
 
-	//// Check transaction on m[2].
-	//status, raw = m[2].Get(t, nil, fmt.Sprintf("/transactions/%s", tx0.ID))
+	// Check transaction on m[2].
+	status, raw = m[2].Get(t, nil, fmt.Sprintf("/transactions/%s", tx0.ID))
 
-	//var tx1 mint.TransactionResource
-	//err = raw.Extract("transaction", &tx1);
-	//assert.Nil(t, err)
+	var tx2 mint.TransactionResource
+	err = raw.Extract("transaction", &tx2)
+	assert.Nil(t, err)
 
-	//assert.Equal(t, 200, status)
-	//assert.Equal(t, big.NewInt(10), tx1.Crossings[0].Amount)
-	//assert.Equal(t, mint.TxStReserved, tx1.Crossings[0].Status)
-	//assert.Equal(t, tx1.ID, tx1.Crossings[0].Transaction)
-	//assert.Equal(t, int8(1), tx1.Crossings[0].TransactionHop)
+	assert.Equal(t, 200, status)
+	assert.Equal(t, 1, len(tx2.Crossings))
+	assert.Equal(t, 1, len(tx2.Operations))
 
-	//assert.Equal(t, u[1].Address, tx1.Operations[0].Source)
-	//assert.Equal(t, u[2].Address, tx1.Operations[0].Destination)
-	//assert.Equal(t, big.NewInt(10), tx1.Operations[0].Amount)
-	//assert.Equal(t, mint.TxStReserved, tx1.Operations[0].Status)
-	//assert.Equal(t, tx1.ID, *tx1.Operations[0].Transaction)
-	//assert.Equal(t, int8(2), *tx1.Operations[0].TransactionHop)
+	assert.Equal(t, big.NewInt(11), tx2.Crossings[0].Amount)
+	assert.Equal(t, mint.TxStReserved, tx2.Crossings[0].Status)
+	assert.Equal(t, tx1.ID, tx2.Crossings[0].Transaction)
+	assert.Equal(t, int8(2), tx2.Crossings[0].TransactionHop)
+
+	assert.Equal(t, u[2].Address, tx2.Operations[0].Source)
+	assert.Equal(t, u[2].Address, tx2.Operations[0].Destination)
+	assert.Equal(t, big.NewInt(10), tx2.Operations[0].Amount)
+	assert.Equal(t, mint.TxStReserved, tx2.Operations[0].Status)
+	assert.Equal(t, tx1.ID, *tx2.Operations[0].Transaction)
+	assert.Equal(t, int8(3), *tx2.Operations[0].TransactionHop)
 }
