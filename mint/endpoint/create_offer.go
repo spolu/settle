@@ -77,7 +77,7 @@ func (e *CreateOffer) Validate(
 	if e.Pair[0].Owner != e.Owner {
 		return errors.Trace(errors.NewUserErrorf(nil,
 			400, "offer_not_authorized",
-			"You can only create offers whose base asset were created by the "+
+			"You can only create offers whose base asset is owned by the "+
 				"account you are currently authenticated with: %s. This "+
 				"offer base asset was created by: %s.",
 			e.Owner, e.Pair[0].Owner,

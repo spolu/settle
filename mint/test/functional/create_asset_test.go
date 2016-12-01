@@ -50,9 +50,8 @@ func TestCreateAsset(
 		})
 
 	var asset mint.AssetResource
-	if err := raw.Extract("asset", &asset); err != nil {
-		t.Fatal(err)
-	}
+	err := raw.Extract("asset", &asset)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 201, status)
 	assert.Regexp(t, mint.IDRegexp, asset.ID)
@@ -82,9 +81,8 @@ func TestCreateAssetWithInvalidCode(
 		})
 
 	var e errors.ConcreteUserError
-	if err := raw.Extract("error", &e); err != nil {
-		t.Fatal(err)
-	}
+	err := raw.Extract("error", &e)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 400, status)
 	assert.Equal(t, "code_invalid", e.ErrCode)
@@ -105,9 +103,8 @@ func TestCreateAssetWithInvalidScale(
 		})
 
 	var e errors.ConcreteUserError
-	if err := raw.Extract("error", &e); err != nil {
-		t.Fatal(err)
-	}
+	err := raw.Extract("error", &e)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 400, status)
 	assert.Equal(t, "scale_invalid", e.ErrCode)
@@ -136,9 +133,8 @@ func TestCreateAssetThatAlreadyExists(
 		})
 
 	var e errors.ConcreteUserError
-	if err := raw.Extract("error", &e); err != nil {
-		t.Fatal(err)
-	}
+	err := raw.Extract("error", &e)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 400, status)
 	assert.Equal(t, "asset_already_exists", e.ErrCode)

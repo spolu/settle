@@ -197,7 +197,9 @@ func (m *Mint) Get(
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.SetBasicAuth(user.Username, user.Password)
+	if user != nil {
+		req.SetBasicAuth(user.Username, user.Password)
+	}
 
 	r, err := http.DefaultClient.Do(req)
 	if err != nil {

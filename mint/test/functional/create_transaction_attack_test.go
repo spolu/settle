@@ -120,18 +120,16 @@ func TestCreateTransactionAttackMultiCreation(
 		})
 
 	var tx0 mint.TransactionResource
-	if err := raw.Extract("transaction", &tx0); err != nil {
-		t.Fatal(err)
-	}
+	err := raw.Extract("transaction", &tx0)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 201, status)
 
 	status, raw = u[1].Get(t, fmt.Sprintf("/offers/%s", o[1].ID))
 
 	var of1 mint.OfferResource
-	if err := raw.Extract("offer", &of1); err != nil {
-		t.Fatal(err)
-	}
+	err = raw.Extract("offer", &of1)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 200, status)
 

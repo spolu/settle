@@ -76,9 +76,8 @@ func TestCreateTransactionWith2Offers(
 		})
 
 	var tx0 mint.TransactionResource
-	if err := raw.Extract("transaction", &tx0); err != nil {
-		t.Fatal(err)
-	}
+	err := raw.Extract("transaction", &tx0)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 201, status)
 	assert.Regexp(t, mint.IDRegexp, tx0.ID)
@@ -113,12 +112,11 @@ func TestCreateTransactionWith2Offers(
 	assert.Equal(t, int8(0), *tx0.Operations[0].TransactionHop)
 
 	// Check transaction on m[1].
-	status, raw = u[1].Get(t, fmt.Sprintf("/transactions/%s", tx0.ID))
+	status, raw = m[1].Get(t, nil, fmt.Sprintf("/transactions/%s", tx0.ID))
 
 	var tx1 mint.TransactionResource
-	if err := raw.Extract("transaction", &tx1); err != nil {
-		t.Fatal(err)
-	}
+	err = raw.Extract("transaction", &tx1)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 200, status)
 	assert.Equal(t, tx0.ID, tx1.ID)
@@ -166,12 +164,11 @@ func TestCreateTransactionWith2Offers(
 	assert.Equal(t, int8(2), *tx1.Operations[0].TransactionHop)
 
 	// Check transaction on m[2].
-	status, raw = u[2].Get(t, fmt.Sprintf("/transactions/%s", tx0.ID))
+	status, raw = m[2].Get(t, nil, fmt.Sprintf("/transactions/%s", tx0.ID))
 
 	var tx2 mint.TransactionResource
-	if err := raw.Extract("transaction", &tx2); err != nil {
-		t.Fatal(err)
-	}
+	err = raw.Extract("transaction", &tx2)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 200, status)
 	assert.Equal(t, tx0.ID, tx2.ID)
@@ -243,9 +240,8 @@ func TestCreateTransactionWithInsufficientOfferAmount(
 		})
 
 	var e errors.ConcreteUserError
-	if err := raw.Extract("error", &e); err != nil {
-		t.Fatal(err)
-	}
+	err := raw.Extract("error", &e)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 402, status)
 	assert.Equal(t, "transaction_failed", e.ErrCode)
@@ -290,9 +286,8 @@ func TestCreateTransactionWithUserUsedTwice(
 		})
 
 	var tx0 mint.TransactionResource
-	if err := raw.Extract("transaction", &tx0); err != nil {
-		t.Fatal(err)
-	}
+	err := raw.Extract("transaction", &tx0)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 201, status)
 	assert.Equal(t, big.NewInt(10), tx0.Operations[0].Amount)
@@ -315,12 +310,13 @@ func TestCreateTransactionWithNoOffer(
 		})
 
 	var tx0 mint.TransactionResource
-	if err := raw.Extract("transaction", &tx0); err != nil {
-		t.Fatal(err)
-	}
+	err := raw.Extract("transaction", &tx0)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 201, status)
 	assert.Regexp(t, mint.IDRegexp, tx0.ID)
+	assert.Equal(t, 1, len(tx0.Operations))
+	assert.Equal(t, 0, len(tx0.Crossings))
 	assert.Equal(t, big.NewInt(10), tx0.Operations[0].Amount)
 	assert.Equal(t, u[2].Address, tx0.Operations[0].Destination)
 	assert.Equal(t, u[0].Address, tx0.Operations[0].Source)
@@ -345,25 +341,27 @@ func TestCreateTransactionWith1Offer(
 		})
 
 	var tx0 mint.TransactionResource
-	if err := raw.Extract("transaction", &tx0); err != nil {
-		t.Fatal(err)
-	}
+	err := raw.Extract("transaction", &tx0)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 201, status)
 	assert.Regexp(t, mint.IDRegexp, tx0.ID)
+	assert.Equal(t, 1, len(tx0.Operations))
+	assert.Equal(t, 0, len(tx0.Crossings))
 	assert.Equal(t, big.NewInt(10), tx0.Operations[0].Amount)
 	assert.Equal(t, u[1].Address, tx0.Operations[0].Destination)
 	assert.Equal(t, u[0].Address, tx0.Operations[0].Source)
 
 	// Check transaction on m[1].
-	status, raw = u[1].Get(t, fmt.Sprintf("/transactions/%s", tx0.ID))
+	status, raw = m[1].Get(t, nil, fmt.Sprintf("/transactions/%s", tx0.ID))
 
 	var tx1 mint.TransactionResource
-	if err := raw.Extract("transaction", &tx1); err != nil {
-		t.Fatal(err)
-	}
+	err = raw.Extract("transaction", &tx1)
+	assert.Nil(t, err)
 
 	assert.Equal(t, 200, status)
+	assert.Equal(t, 1, len(tx1.Operations))
+	assert.Equal(t, 1, len(tx1.Crossings))
 	assert.Equal(t, big.NewInt(10), tx1.Crossings[0].Amount)
 	assert.Equal(t, mint.TxStReserved, tx1.Crossings[0].Status)
 	assert.Equal(t, tx1.ID, tx1.Crossings[0].Transaction)
@@ -376,4 +374,96 @@ func TestCreateTransactionWith1Offer(
 	assert.Equal(t, tx1.ID, *tx1.Operations[0].Transaction)
 	assert.Equal(t, int8(2), *tx1.Operations[0].TransactionHop)
 
+}
+
+func TestCreateTransactionWithRemoteBaseAsset(
+	t *testing.T,
+) {
+	t.Parallel()
+	m, u, _, o := setupCreateTransaction(t)
+	defer tearDownCreateTransaction(t, m)
+
+	// Credit u[0] of u[1] USD.2
+	status, raw := u[1].Post(t,
+		fmt.Sprintf("/transactions"),
+		url.Values{
+			"pair":        {fmt.Sprintf("%s[USD.2]/%s[USD.2]", u[1].Address, u[1].Address)},
+			"amount":      {"11"},
+			"destination": {u[0].Address},
+			"path[]":      {},
+		})
+
+	assert.Equal(t, 201, status)
+
+	var tx mint.TransactionResource
+	err := raw.Extract("transaction", &tx)
+	assert.Nil(t, err)
+
+	status, _ = u[1].Post(t,
+		fmt.Sprintf("/transactions/%s/settle", tx.ID),
+		url.Values{})
+	assert.Equal(t, 200, status)
+
+	// Attempt to create
+	status, raw = u[0].Post(t,
+		fmt.Sprintf("/transactions"),
+		url.Values{
+			"pair":        {fmt.Sprintf("%s[USD.2]/%s[USD.2]", u[1].Address, u[2].Address)},
+			"amount":      {"10"},
+			"destination": {u[2].Address},
+			"path[]": {
+				o[2].ID,
+			},
+		})
+
+	var tx0 mint.TransactionResource
+	err = raw.Extract("transaction", &tx0)
+	assert.Nil(t, err)
+
+	assert.Equal(t, 201, status)
+	assert.Regexp(t, mint.IDRegexp, tx0.ID)
+	assert.Equal(t, 0, len(tx0.Operations))
+	assert.Equal(t, 0, len(tx0.Crossings))
+
+	// Check transaction on m[1].
+	status, raw = m[1].Get(t, nil, fmt.Sprintf("/transactions/%s", tx0.ID))
+
+	var tx1 mint.TransactionResource
+	err = raw.Extract("transaction", &tx1)
+	assert.Nil(t, err)
+
+	assert.Equal(t, 200, status)
+	assert.Equal(t, 0, len(tx1.Crossings))
+	assert.Equal(t, 1, len(tx1.Operations))
+
+	assert.Equal(t, fmt.Sprintf("%s[USD.2]", u[1].Address), tx1.Operations[0].Asset)
+	assert.Equal(t, u[0].Address, tx1.Operations[0].Source)
+	assert.Equal(t, u[2].Address, tx1.Operations[0].Destination)
+	assert.Equal(t, big.NewInt(11), tx1.Operations[0].Amount)
+	assert.Equal(t, mint.TxStReserved, tx1.Operations[0].Status)
+	assert.Equal(t, tx1.ID, *tx1.Operations[0].Transaction)
+	assert.Equal(t, int8(1), *tx1.Operations[0].TransactionHop)
+
+	// Check transaction on m[2].
+	status, raw = m[2].Get(t, nil, fmt.Sprintf("/transactions/%s", tx0.ID))
+
+	var tx2 mint.TransactionResource
+	err = raw.Extract("transaction", &tx2)
+	assert.Nil(t, err)
+
+	assert.Equal(t, 200, status)
+	assert.Equal(t, 1, len(tx2.Crossings))
+	assert.Equal(t, 1, len(tx2.Operations))
+
+	assert.Equal(t, big.NewInt(11), tx2.Crossings[0].Amount)
+	assert.Equal(t, mint.TxStReserved, tx2.Crossings[0].Status)
+	assert.Equal(t, tx1.ID, tx2.Crossings[0].Transaction)
+	assert.Equal(t, int8(2), tx2.Crossings[0].TransactionHop)
+
+	assert.Equal(t, u[2].Address, tx2.Operations[0].Source)
+	assert.Equal(t, u[2].Address, tx2.Operations[0].Destination)
+	assert.Equal(t, big.NewInt(10), tx2.Operations[0].Amount)
+	assert.Equal(t, mint.TxStReserved, tx2.Operations[0].Status)
+	assert.Equal(t, tx1.ID, *tx2.Operations[0].Transaction)
+	assert.Equal(t, int8(3), *tx2.Operations[0].TransactionHop)
 }

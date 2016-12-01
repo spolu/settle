@@ -49,13 +49,19 @@ func (p OfPath) Value() (value driver.Value, err error) {
 
 // Scan implements sql.Scanner.
 func (p *OfPath) Scan(src interface{}) error {
+	s := ""
 	switch src := src.(type) {
 	case []byte:
-		*p = strings.Split(string(src), "/")
+		s = string(src)
 	case string:
-		*p = strings.Split(src, "/")
+		s = src
 	default:
 		return errors.Newf("Incompatible type for OfPath with value: %q", src)
+	}
+	if len(s) == 0 {
+		*p = []string{}
+	} else {
+		*p = strings.Split(s, "/")
 	}
 
 	return nil
