@@ -6,7 +6,9 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/mint"
+	"github.com/spolu/settle/mint/model"
 	"github.com/spolu/settle/mint/test"
 	"github.com/stretchr/testify/assert"
 )
@@ -58,7 +60,7 @@ func TestSettleTransactionWith2Offers(
 	t *testing.T,
 ) {
 	t.Parallel()
-	m, u, _, o := setupSettleTransaction(t)
+	m, u, a, o := setupSettleTransaction(t)
 	defer tearDownSettleTransaction(t, m)
 
 	status, raw := u[0].Post(t,
@@ -128,10 +130,68 @@ func TestSettleTransactionWith2Offers(
 	assert.Equal(t, mint.TxStSettled, tx2.Crossings[0].Status)
 	assert.Equal(t, mint.TxStSettled, tx2.Operations[0].Status)
 
+	// Check balance on m[0]
+	balance, err := model.LoadBalanceByAssetHolder(m[0].Ctx,
+		a[0].Name, u[1].Address)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, big.NewInt(11), (*big.Int)(&balance.Value))
+
+	// Check balance on m[1]
+	balance, err = model.LoadBalanceByAssetHolder(m[1].Ctx,
+		a[1].Name, u[2].Address)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Equal(t, big.NewInt(11), (*big.Int)(&balance.Value))
+
 	// Check that re-settling does not trigger an error.
 	status, _ = u[0].Post(t,
 		fmt.Sprintf("/transactions/%s/settle", tx.ID),
 		url.Values{})
 
 	assert.Equal(t, 200, status)
+}
+
+func TestSettleTransactionWithWrongSecret(
+	t *testing.T,
+) {
+	t.Parallel()
+	m, u, _, o := setupSettleTransaction(t)
+	defer tearDownSettleTransaction(t, m)
+
+	status, raw := u[0].Post(t,
+		fmt.Sprintf("/transactions"),
+		url.Values{
+			"pair":        {fmt.Sprintf("%s[USD.2]/%s[USD.2]", u[0].Address, u[2].Address)},
+			"amount":      {"10"},
+			"destination": {u[2].Address},
+			"path[]": {
+				o[1].ID,
+				o[2].ID,
+			},
+		})
+
+	assert.Equal(t, 201, status)
+
+	var tx mint.TransactionResource
+	if err := raw.Extract("transaction", &tx); err != nil {
+		t.Fatal(err)
+	}
+
+	status, raw = m[1].Post(t, nil,
+		fmt.Sprintf("/transactions/%s/settle", tx.ID),
+		url.Values{
+			"hop":    {"1"},
+			"secret": {"foo"},
+		})
+
+	var e errors.ConcreteUserError
+	if err := raw.Extract("error", &e); err != nil {
+		t.Fatal(err)
+	}
+
+	assert.Equal(t, 400, status)
+	assert.Equal(t, "secret_invalid", e.ErrCode)
 }

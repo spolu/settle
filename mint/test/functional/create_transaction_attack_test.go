@@ -85,7 +85,7 @@ func TestCreateTransactionAttackMultiCreation(
 					pat.Param(r, "transaction"))
 				assert.Nil(t, err)
 
-				fmt.Printf(" ---> %s REPOST\n", r.URL.Path)
+				fmt.Printf("\n ---> %s REPOST ATTACK\n\n", r.URL.Path)
 
 				m[1].Post(t,
 					nil,

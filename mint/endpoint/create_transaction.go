@@ -351,6 +351,14 @@ func (e *CreateTransaction) ExecutePropagated(
 		e.Plan = plan
 	}
 
+	if e.Plan.Actions[e.Hop].Mint != mint.GetHost(ctx) {
+		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
+			402, "settlement_failed",
+			"The hop provided does not match the current mint for "+
+				"transaction: %s", e.ID,
+		))
+	}
+
 	// Check the plan at previous hop before we execute this hop, to convince
 	// ourselves that the funds are reserved!
 	err := e.Plan.Check(ctx, e.Client, e.Hop-1)
@@ -401,8 +409,14 @@ func (e *CreateTransaction) Propagate(
 	ctx context.Context,
 ) error {
 	if int(e.Hop)+1 < len(e.Plan.Actions) {
-		_, err := e.Client.PropagateTransaction(ctx,
-			e.ID, e.Hop+1, e.Plan.Actions[e.Hop+1].Mint)
+
+		m := e.Plan.Actions[e.Hop+1].Mint
+
+		mint.Logf(ctx,
+			"Propagating transaction: transaction=%s hop=%d mint=%s",
+			e.ID, e.Hop, m)
+
+		_, err := e.Client.PropagateTransaction(ctx, e.ID, e.Hop+1, m)
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -423,9 +437,11 @@ func (e *CreateTransaction) ExecutePlan(
 	a := e.Plan.Actions[e.Hop]
 	if a.IsExecuted {
 		mint.Logf(ctx,
-			"Skipping action: hop=%d", e.Hop)
+			"Skipping transaction plan: transaction=%s hop=%d", e.ID, e.Hop)
 		return nil
 	}
+	mint.Logf(ctx,
+		"Executing transcation plan: transaction=%s hop=%d", e.ID, e.Hop)
 
 	// We have the transaction lock so this is safe to write. Also we can mark
 	// it as executed right away since everything gets canceled in case of
