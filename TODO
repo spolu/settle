@@ -1,9 +1,10 @@
 # mint
 
- [ ] figure out when to set the offer as consumed (multiple crossings might be reserved)
+ [ ] async proceses
  [ ] propagation protocol for both operations and offers (need to learn more)
  [ ] attempt to use Amount everywhere?
  [ ] pass DSN for DB, support Postgres
+ [x] figure out when to set the offer as consumed (multiple crossings might be reserved)
  [x] remove user from records entirely?
  [x] remove the ability to create an operation directly?
  [x] transaction starting from an asset not owned by owner
