@@ -68,16 +68,8 @@ func (e *SettleTransaction) Validate(
 ) error {
 	ctx := r.Context()
 
-	// Validate id.
-	id, owner, token, err := ValidateID(ctx, pat.Param(r, "transaction"))
-	if err != nil {
-		return errors.Trace(err)
-	}
-	e.ID = *id
-	e.Token = *token
-	e.Owner = *owner
-
-	if authentication.Get(ctx).Status != authentication.AutStSucceeded {
+	switch authentication.Get(ctx).Status {
+	case authentication.AutStSkipped:
 		// Validate hop.
 		hop, err := ValidateHop(ctx, r.PostFormValue("hop"))
 		if err != nil {
@@ -91,9 +83,16 @@ func (e *SettleTransaction) Validate(
 			return errors.Trace(err)
 		}
 		e.Secret = *secret
-
-		return nil
 	}
+
+	// Validate id.
+	id, owner, token, err := ValidateID(ctx, pat.Param(r, "transaction"))
+	if err != nil {
+		return errors.Trace(err)
+	}
+	e.ID = *id
+	e.Token = *token
+	e.Owner = *owner
 
 	return nil
 }
@@ -102,10 +101,15 @@ func (e *SettleTransaction) Validate(
 func (e *SettleTransaction) Execute(
 	ctx context.Context,
 ) (*int, *svc.Resp, error) {
-	if authentication.Get(ctx).Status == authentication.AutStSucceeded {
+	switch authentication.Get(ctx).Status {
+	case authentication.AutStSkipped:
+		return e.ExecutePropagated(ctx)
+	case authentication.AutStSucceeded:
 		return e.ExecuteCanonical(ctx)
 	}
-	return e.ExecutePropagated(ctx)
+	return nil, nil, errors.Trace(errors.Newf(
+		"Authentication status not expected: %s",
+		authentication.Get(ctx).Status))
 }
 
 // ExecuteCanonical executes the canonical settlement of a transaction (owner

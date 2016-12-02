@@ -212,6 +212,41 @@ func (c *Client) RetrieveOffer(
 	return &offer, nil
 }
 
+// RetrieveOperation retrieves an operation given its ID by extracting the mint
+// and retrieving it from there.
+func (c *Client) RetrieveOperation(
+	ctx context.Context,
+	id string,
+) (*OperationResource, error) {
+	owner, _, err := NormalizedOwnerAndTokenFromID(ctx, id)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	_, host, err := UsernameAndMintHostFromAddress(ctx, owner)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	r, err := c.httpClient.Get(
+		FullMintURL(ctx, host, fmt.Sprintf("/operatons/%s", id)).String())
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	defer r.Body.Close()
+
+	var raw svc.Resp
+	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	var operation OperationResource
+	if err := raw.Extract("operation", &operation); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &operation, nil
+}
+
 // RetrieveTransaction retrieves a transaction given its ID by extracting the
 // mint and retrieving it from there. If host is specified, it attempts to
 // retrrieve the transaction from this host instead of the canonical host.

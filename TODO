@@ -4,6 +4,7 @@
  [ ] propagation protocol for both operations and offers (need to learn more)
  [ ] attempt to use Amount everywhere?
  [ ] pass DSN for DB, support Postgres
+ [x] validate asset is created when creating offer and test
  [x] figure out when to set the offer as consumed (multiple crossings might be reserved)
  [x] remove user from records entirely?
  [x] remove the ability to create an operation directly?
@@ -60,16 +61,7 @@
   - mints are eventually consistent on operations and offers
   - propagation happens asynchronously and can be (is?) triggered by clients
 
-  # transactions
+  # propagation
 
-  - the chain of calls include
-    - operation
-    - crossing
-    - operation
-    - crossing
-    - operation
-
-  - each element of the chain commit to performing the operation/crossing if
-    provided with the lock. The operation/offer updates are propagated
-    (best-effort) only once they are committed
-
+  - POST /operations/:op unauthenticated (as is the case for transactions?)
+  

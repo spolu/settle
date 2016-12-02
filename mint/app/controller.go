@@ -25,6 +25,7 @@ func (c *Controller) Bind(
 	mux.HandleFunc(pat.Get("/offers/:offer"), endpoint.HandlerFor(endpoint.EndPtRetrieveOffer))
 	mux.HandleFunc(pat.Get("/transactions/:transaction"), endpoint.HandlerFor(endpoint.EndPtRetrieveTransaction))
 	mux.HandleFunc(pat.Post("/transactions/:transaction"), endpoint.HandlerFor(endpoint.EndPtCreateTransaction))
+	mux.HandleFunc(pat.Post("/operations/:operation"), endpoint.HandlerFor(endpoint.EndPtCreateOperation))
 
 	//mux.HandleFunc(pat.Post("/propagations"), endpoint.HandlerFor(endpoint.EndPtCreatePropagation))
 	//mux.HandleFunc(pat.Get("/operations/:operation"), endpoint.HandlerFor(endpoint.EndPtRetrieveOperation))

@@ -73,7 +73,8 @@ func (e *CreateTransaction) Validate(
 ) error {
 	ctx := r.Context()
 
-	if authentication.Get(ctx).Status != authentication.AutStSucceeded {
+	switch authentication.Get(ctx).Status {
+	case authentication.AutStSkipped:
 		// Validate id.
 		id, owner, _, err := ValidateID(ctx, pat.Param(r, "transaction"))
 		if err != nil {
@@ -89,52 +90,51 @@ func (e *CreateTransaction) Validate(
 		}
 		e.Hop = *hop
 
-		return nil
-	}
+	case authentication.AutStSucceeded:
+		e.Owner = fmt.Sprintf("%s@%s",
+			authentication.Get(ctx).User.Username,
+			mint.GetHost(ctx))
+		e.Hop = int8(0)
 
-	e.Owner = fmt.Sprintf("%s@%s",
-		authentication.Get(ctx).User.Username,
-		mint.GetHost(ctx))
-	e.Hop = int8(0)
-
-	// Validate asset pair.
-	pair, err := ValidateAssetPair(ctx, r.PostFormValue("pair"))
-	if err != nil {
-		return errors.Trace(err) // 400
-	}
-	e.BaseAsset = pair[0].Name
-	e.QuoteAsset = pair[1].Name
-
-	// Validate amount.
-	amount, err := ValidateAmount(ctx, r.PostFormValue("amount"))
-	if err != nil {
-		return errors.Trace(err)
-	}
-	e.Amount = *amount
-
-	// Validate destination.
-	dstAddress, err := mint.NormalizedAddress(ctx, r.PostFormValue("destination"))
-	if err != nil {
-		return errors.Trace(errors.NewUserErrorf(err,
-			400, "destination_invalid",
-			"The destination address you provided is invalid: %s.",
-			dstAddress,
-		))
-	}
-	e.Destination = dstAddress
-
-	// Validate path.
-	if r.PostForm == nil {
-		err := r.ParseMultipartForm(defaultMaxMemory)
+		// Validate asset pair.
+		pair, err := ValidateAssetPair(ctx, r.PostFormValue("pair"))
 		if err != nil {
-			return errors.Trace(err) // 500
+			return errors.Trace(err) // 400
 		}
+		e.BaseAsset = pair[0].Name
+		e.QuoteAsset = pair[1].Name
+
+		// Validate amount.
+		amount, err := ValidateAmount(ctx, r.PostFormValue("amount"))
+		if err != nil {
+			return errors.Trace(err)
+		}
+		e.Amount = *amount
+
+		// Validate destination.
+		dstAddress, err := mint.NormalizedAddress(ctx, r.PostFormValue("destination"))
+		if err != nil {
+			return errors.Trace(errors.NewUserErrorf(err,
+				400, "destination_invalid",
+				"The destination address you provided is invalid: %s.",
+				dstAddress,
+			))
+		}
+		e.Destination = dstAddress
+
+		// Validate path.
+		if r.PostForm == nil {
+			err := r.ParseMultipartForm(defaultMaxMemory)
+			if err != nil {
+				return errors.Trace(err) // 500
+			}
+		}
+		path, err := ValidatePath(ctx, r.PostForm["path[]"])
+		if err != nil {
+			return errors.Trace(err)
+		}
+		e.Path = path
 	}
-	path, err := ValidatePath(ctx, r.PostForm["path[]"])
-	if err != nil {
-		return errors.Trace(err)
-	}
-	e.Path = path
 
 	return nil
 }
@@ -143,10 +143,15 @@ func (e *CreateTransaction) Validate(
 func (e *CreateTransaction) Execute(
 	ctx context.Context,
 ) (*int, *svc.Resp, error) {
-	if authentication.Get(ctx).Status == authentication.AutStSucceeded {
+	switch authentication.Get(ctx).Status {
+	case authentication.AutStSkipped:
+		return e.ExecutePropagated(ctx)
+	case authentication.AutStSucceeded:
 		return e.ExecuteCanonical(ctx)
 	}
-	return e.ExecutePropagated(ctx)
+	return nil, nil, errors.Trace(errors.Newf(
+		"Authentication status not expected: %s",
+		authentication.Get(ctx).Status))
 }
 
 // ExecuteCanonical executes the creation of a canonical transaction (owner
@@ -163,8 +168,14 @@ func (e *CreateTransaction) ExecuteCanonical(
 
 	// Create canonical transaction locally.
 	tx, err := model.CreateCanonicalTransaction(ctx,
-		e.Owner, e.BaseAsset, e.QuoteAsset, model.Amount(e.Amount),
-		e.Destination, model.OfPath(e.Path), mint.TxStReserved)
+		e.Owner,
+		e.BaseAsset,
+		e.QuoteAsset,
+		model.Amount(e.Amount),
+		e.Destination,
+		model.OfPath(e.Path),
+		mint.TxStReserved,
+	)
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
 	}
@@ -320,10 +331,14 @@ func (e *CreateTransaction) ExecutePropagated(
 			token,
 			time.Unix(0, transaction.Created*mint.TimeResolutionNs),
 			e.Owner,
-			e.BaseAsset, e.QuoteAsset,
+			e.BaseAsset,
+			e.QuoteAsset,
 			model.Amount(e.Amount),
-			e.Destination, model.OfPath(e.Path),
-			mint.TxStReserved, transaction.Lock)
+			e.Destination,
+			model.OfPath(e.Path),
+			mint.TxStReserved,
+			transaction.Lock,
+		)
 		if err != nil {
 			return nil, nil, errors.Trace(err) // 500
 		}
@@ -481,9 +496,15 @@ func (e *CreateTransaction) ExecutePlan(
 		}
 
 		op, err := model.CreateCanonicalOperation(ctx,
-			asset.Owner, *a.OperationAsset,
-			*a.OperationSource, *a.OperationDestination,
-			model.Amount(*a.Amount), mint.TxStReserved, &e.ID, &e.Hop)
+			asset.Owner,
+			*a.OperationAsset,
+			*a.OperationSource,
+			*a.OperationDestination,
+			model.Amount(*a.Amount),
+			mint.TxStReserved,
+			&e.ID,
+			&e.Hop,
+		)
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -547,8 +568,13 @@ func (e *CreateTransaction) ExecutePlan(
 		}
 
 		cr, err := model.CreateCrossing(ctx,
-			offer.Owner, *a.CrossingOffer, model.Amount(*a.Amount),
-			mint.TxStReserved, e.ID, e.Hop)
+			offer.Owner,
+			*a.CrossingOffer,
+			model.Amount(*a.Amount),
+			mint.TxStReserved,
+			e.ID,
+			e.Hop,
+		)
 		if err != nil {
 			return errors.Trace(err)
 		}
