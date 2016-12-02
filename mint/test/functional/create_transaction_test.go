@@ -467,3 +467,88 @@ func TestCreateTransactionWithRemoteBaseAsset(
 	assert.Equal(t, tx1.ID, *tx2.Operations[0].Transaction)
 	assert.Equal(t, int8(3), *tx2.Operations[0].TransactionHop)
 }
+
+func TestCreateTransactionWithNegativeAmount(
+	t *testing.T,
+) {
+	t.Parallel()
+	m, u, _, o := setupCreateTransaction(t)
+	defer tearDownCreateTransaction(t, m)
+
+	status, raw := u[0].Post(t,
+		fmt.Sprintf("/transactions"),
+		url.Values{
+			"pair":        {fmt.Sprintf("%s[USD.2]/%s[USD.2]", u[0].Address, u[2].Address)},
+			"amount":      {"-10"},
+			"destination": {u[2].Address},
+			"path[]": {
+				o[1].ID,
+				o[2].ID,
+			},
+		})
+
+	var e errors.ConcreteUserError
+	err := raw.Extract("error", &e)
+	assert.Nil(t, err)
+
+	assert.Equal(t, 400, status)
+	assert.Equal(t, "amount_invalid", e.ErrCode)
+}
+
+func TestCreateTransactionWithInvalidBaseAsset(
+	t *testing.T,
+) {
+	t.Parallel()
+	m, u, _, o := setupCreateTransaction(t)
+	defer tearDownCreateTransaction(t, m)
+
+	invalidAsset := "foo"
+
+	status, raw := u[0].Post(t,
+		fmt.Sprintf("/transactions"),
+		url.Values{
+			"pair":        {fmt.Sprintf("%s/%s[USD.2]", invalidAsset, u[2].Address)},
+			"amount":      {"10"},
+			"destination": {u[2].Address},
+			"path[]": {
+				o[1].ID,
+				o[2].ID,
+			},
+		})
+
+	var e errors.ConcreteUserError
+	err := raw.Extract("error", &e)
+	assert.Nil(t, err)
+
+	assert.Equal(t, 400, status)
+	assert.Equal(t, "pair_invalid", e.ErrCode)
+}
+
+func TestCreateTransactionWithInvalidQuoteAsset(
+	t *testing.T,
+) {
+	t.Parallel()
+	m, u, _, o := setupCreateTransaction(t)
+	defer tearDownCreateTransaction(t, m)
+
+	invalidAsset := "foo"
+
+	status, raw := u[0].Post(t,
+		fmt.Sprintf("/transactions"),
+		url.Values{
+			"pair":        {fmt.Sprintf("%s[USD.2]/%s", u[0].Address, invalidAsset)},
+			"amount":      {"10"},
+			"destination": {u[2].Address},
+			"path[]": {
+				o[1].ID,
+				o[2].ID,
+			},
+		})
+
+	var e errors.ConcreteUserError
+	err := raw.Extract("error", &e)
+	assert.Nil(t, err)
+
+	assert.Equal(t, 400, status)
+	assert.Equal(t, "pair_invalid", e.ErrCode)
+}

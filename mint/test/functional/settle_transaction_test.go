@@ -185,3 +185,50 @@ func TestSettleTransactionWithWrongSecret(
 	assert.Equal(t, 400, status)
 	assert.Equal(t, "secret_invalid", e.ErrCode)
 }
+
+func TestSettleTransactionmWithNoOffer(
+	t *testing.T,
+) {
+	t.Parallel()
+	m, u, a, _ := setupSettleTransaction(t)
+	defer tearDownSettleTransaction(t, m)
+
+	status, raw := u[0].Post(t,
+		fmt.Sprintf("/transactions"),
+		url.Values{
+			"pair":        {fmt.Sprintf("%s[USD.2]/%s[USD.2]", u[0].Address, u[0].Address)},
+			"amount":      {"10"},
+			"destination": {u[1].Address},
+		})
+
+	assert.Equal(t, 201, status)
+
+	var tx mint.TransactionResource
+	err := raw.Extract("transaction", &tx)
+	assert.Nil(t, err)
+
+	status, raw = u[0].Post(t,
+		fmt.Sprintf("/transactions/%s/settle", tx.ID),
+		url.Values{})
+
+	var tx0 mint.TransactionResource
+	err = raw.Extract("transaction", &tx0)
+	assert.Nil(t, err)
+
+	assert.Equal(t, 200, status)
+	assert.Equal(t, 0, len(tx0.Crossings))
+	assert.Equal(t, 1, len(tx0.Operations))
+
+	assert.Equal(t, u[0].Address, tx0.Operations[0].Source)
+	assert.Equal(t, u[1].Address, tx0.Operations[0].Destination)
+	assert.Equal(t, big.NewInt(10), tx0.Operations[0].Amount)
+	assert.Equal(t, mint.TxStSettled, tx0.Operations[0].Status)
+	assert.Equal(t, tx.ID, *tx0.Operations[0].Transaction)
+	assert.Equal(t, int8(0), *tx0.Operations[0].TransactionHop)
+
+	// Check balance on m[0]
+	balance, err := model.LoadBalanceByAssetHolder(m[0].Ctx,
+		a[0].Name, u[1].Address)
+	assert.Nil(t, err)
+	assert.Equal(t, big.NewInt(10), (*big.Int)(&balance.Value))
+}
