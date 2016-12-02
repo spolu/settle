@@ -22,7 +22,6 @@ import (
 
 // Transaction represents a transaction across a chain of offers.
 type Transaction struct {
-	User        *string
 	Owner       string
 	Token       string
 	Created     time.Time
@@ -75,7 +74,6 @@ func NewTransactionResource(
 // object.
 func CreateCanonicalTransaction(
 	ctx context.Context,
-	user string,
 	owner string,
 	baseAsset string,
 	quoteAsset string,
@@ -94,7 +92,6 @@ func CreateCanonicalTransaction(
 	lock := base64.StdEncoding.EncodeToString(h)
 
 	transaction := Transaction{
-		User:        &user,
 		Owner:       owner,
 		Token:       tok,
 		Created:     time.Now(),
@@ -114,10 +111,10 @@ func CreateCanonicalTransaction(
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO transactions
-  (user, owner, token, created, propagation, base_asset, quote_asset,
+  (owner, token, created, propagation, base_asset, quote_asset,
    amount, destination, path, status, lock, secret)
 VALUES
-  (:user, :owner, :token, :created, :propagation, :base_asset, :quote_asset,
+  (:owner, :token, :created, :propagation, :base_asset, :quote_asset,
    :amount, :destination, :path, :status, :lock, :secret)
 `, transaction); err != nil {
 		switch err := err.(type) {
@@ -152,7 +149,6 @@ func CreatePropagatedTransaction(
 	lock string,
 ) (*Transaction, error) {
 	transaction := Transaction{
-		User:        nil,
 		Owner:       owner,
 		Token:       token,
 		Created:     created,
@@ -171,10 +167,10 @@ func CreatePropagatedTransaction(
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO transactions
-  (user, owner, token, created, propagation, base_asset, quote_asset,
+  (owner, token, created, propagation, base_asset, quote_asset,
    amount, destination, path, status, lock, secret)
 VALUES
-  (:user, :owner, :token, :created, :propagation, :base_asset, :quote_asset,
+  (:owner, :token, :created, :propagation, :base_asset, :quote_asset,
    :amount, :destination, :path, :status, :lock, :secret)
 `, transaction); err != nil {
 		switch err := err.(type) {

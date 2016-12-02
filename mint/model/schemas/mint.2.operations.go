@@ -7,7 +7,6 @@ import "github.com/spolu/settle/mint/model"
 const (
 	operationsSQL = `
 CREATE TABLE IF NOT EXISTS operations(
-  user VARCHAR(256),            -- user token (not present if propagated)
   owner VARCHAR(256) NOT NULL,  -- owner address
   token VARCHAR(256) NOT NULL,  -- token
   created TIMESTAMP NOT NULL,
@@ -23,8 +22,7 @@ CREATE TABLE IF NOT EXISTS operations(
   txn VARCHAR(256),                  -- transaction id
   hop SMALLINT,                      -- transaction hop
 
-  PRIMARY KEY(owner, token),
-  CONSTRAINT operations_user_fk FOREIGN KEY (user) REFERENCES users(token)
+  PRIMARY KEY(owner, token)
 );
 `
 )

@@ -7,7 +7,6 @@ import "github.com/spolu/settle/mint/model"
 const (
 	offersSQL = `
 CREATE TABLE IF NOT EXISTS offers(
-  user VARCHAR(256),            -- user token (not present if propagated)
   owner VARCHAR(256) NOT NULL,  -- owner address
   token VARCHAR(256) NOT NULL,  -- token
   created TIMESTAMP NOT NULL,
@@ -24,8 +23,7 @@ CREATE TABLE IF NOT EXISTS offers(
   status VARCHAR(32) NOT NULL,       -- status (active, closed, consumed)
   remainder VARCHAR(64) NOT NULL,    -- remainder amount of quote asset asked
 
-  PRIMARY KEY(owner, token),
-  CONSTRAINT offers_user_fk FOREIGN KEY (user) REFERENCES users(token)
+  PRIMARY KEY(owner, token)
 );
 `
 )

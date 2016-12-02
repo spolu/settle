@@ -20,7 +20,6 @@ import (
 // Crossing represents a transaction crossing an offer and consuming some of
 // its amount. Crossings are not propagated.
 type Crossing struct {
-	User    string
 	Owner   string
 	Token   string
 	Created time.Time
@@ -54,7 +53,6 @@ func NewCrossingResource(
 // CreateCrossing creates and stores a new Crossing object.
 func CreateCrossing(
 	ctx context.Context,
-	user string,
 	owner string,
 	offer string,
 	amount Amount,
@@ -63,7 +61,6 @@ func CreateCrossing(
 	hop int8,
 ) (*Crossing, error) {
 	crossing := Crossing{
-		User:    user,
 		Owner:   owner,
 		Token:   token.New("crossing"),
 		Created: time.Now(),
@@ -79,9 +76,9 @@ func CreateCrossing(
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO crossings
-  (user, owner, token, created, offer, amount, status, txn, hop)
+  (owner, token, created, offer, amount, status, txn, hop)
 VALUES
-  (:user, :owner, :token, :created, :offer, :amount, :status, :txn, :hop)
+  (:owner, :token, :created, :offer, :amount, :status, :txn, :hop)
 `, crossing); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:

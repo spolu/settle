@@ -15,7 +15,6 @@ func (c *Controller) Bind(
 ) {
 	// Authenticated.
 	mux.HandleFunc(pat.Post("/assets"), endpoint.HandlerFor(endpoint.EndPtCreateAsset))
-	mux.HandleFunc(pat.Post("/assets/:asset/operations"), endpoint.HandlerFor(endpoint.EndPtCreateOperation))
 	mux.HandleFunc(pat.Post("/offers"), endpoint.HandlerFor(endpoint.EndPtCreateOffer))
 	mux.HandleFunc(pat.Post("/transactions"), endpoint.HandlerFor(endpoint.EndPtCreateTransaction))
 
