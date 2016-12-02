@@ -109,18 +109,35 @@ func (e *CreateOffer) Execute(
 	ctx = db.Begin(ctx)
 	defer db.LoggedRollback(ctx)
 
+	// Validate that the asset exists locally.
+	asset, err := model.LoadAssetByName(ctx, e.Pair[0].Name)
+	if err != nil {
+		return nil, nil, errors.Trace(err) // 500
+	} else if asset == nil {
+		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
+			400, "asset_not_found",
+			"The base asset you specifed does not exist: %s. You must create "+
+				"an asset before you use it as base asset of an offer.",
+			e.Pair[0].Name,
+		))
+	}
+
 	// Create canonical offer locally.
 	offer, err := model.CreateCanonicalOffer(ctx,
-		e.Owner, e.Pair[0].Name, e.Pair[1].Name,
-		model.Amount(e.BasePrice), model.Amount(e.QuotePrice),
-		model.Amount(e.Amount), mint.OfStActive, model.Amount(e.Amount))
+		e.Owner,
+		e.Pair[0].Name,
+		e.Pair[1].Name,
+		model.Amount(e.BasePrice),
+		model.Amount(e.QuotePrice),
+		model.Amount(e.Amount),
+		mint.OfStActive,
+		model.Amount(e.Amount),
+	)
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
 	}
 
 	db.Commit(ctx)
-
-	// TODO(stan): propagation
 
 	return ptr.Int(http.StatusCreated), &svc.Resp{
 		"offer": format.JSONPtr(model.NewOfferResource(ctx, offer)),

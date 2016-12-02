@@ -99,3 +99,26 @@ func TestCreateOfferWithNotOwnedAsset(
 	assert.Equal(t, 400, status)
 	assert.Equal(t, "offer_not_authorized", e.ErrCode)
 }
+
+func TestCreateOfferWithInexistantAsset(
+	t *testing.T,
+) {
+	t.Parallel()
+	m, u, _ := setupCreateOffer(t)
+	defer tearDownCreateOffer(t, m)
+
+	status, raw := u[0].Post(t,
+		fmt.Sprintf("/offers"),
+		url.Values{
+			"pair":   {fmt.Sprintf("%s[USD.4]/%s[USD.2]", u[0].Address, u[1].Address)},
+			"price":  {"1/1"},
+			"amount": {"100"},
+		})
+
+	var e errors.ConcreteUserError
+	err := raw.Extract("error", &e)
+	assert.Nil(t, err)
+
+	assert.Equal(t, 400, status)
+	assert.Equal(t, "asset_not_found", e.ErrCode)
+}
