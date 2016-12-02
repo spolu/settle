@@ -111,12 +111,9 @@ func (e *CreateOffer) Execute(
 
 	// Create canonical offer locally.
 	offer, err := model.CreateCanonicalOffer(ctx,
-		authentication.Get(ctx).User.Token,
-		e.Owner,
-		e.Pair[0].Name, e.Pair[1].Name,
+		e.Owner, e.Pair[0].Name, e.Pair[1].Name,
 		model.Amount(e.BasePrice), model.Amount(e.QuotePrice),
-		model.Amount(e.Amount),
-		mint.OfStActive, model.Amount(e.Amount))
+		model.Amount(e.Amount), mint.OfStActive, model.Amount(e.Amount))
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
 	}

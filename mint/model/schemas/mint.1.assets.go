@@ -7,7 +7,6 @@ import "github.com/spolu/settle/mint/model"
 const (
 	assetsSQL = `
 CREATE TABLE IF NOT EXISTS assets(
-  user VARCHAR(256) NOT NULL,   -- user token
   owner VARCHAR(256) NOT NULL,  -- owner address
   token VARCHAR(256) NOT NULL,  -- token
   created TIMESTAMP NOT NULL,
@@ -16,7 +15,6 @@ CREATE TABLE IF NOT EXISTS assets(
   scale SMALLINT,               -- factor by which the asset native is scaled
 
   PRIMARY KEY(owner, token),
-  CONSTRAINT assets_user_fk FOREIGN KEY (user) REFERENCES users(token),
   CONSTRAINT assets_owner_code_u UNIQUE (owner, code) -- not propagated
 );
 `

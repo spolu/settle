@@ -7,7 +7,6 @@ import "github.com/spolu/settle/mint/model"
 const (
 	transactionsSQL = `
 CREATE TABLE IF NOT EXISTS transactions(
-  user VARCHAR(256),            -- user token (not present if propagated)
   owner VARCHAR(256) NOT NULL,  -- owner address
   token VARCHAR(256) NOT NULL,  -- token
   created TIMESTAMP NOT NULL,
@@ -24,8 +23,7 @@ CREATE TABLE IF NOT EXISTS transactions(
   lock VARCHAR(256) NOT NULL,        -- lock = hex(scrypt(secret, id))
   secret VARCHAR(256),               -- lock secret
 
-  PRIMARY KEY(owner, token),
-  CONSTRAINT transactions_user_fk FOREIGN KEY (user) REFERENCES users(token)
+  PRIMARY KEY(owner, token)
 );
 `
 )

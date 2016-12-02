@@ -26,7 +26,6 @@ import (
 // - Propagated offers are indicatively stored on the mints of the offers's
 //   assets, to compute order books.
 type Offer struct {
-	User        *string
 	Owner       string
 	Token       string
 	Created     time.Time
@@ -66,7 +65,6 @@ func NewOfferResource(
 // CreateCanonicalOffer creates and stores a new canonical Offer object.
 func CreateCanonicalOffer(
 	ctx context.Context,
-	user string,
 	owner string,
 	baseAsset string,
 	quoteAsset string,
@@ -77,7 +75,6 @@ func CreateCanonicalOffer(
 	remainder Amount,
 ) (*Offer, error) {
 	offer := Offer{
-		User:        &user,
 		Owner:       owner,
 		Token:       token.New("offer"),
 		Created:     time.Now(),
@@ -96,10 +93,10 @@ func CreateCanonicalOffer(
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO offers
-  (user, owner, token, created, propagation, base_asset, quote_asset,
+  (owner, token, created, propagation, base_asset, quote_asset,
    base_price, quote_price, amount, status, remainder)
 VALUES
-  (:user, :owner, :token, :created, :propagation, :base_asset, :quote_asset,
+  (:owner, :token, :created, :propagation, :base_asset, :quote_asset,
    :base_price, :quote_price, :amount, :status, :remainder)
 `, offer); err != nil {
 		switch err := err.(type) {
@@ -133,7 +130,6 @@ func CreatePropagatedOffer(
 	remainder Amount,
 ) (*Offer, error) {
 	offer := Offer{
-		User:        nil,
 		Owner:       owner,
 		Token:       token,
 		Created:     created,
@@ -152,10 +148,10 @@ func CreatePropagatedOffer(
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO offers
-  (user, owner, token, created, propagation, base_asset, quote_asset,
+  (owner, token, created, propagation, base_asset, quote_asset,
    base_price, quote_price, amount, status)
 VALUES
-  (:user, :owner, :token, :created, :propagation, :base_asset, :quote_asset,
+  (:owner, :token, :created, :propagation, :base_asset, :quote_asset,
    :base_price, :quote_price, :amount, :status, :remainder)
 `, offer); err != nil {
 		switch err := err.(type) {

@@ -32,7 +32,6 @@ var MaxAssetAmount = new(big.Int).Exp(
 //   created out of a transaction are created `settled`.
 // - Only settled operation are propagated.
 type Operation struct {
-	User        *string
 	Owner       string // Owner address.
 	Token       string
 	Created     time.Time
@@ -71,7 +70,6 @@ func NewOperationResource(
 // CreateCanonicalOperation creates and stores a new Operation.
 func CreateCanonicalOperation(
 	ctx context.Context,
-	user string,
 	owner string,
 	asset string,
 	source string,
@@ -82,7 +80,6 @@ func CreateCanonicalOperation(
 	hop *int8,
 ) (*Operation, error) {
 	operation := Operation{
-		User:        &user,
 		Owner:       owner,
 		Token:       token.New("operation"),
 		Created:     time.Now(),
@@ -101,10 +98,10 @@ func CreateCanonicalOperation(
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO operations
-  (user, owner, token, created, propagation, asset, source, destination,
+  (owner, token, created, propagation, asset, source, destination,
    amount, status, txn, hop)
 VALUES
-  (:user, :owner, :token, :created, :propagation, :asset, :source, :destination,
+  (:owner, :token, :created, :propagation, :asset, :source, :destination,
    :amount, :status, :txn, :hop)
 `, operation); err != nil {
 		switch err := err.(type) {
@@ -138,7 +135,6 @@ func CreatePropagatedOperation(
 	hop *int8,
 ) (*Operation, error) {
 	operation := Operation{
-		User:        nil,
 		Owner:       owner,
 		Token:       token,
 		Created:     created,
@@ -157,10 +153,10 @@ func CreatePropagatedOperation(
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO operations
-  (user, owner, token, created, propagation, asset, source, destination,
+  (owner, token, created, propagation, asset, source, destination,
    amount, status, txn, hop)
 VALUES
-  (:user, :owner, :token, :created, :propagation, :asset, :source, :destination,
+  (:owner, :token, :created, :propagation, :asset, :source, :destination,
    :amount, :status, :txn, :hop)
 `, operation); err != nil {
 		switch err := err.(type) {

@@ -7,7 +7,6 @@ import "github.com/spolu/settle/mint/model"
 const (
 	crossingsSQL = `
 CREATE TABLE IF NOT EXISTS crossings(
-  user VARCHAR(256) NOT NULL,   -- user token
   owner VARCHAR(256) NOT NULL,  -- owner address
   token VARCHAR(256) NOT NULL,  -- token
   created TIMESTAMP NOT NULL,
@@ -19,8 +18,7 @@ CREATE TABLE IF NOT EXISTS crossings(
   txn VARCHAR(256) NOT NULL,         -- transaction id
   hop SMALLINT NOT NULL,             -- transaction hop
 
-  PRIMARY KEY(owner, token),
-  CONSTRAINT crossings_user_fk FOREIGN KEY (user) REFERENCES users(token)
+  PRIMARY KEY(owner, token)
 );
 `
 )

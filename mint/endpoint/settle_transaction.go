@@ -378,9 +378,7 @@ func (e *SettleTransaction) Settle(
 			if a.OperationDestination != nil &&
 				asset.Owner != *a.OperationDestination {
 				dstBalance, err = model.LoadOrCreateBalanceByAssetHolder(ctx,
-					asset.User,
-					asset.Owner,
-					*a.OperationAsset, *a.OperationDestination)
+					asset.Owner, *a.OperationAsset, *a.OperationDestination)
 				if err != nil {
 					return errors.Trace(err)
 				}
@@ -424,12 +422,12 @@ func (e *SettleTransaction) Settle(
 			txStore.StoreOperation(ctx, e.ID, op)
 
 			mint.Logf(ctx,
-				"Settled operation: user=%s id=%s[%s] created=%q propagation=%s "+
+				"Settled operation: id=%s[%s] created=%q propagation=%s "+
 					"asset=%s source=%s destination=%s amount=%s "+
 					"status=%s transaction=%s",
-				*op.User, op.Owner, op.Token, op.Created, op.Propagation,
-				op.Asset, op.Source, op.Destination,
-				(*big.Int)(&op.Amount).String(), op.Status, *op.Transaction)
+				op.Owner, op.Token, op.Created, op.Propagation, op.Asset,
+				op.Source, op.Destination, (*big.Int)(&op.Amount).String(),
+				op.Status, *op.Transaction)
 
 		case TxActTpCrossing:
 
@@ -453,11 +451,10 @@ func (e *SettleTransaction) Settle(
 			txStore.StoreCrossing(ctx, e.ID, cr)
 
 			mint.Logf(ctx,
-				"Settled crossing: user=%s id=%s[%s] created=%q "+
-					"offer=%s amount=%s status=%s transaction=%s",
-				cr.User, cr.Owner, cr.Token, cr.Created,
-				cr.Offer, (*big.Int)(&cr.Amount).String(),
-				cr.Status, cr.Transaction)
+				"Settled crossing: id=%s[%s] created=%q offer=%s amount=%s "+
+					"status=%s transaction=%s",
+				cr.Owner, cr.Token, cr.Created, cr.Offer,
+				(*big.Int)(&cr.Amount).String(), cr.Status, cr.Transaction)
 		}
 	}
 

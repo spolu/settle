@@ -29,7 +29,6 @@ var AssetCodeRegexp = regexp.MustCompile("^[A-Z0-9\\-]{1,64}$")
 
 // Asset represents an asset object. Asset are created by users (issuer).
 type Asset struct {
-	User    string
 	Owner   string
 	Token   string
 	Created time.Time
@@ -60,13 +59,11 @@ func NewAssetResource(
 // CreateAsset creates and stores a new Asset object.
 func CreateAsset(
 	ctx context.Context,
-	user string,
 	owner string,
 	code string,
 	scale int8,
 ) (*Asset, error) {
 	asset := Asset{
-		User:    user,
 		Owner:   owner,
 		Token:   token.New("asset"),
 		Created: time.Now(),
@@ -78,9 +75,9 @@ func CreateAsset(
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO assets
-  (user, owner, token, created, code, scale)
+  (owner, token, created, code, scale)
 VALUES
-  (:user, :owner, :token, :created, :code, :scale)
+  (:owner, :token, :created, :code, :scale)
 `, asset); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:

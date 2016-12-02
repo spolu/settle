@@ -163,12 +163,8 @@ func (e *CreateTransaction) ExecuteCanonical(
 
 	// Create canonical transaction locally.
 	tx, err := model.CreateCanonicalTransaction(ctx,
-		authentication.Get(ctx).User.Token,
-		e.Owner,
-		e.BaseAsset, e.QuoteAsset,
-		model.Amount(e.Amount),
-		e.Destination, model.OfPath(e.Path),
-		mint.TxStReserved)
+		e.Owner, e.BaseAsset, e.QuoteAsset, model.Amount(e.Amount),
+		e.Destination, model.OfPath(e.Path), mint.TxStReserved)
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
 	}
@@ -478,22 +474,16 @@ func (e *CreateTransaction) ExecutePlan(
 		if a.OperationDestination != nil &&
 			asset.Owner != *a.OperationDestination {
 			dstBalance, err = model.LoadOrCreateBalanceByAssetHolder(ctx,
-				asset.User,
-				asset.Owner,
-				*a.OperationAsset, *a.OperationDestination)
+				asset.Owner, *a.OperationAsset, *a.OperationDestination)
 			if err != nil {
 				return errors.Trace(err)
 			}
 		}
 
 		op, err := model.CreateCanonicalOperation(ctx,
-			asset.User,
-			asset.Owner,
-			*a.OperationAsset,
+			asset.Owner, *a.OperationAsset,
 			*a.OperationSource, *a.OperationDestination,
-			model.Amount(*a.Amount),
-			mint.TxStReserved,
-			&e.ID, &e.Hop)
+			model.Amount(*a.Amount), mint.TxStReserved, &e.ID, &e.Hop)
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -538,12 +528,12 @@ func (e *CreateTransaction) ExecutePlan(
 		}
 
 		mint.Logf(ctx,
-			"Reserved operation: user=%s id=%s[%s] created=%q propagation=%s "+
+			"Reserved operation: id=%s[%s] created=%q propagation=%s "+
 				"asset=%s source=%s destination=%s amount=%s "+
 				"status=%s transaction=%s",
-			*op.User, op.Owner, op.Token, op.Created, op.Propagation,
-			op.Asset, op.Source, op.Destination,
-			(*big.Int)(&op.Amount).String(), op.Status, *op.Transaction)
+			op.Owner, op.Token, op.Created, op.Propagation, op.Asset,
+			op.Source, op.Destination, (*big.Int)(&op.Amount).String(),
+			op.Status, *op.Transaction)
 
 	case TxActTpCrossing:
 
@@ -557,10 +547,7 @@ func (e *CreateTransaction) ExecutePlan(
 		}
 
 		cr, err := model.CreateCrossing(ctx,
-			*offer.User,
-			offer.Owner,
-			*a.CrossingOffer,
-			model.Amount(*a.Amount),
+			offer.Owner, *a.CrossingOffer, model.Amount(*a.Amount),
 			mint.TxStReserved, e.ID, e.Hop)
 		if err != nil {
 			return errors.Trace(err)
@@ -591,11 +578,10 @@ func (e *CreateTransaction) ExecutePlan(
 		}
 
 		mint.Logf(ctx,
-			"Reserved crossing: user=%s id=%s[%s] created=%q "+
-				"offer=%s amount=%s status=%s transaction=%s",
-			cr.User, cr.Owner, cr.Token, cr.Created,
-			cr.Offer, (*big.Int)(&cr.Amount).String(),
-			cr.Status, cr.Transaction)
+			"Reserved crossing: id=%s[%s] created=%q offer=%s amount=%s "+
+				"status=%s transaction=%s",
+			cr.Owner, cr.Token, cr.Created, cr.Offer,
+			(*big.Int)(&cr.Amount).String(), cr.Status, cr.Transaction)
 	}
 
 	return nil
