@@ -184,7 +184,7 @@ func (e *CreateOffer) ExecutePropagated(
 	offer, err := e.Client.RetrieveOffer(ctx, e.ID)
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
-			402, "propogation_failed",
+			402, "propagation_failed",
 			"Failed to retrieve canonical offer: %s", e.ID,
 		))
 	}
@@ -192,26 +192,26 @@ func (e *CreateOffer) ExecutePropagated(
 	owner, token, err := mint.NormalizedOwnerAndTokenFromID(ctx, offer.ID)
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-			402, "propogation_failed",
+			402, "propagation_failed",
 			"Received invalid offer id: %s", offer.ID,
 		))
 	}
 
 	if e.ID != offer.ID {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-			402, "propogation_failed",
+			402, "propagation_failed",
 			"Unexpected offer id: %s expected %s", offer.ID, e.ID,
 		))
 	}
 	if e.Owner != owner || offer.Owner != owner {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-			402, "propogation_failed",
+			402, "propagation_failed",
 			"Unexpected offer owner: %s expected %s", owner, e.Owner,
 		))
 	}
 	if e.Token != token {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-			402, "propogation_failed",
+			402, "propagation_failed",
 			"Unexpected offer token: %s expected %s", token, e.Token,
 		))
 	}
@@ -219,13 +219,13 @@ func (e *CreateOffer) ExecutePropagated(
 	pair, err := mint.AssetResourcesFromPair(ctx, offer.Pair)
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-			402, "propogation_failed",
+			402, "propagation_failed",
 			"Received invalid offer pair: %s", offer.Pair,
 		))
 	}
 	if pair[0].Owner != offer.Owner {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-			402, "propogation_failed",
+			402, "propagation_failed",
 			"Operation and pair asset owner mismatch: %s expected %s",
 			pair[0].Owner, offer.Owner,
 		))
@@ -234,14 +234,14 @@ func (e *CreateOffer) ExecutePropagated(
 	basePrice, quotePrice, err := ValidatePrice(ctx, offer.Price)
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-			402, "propogation_failed",
+			402, "propagation_failed",
 			"Received invalid offer price: %s", offer.Price,
 		))
 	}
 	amount, err := ValidateAmount(ctx, offer.Amount.String())
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-			402, "propogation_failed",
+			402, "propagation_failed",
 			"Received invalid offer amount: %s", offer.Amount.String(),
 		))
 	}
@@ -250,14 +250,14 @@ func (e *CreateOffer) ExecutePropagated(
 	case mint.OfStActive, mint.OfStClosed, mint.OfStConsumed:
 	default:
 		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-			402, "propogation_failed",
+			402, "propagation_failed",
 			"Received invalid offer status: %s", offer.Status,
 		))
 	}
 	remainder, err := ValidateAmount(ctx, offer.Remainder.String())
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-			402, "propogation_failed",
+			402, "propagation_failed",
 			"Received invalid offer remainder: %s", offer.Remainder.String(),
 		))
 	}
@@ -265,13 +265,13 @@ func (e *CreateOffer) ExecutePropagated(
 	user, host, err := mint.UsernameAndMintHostFromAddress(ctx, pair[1].Owner)
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-			402, "propogation_failed",
+			402, "propagation_failed",
 			"Received invalid pair asset owner: %s", pair[1].Owner,
 		))
 	}
 	if host != mint.GetHost(ctx) {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-			402, "propogation_failed",
+			402, "propagation_failed",
 			"Received offer with no impact on any of this mint users.",
 		))
 	}
@@ -281,7 +281,7 @@ func (e *CreateOffer) ExecutePropagated(
 		return nil, nil, errors.Trace(err) // 500
 	} else if u == nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-			402, "propogation_failed",
+			402, "propagation_failed",
 			"User impacted by offer does not exist: %s@%s",
 			user, mint.GetHost(ctx),
 		))

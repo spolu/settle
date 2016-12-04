@@ -67,6 +67,7 @@ func TestPropagateOfferSimple(
 	err = raw.Extract("offer", &prop)
 	assert.Nil(t, err)
 
+	assert.Equal(t, 201, status)
 	assert.Equal(t, offer.ID, prop.ID)
 	assert.Equal(t, offer.Created, prop.Created)
 	assert.Equal(t, offer.Owner, prop.Owner)

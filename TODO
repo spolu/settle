@@ -30,9 +30,9 @@
 
   # test
 
-    [ ] operation propagation
     [ ] test that consumes an offer entirely (check status)
     [~] transaction tests with misbehaving mint
+    [x] operation propagation
     [x] offer propagation
     [x] concurrent call to transaction settlement attack test
     [x] test settlement with erroneous secret

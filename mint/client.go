@@ -228,7 +228,7 @@ func (c *Client) RetrieveOperation(
 	}
 
 	r, err := c.httpClient.Get(
-		FullMintURL(ctx, host, fmt.Sprintf("/operatons/%s", id)).String())
+		FullMintURL(ctx, host, fmt.Sprintf("/operations/%s", id)).String())
 	if err != nil {
 		return nil, errors.Trace(err)
 	}

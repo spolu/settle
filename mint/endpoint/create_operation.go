@@ -90,7 +90,7 @@ func (e *CreateOperation) ExecutePropagated(
 	operation, err := e.Client.RetrieveOperation(ctx, e.ID)
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
-			402, "propogation_failed",
+			402, "propagation_failed",
 			"Failed to retrieve canonical operation: %s", e.ID,
 		))
 	}
@@ -98,33 +98,33 @@ func (e *CreateOperation) ExecutePropagated(
 	owner, token, err := mint.NormalizedOwnerAndTokenFromID(ctx, operation.ID)
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-			402, "propogation_failed",
+			402, "propagation_failed",
 			"Received invalid operation id: %s", operation.ID,
 		))
 	}
 
 	if e.ID != operation.ID {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-			402, "propogation_failed",
+			402, "propagation_failed",
 			"Unexpected operation id: %s expected %s", operation.ID, e.ID,
 		))
 	}
 	if e.Owner != owner || operation.Owner != owner {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-			402, "propogation_failed",
+			402, "propagation_failed",
 			"Unexpected operation owner: %s expected %s", owner, e.Owner,
 		))
 	}
 	if e.Token != token {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-			402, "propogation_failed",
+			402, "propagation_failed",
 			"Unexpected operation token: %s expected %s", token, e.Token,
 		))
 	}
 	if operation.Status != mint.TxStSettled {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-			402, "propogation_failed",
-			"Operation is not settled: status is %s. Only settled operations "+
+			402, "propagation_failed",
+			"Operation status is %s. Only settled operations "+
 				"can be propagated.", operation.Status,
 		))
 	}
@@ -132,13 +132,13 @@ func (e *CreateOperation) ExecutePropagated(
 	asset, err := mint.AssetResourceFromName(ctx, operation.Asset)
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-			402, "propogation_failed",
+			402, "propagation_failed",
 			"Received invalid operation asset: %s", operation.Asset,
 		))
 	}
 	if asset.Owner != operation.Owner {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-			402, "propogation_failed",
+			402, "propagation_failed",
 			"Operation and asset owner mismatch: %s expected %s",
 			operation.Asset, operation.Owner,
 		))
@@ -148,7 +148,7 @@ func (e *CreateOperation) ExecutePropagated(
 		operation.Source)
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-			402, "propogation_failed",
+			402, "propagation_failed",
 			"Received invalid operation source: %s", operation.Source,
 		))
 	}
@@ -156,7 +156,7 @@ func (e *CreateOperation) ExecutePropagated(
 		operation.Destination)
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-			402, "propogation_failed",
+			402, "propagation_failed",
 			"Received invalid operation destination: %s", operation.Destination,
 		))
 	}
@@ -168,7 +168,7 @@ func (e *CreateOperation) ExecutePropagated(
 		user = dstUser
 	} else {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-			402, "propogation_failed",
+			402, "propagation_failed",
 			"Received operation with no impact on any of this mint users.",
 		))
 	}
@@ -178,7 +178,7 @@ func (e *CreateOperation) ExecutePropagated(
 		return nil, nil, errors.Trace(err) // 500
 	} else if u == nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-			402, "propogation_failed",
+			402, "propagation_failed",
 			"User impacted by operation does not exist: %s@%s",
 			user, mint.GetHost(ctx),
 		))
