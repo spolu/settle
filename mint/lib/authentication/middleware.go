@@ -71,6 +71,7 @@ var SkipList = []*SkipRule{
 	&SkipRule{"POST", regexp.MustCompile("^/transactions/[a-zA-Z0-9_\\+:@\\.\\[\\]]+$")},
 	&SkipRule{"POST", regexp.MustCompile("^/transactions/[a-zA-Z0-9_\\+:@\\.\\[\\]]+/settle$")},
 	&SkipRule{"POST", regexp.MustCompile("^/operations/[a-zA-Z0-9_\\+:@\\.\\[\\]]+$")},
+	&SkipRule{"POST", regexp.MustCompile("^/offers/[a-zA-Z0-9_\\+:@\\.\\[\\]]+$")},
 }
 
 // ServeHTTP handles incoming HTTP requests and attempt to authenticate them.

@@ -44,7 +44,7 @@ func tearDownCreateOffer(
 	}
 }
 
-func TestCreateOffer(
+func TestCreateOfferSimple(
 	t *testing.T,
 ) {
 	t.Parallel()

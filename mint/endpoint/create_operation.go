@@ -83,8 +83,7 @@ func (e *CreateOperation) Execute(
 	return e.ExecutePropagated(ctx)
 }
 
-// ExecutePropagated executes the settlement of a propagated transaction
-// (involved mint).
+// ExecutePropagated executes the propagation of an operation (involved mint).
 func (e *CreateOperation) ExecutePropagated(
 	ctx context.Context,
 ) (*int, *svc.Resp, error) {
@@ -188,26 +187,38 @@ func (e *CreateOperation) ExecutePropagated(
 	ctx = db.Begin(ctx)
 	defer db.LoggedRollback(ctx)
 
-	// Create propagated operation locally.
-	op, err := model.CreatePropagatedOperation(ctx,
-		token,
-		time.Unix(0, operation.Created*mint.TimeResolutionNs),
-		owner,
-		operation.Asset,
-		operation.Source,
-		operation.Destination,
-		model.Amount(*operation.Amount),
-		operation.Status,
-		operation.Transaction,
-		operation.TransactionHop,
-	)
+	code := http.StatusCreated
+
+	op, err := model.LoadPropagatedOperationByOwnerToken(ctx, owner, token)
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
+	} else if op != nil {
+		// Nothing to do: an operation is immutable once settled.
+		// TODO(stan): check that the operation hasn't changed.
+
+		code = http.StatusOK
+	} else {
+		// Create propagated operation locally.
+		op, err = model.CreatePropagatedOperation(ctx,
+			owner,
+			token,
+			time.Unix(0, operation.Created*mint.TimeResolutionNs),
+			operation.Asset,
+			operation.Source,
+			operation.Destination,
+			model.Amount(*operation.Amount),
+			operation.Status,
+			operation.Transaction,
+			operation.TransactionHop,
+		)
+		if err != nil {
+			return nil, nil, errors.Trace(err) // 500
+		}
 	}
 
 	db.Commit(ctx)
 
-	return ptr.Int(http.StatusCreated), &svc.Resp{
+	return ptr.Int(code), &svc.Resp{
 		"operation": format.JSONPtr(model.NewOperationResource(ctx, op)),
 	}, nil
 }

@@ -1,9 +1,10 @@
 # mint
 
  [ ] async proceses
- [ ] propagation protocol for both operations and offers (need to learn more)
  [ ] attempt to use Amount everywhere?
  [ ] pass DSN for DB, support Postgres
+ [x] propagation protocol for both operations and offers
+ [x] idempotency of propagation (load offer/operation and save if they exist and return 200)
  [x] validate asset is created when creating offer and test
  [x] figure out when to set the offer as consumed (multiple crossings might be reserved)
  [x] remove user from records entirely?
@@ -29,8 +30,10 @@
 
   # test
 
+    [ ] operation propagation
     [ ] test that consumes an offer entirely (check status)
     [~] transaction tests with misbehaving mint
+    [x] offer propagation
     [x] concurrent call to transaction settlement attack test
     [x] test settlement with erroneous secret
     [x] concurrent call to transaction creation attack test
@@ -64,4 +67,3 @@
   # propagation
 
   - POST /operations/:op unauthenticated (as is the case for transactions?)
-  

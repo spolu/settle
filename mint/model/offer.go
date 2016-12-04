@@ -149,7 +149,7 @@ func CreatePropagatedOffer(
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO offers
   (owner, token, created, propagation, base_asset, quote_asset,
-   base_price, quote_price, amount, status)
+   base_price, quote_price, amount, status, remainder)
 VALUES
   (:owner, :token, :created, :propagation, :base_asset, :quote_asset,
    :base_price, :quote_price, :amount, :status, :remainder)
@@ -233,4 +233,38 @@ func LoadCanonicalOfferByID(
 		return nil, errors.Trace(err)
 	}
 	return LoadCanonicalOfferByOwnerToken(ctx, owner, token)
+}
+
+// LoadPropagatedOfferByOwnerToken attempts to load the propagated offer for
+// the given owner and token.
+func LoadPropagatedOfferByOwnerToken(
+	ctx context.Context,
+	owner string,
+	token string,
+) (*Offer, error) {
+	offer := Offer{
+		Owner:       owner,
+		Token:       token,
+		Propagation: mint.PgTpCanonical,
+	}
+
+	ext := db.Ext(ctx)
+	if rows, err := sqlx.NamedQuery(ext, `
+SELECT *
+FROM offers
+WHERE owner = :owner
+  AND token = :token
+  AND propagation = :propagation
+`, offer); err != nil {
+		return nil, errors.Trace(err)
+	} else if !rows.Next() {
+		return nil, nil
+	} else if err := rows.StructScan(&offer); err != nil {
+		defer rows.Close()
+		return nil, errors.Trace(err)
+	} else if err := rows.Close(); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &offer, nil
 }
