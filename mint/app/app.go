@@ -86,5 +86,10 @@ func Build(
 
 	(&Controller{}).Bind(mux)
 
+	// Start on async worker.
+	go func() {
+		async.Get(ctx).Run()
+	}()
+
 	return mux, nil
 }

@@ -87,6 +87,9 @@ func CreateMint(
 
 	(&app.Controller{}).Bind(mux)
 
+	// We don't start an async worker in tests and rely on manually running
+	// tasks when needed instead.
+
 	m := Mint{
 		Server:  httptest.NewServer(mux),
 		Mux:     mux,

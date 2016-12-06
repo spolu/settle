@@ -4,6 +4,7 @@ package async
 
 import (
 	"context"
+	"sort"
 	"sync"
 	"time"
 
@@ -50,6 +51,24 @@ type Deadline struct {
 	Model *model.Task
 }
 
+// Deadlines is a slice of Deadline implementing sort.Interface
+type Deadlines []Deadline
+
+// Len implenents the sort.Interface
+func (s Deadlines) Len() int {
+	return len(s)
+}
+
+// Less implenents the sort.Interface
+func (s Deadlines) Less(i, j int) bool {
+	return s[i].Deadline().After(s[j].Deadline())
+}
+
+// Swap implenents the sort.Interface
+func (s Deadlines) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
 // Deadline returns the current deadline for the task.
 func (d Deadline) Deadline() time.Time {
 	return d.Task.DeadlineForRetry(d.Model.Retry)
@@ -58,7 +77,7 @@ func (d Deadline) Deadline() time.Time {
 // Async represents the state of an async queue.
 type Async struct {
 	Ctx       context.Context
-	Pending   []Deadline
+	Pending   Deadlines
 	Scheduled chan Deadline
 
 	mutex *sync.Mutex
@@ -85,7 +104,7 @@ func NewAsync(
 
 	db.Commit(ctx)
 
-	deadlines := []Deadline{}
+	deadlines := Deadlines{}
 	for _, m := range tasks {
 		generator, ok := registrar[m.Name]
 		if !ok {
@@ -104,7 +123,7 @@ func NewAsync(
 	}
 
 	a.Pending = deadlines
-	// TODO(stan): sort a.Deadlines by descending task.Deadline()
+	sort.Sort(a.Pending)
 
 	a.schedule()
 
@@ -124,6 +143,10 @@ func (a *Async) schedule() {
 		select {
 		case a.Scheduled <- d:
 			a.Pending = a.Pending[:len(a.Pending)-1]
+
+			mint.Logf(a.Ctx, "Scheduled task: "+
+				"name=%s subject=%s retry=%d deadline=%q",
+				d.Task.Name(), d.Task.Subject(), d.Model.Retry, d.Deadline())
 		}
 	}
 }
@@ -165,7 +188,11 @@ func (a *Async) AppendAndSchedule(
 	defer a.mutex.Unlock()
 
 	a.Pending = append(a.Pending, d)
-	// TODO(stan): sort a.Deadlines by descending task.Deadline()
+	sort.Sort(a.Pending)
+
+	mint.Logf(a.Ctx, "Queued task: "+
+		"name=%s subject=%s retry=%d deadline=%q",
+		d.Task.Name(), d.Task.Subject(), d.Model.Retry, d.Deadline())
 
 	a.schedule()
 }
