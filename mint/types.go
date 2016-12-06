@@ -69,3 +69,43 @@ func (s *TxStatus) Scan(src interface{}) error {
 
 	return nil
 }
+
+// Value implements driver.Valuer.
+func (s TkStatus) Value() (value driver.Value, err error) {
+	return string(s), nil
+}
+
+// Scan implements sql.Scanner.
+func (s *TkStatus) Scan(src interface{}) error {
+	switch src := src.(type) {
+	case []byte:
+		*s = TkStatus(src)
+	case string:
+		*s = TkStatus(src)
+	default:
+		return errors.Newf(
+			"Incompatible status for TkStatus with value: %q", src)
+	}
+
+	return nil
+}
+
+// Value implements driver.Valuer.
+func (s TkName) Value() (value driver.Value, err error) {
+	return string(s), nil
+}
+
+// Scan implements sql.Scanner.
+func (s *TkName) Scan(src interface{}) error {
+	switch src := src.(type) {
+	case []byte:
+		*s = TkName(src)
+	case string:
+		*s = TkName(src)
+	default:
+		return errors.Newf(
+			"Incompatible status for TkName with value: %q", src)
+	}
+
+	return nil
+}

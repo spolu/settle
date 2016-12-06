@@ -48,7 +48,6 @@
     [ ] transaction cancelation
     [ ] offer propagation
     [ ] operation propagation
-    [ ] crossing propagation
 
 # site
 
@@ -62,8 +61,13 @@
     on other mints, just rely on best effort propagation (hence protocol
     necessarily different from transactions)
   - mints are eventually consistent on operations and offers
-  - propagation happens asynchronously and can be (is?) triggered by clients
+  - propagation happens asynchronously and can be triggered by clients
+  - POST /operations/:op unauthenticated
 
-  # propagation
+  # async
 
-  - POST /operations/:op unauthenticated (as is the case for transactions?)
+  - operation types: operation, offer propagation; transaction cancelation
+  - async.Queue(t Task)
+  - Task is an interface backed by storage in the mint DB
+     Execute() error
+     Type() TkType

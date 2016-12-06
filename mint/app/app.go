@@ -12,6 +12,7 @@ import (
 	"github.com/spolu/settle/lib/recoverer"
 	"github.com/spolu/settle/lib/requestlogger"
 	"github.com/spolu/settle/mint"
+	"github.com/spolu/settle/mint/async"
 	"github.com/spolu/settle/mint/lib/authentication"
 	"github.com/spolu/settle/mint/model"
 
@@ -48,6 +49,12 @@ func BackgroundContextFromFlags(
 	}
 	ctx = db.WithDB(ctx, mintDB)
 
+	a, err := async.NewAsync(ctx)
+	if err != nil {
+		return nil, err
+	}
+	ctx = async.With(ctx, a)
+
 	return ctx, nil
 }
 
@@ -71,6 +78,7 @@ func Build(
 	mux.Use(recoverer.Middleware)
 	mux.Use(db.Middleware(db.GetDB(ctx)))
 	mux.Use(env.Middleware(env.Get(ctx)))
+	mux.Use(async.Middleware(async.Get(ctx)))
 	mux.Use(authentication.Middleware)
 
 	logging.Logf(ctx, "Initializing: environment=%s mint_host=%s",
