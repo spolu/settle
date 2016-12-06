@@ -258,13 +258,16 @@ func TestRunOne(
 	ctx context.Context,
 ) {
 	a := Get(ctx)
+	var d Deadline
+
+	a.mutex.Lock()
+
 	if len(a.Pending) == 0 {
 		return
 	}
-	// TODO(stan): this is thread unsafe. In tests this should not matter but
-	// we could do a bit better here.
-	var d Deadline
 	d, a.Pending = a.Pending[len(a.Pending)-1], a.Pending[:len(a.Pending)-1]
+
+	a.mutex.Unlock()
 
 	a.RunOne(d)
 }
