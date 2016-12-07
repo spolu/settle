@@ -1,9 +1,12 @@
 # mint
 
- [ ] async proceses
- [ ] propagation protocol for both operations and offers (need to learn more)
+ [ ] transaction cancelation
  [ ] attempt to use Amount everywhere?
  [ ] pass DSN for DB, support Postgres
+ [x] async proceses
+ [x] propagation protocol for both operations and offers
+ [x] idempotency of propagation (load offer/operation and save if they exist and return 200)
+ [x] validate asset is created when creating offer and test
  [x] figure out when to set the offer as consumed (multiple crossings might be reserved)
  [x] remove user from records entirely?
  [x] remove the ability to create an operation directly?
@@ -30,6 +33,9 @@
 
     [ ] test that consumes an offer entirely (check status)
     [~] transaction tests with misbehaving mint
+    [x] test async offer/operation propagation
+    [x] operation propagation
+    [x] offer propagation
     [x] concurrent call to transaction settlement attack test
     [x] test settlement with erroneous secret
     [x] concurrent call to transaction creation attack test
@@ -42,9 +48,8 @@
   # async processes
 
     [ ] transaction cancelation
-    [ ] offer propagation
-    [ ] operation propagation
-    [ ] crossing propagation
+    [x] offer propagation
+    [x] operation propagation
 
 # site
 
@@ -58,18 +63,20 @@
     on other mints, just rely on best effort propagation (hence protocol
     necessarily different from transactions)
   - mints are eventually consistent on operations and offers
-  - propagation happens asynchronously and can be (is?) triggered by clients
+  - propagation happens asynchronously and can be triggered by clients
+  - POST /operations/:op unauthenticated
 
-  # transactions
+  # async
 
-  - the chain of calls include
-    - operation
-    - crossing
-    - operation
-    - crossing
-    - operation
+  - operation types: operation, offer propagation; transaction cancelation
+  - async.Queue(t Task)
+  - Task is an interface backed by storage in the mint DB
+     Execute() error
+     Type() TkType
 
-  - each element of the chain commit to performing the operation/crossing if
-    provided with the lock. The operation/offer updates are propagated
-    (best-effort) only once they are committed
+# contact r?
 
+  dm
+  gdb
+  rauchg
+  https://blog.filippo.io/giving-up-on-long-term-pgp/

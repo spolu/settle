@@ -123,9 +123,9 @@ VALUES
 // CreatePropagatedOperation creates and stores a new Operation.
 func CreatePropagatedOperation(
 	ctx context.Context,
+	owner string,
 	token string,
 	created time.Time,
-	owner string,
 	asset string,
 	source string,
 	destination string,
@@ -227,6 +227,19 @@ WHERE owner = :owner
 	return &operation, nil
 }
 
+// LoadCanonicalOperationByID attempts to load the canonical operation for the
+// given id.
+func LoadCanonicalOperationByID(
+	ctx context.Context,
+	id string,
+) (*Operation, error) {
+	owner, token, err := mint.NormalizedOwnerAndTokenFromID(ctx, id)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	return LoadCanonicalOperationByOwnerToken(ctx, owner, token)
+}
+
 // LoadCanonicalOperationByTransactionHop attempts to load the canonical
 // operation for the given transaction and hop.
 func LoadCanonicalOperationByTransactionHop(
@@ -295,4 +308,38 @@ WHERE txn = :txn
 	}
 
 	return operations, nil
+}
+
+// LoadPropagatedOperationByOwnerToken attempts to load the propagated
+// operation for the given owner and token.
+func LoadPropagatedOperationByOwnerToken(
+	ctx context.Context,
+	owner string,
+	token string,
+) (*Operation, error) {
+	operation := Operation{
+		Owner:       owner,
+		Token:       token,
+		Propagation: mint.PgTpPropagated,
+	}
+
+	ext := db.Ext(ctx)
+	if rows, err := sqlx.NamedQuery(ext, `
+SELECT *
+FROM operations
+WHERE owner = :owner
+  AND token = :token
+  AND propagation = :propagation
+`, operation); err != nil {
+		return nil, errors.Trace(err)
+	} else if !rows.Next() {
+		return nil, nil
+	} else if err := rows.StructScan(&operation); err != nil {
+		defer rows.Close()
+		return nil, errors.Trace(err)
+	} else if err := rows.Close(); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &operation, nil
 }

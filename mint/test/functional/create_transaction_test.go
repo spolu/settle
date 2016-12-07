@@ -373,7 +373,6 @@ func TestCreateTransactionWith1Offer(
 	assert.Equal(t, mint.TxStReserved, tx1.Operations[0].Status)
 	assert.Equal(t, tx1.ID, *tx1.Operations[0].Transaction)
 	assert.Equal(t, int8(2), *tx1.Operations[0].TransactionHop)
-
 }
 
 func TestCreateTransactionWithRemoteBaseAsset(

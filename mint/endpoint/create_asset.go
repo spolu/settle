@@ -83,7 +83,10 @@ func (e *CreateAsset) Execute(
 	defer db.LoggedRollback(ctx)
 
 	asset, err := model.CreateAsset(ctx,
-		e.Owner, e.Code, e.Scale)
+		e.Owner,
+		e.Code,
+		e.Scale,
+	)
 	if err != nil {
 		switch err := errors.Cause(err).(type) {
 		case model.ErrUniqueConstraintViolation:

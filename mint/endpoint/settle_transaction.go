@@ -5,6 +5,7 @@ package endpoint
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
 	"math/big"
 	"net/http"
 
@@ -16,6 +17,8 @@ import (
 	"github.com/spolu/settle/lib/ptr"
 	"github.com/spolu/settle/lib/svc"
 	"github.com/spolu/settle/mint"
+	"github.com/spolu/settle/mint/async"
+	"github.com/spolu/settle/mint/async/task"
 	"github.com/spolu/settle/mint/lib/authentication"
 	"github.com/spolu/settle/mint/model"
 	"goji.io/pat"
@@ -68,16 +71,8 @@ func (e *SettleTransaction) Validate(
 ) error {
 	ctx := r.Context()
 
-	// Validate id.
-	id, owner, token, err := ValidateID(ctx, pat.Param(r, "transaction"))
-	if err != nil {
-		return errors.Trace(err)
-	}
-	e.ID = *id
-	e.Token = *token
-	e.Owner = *owner
-
-	if authentication.Get(ctx).Status != authentication.AutStSucceeded {
+	switch authentication.Get(ctx).Status {
+	case authentication.AutStSkipped:
 		// Validate hop.
 		hop, err := ValidateHop(ctx, r.PostFormValue("hop"))
 		if err != nil {
@@ -91,9 +86,16 @@ func (e *SettleTransaction) Validate(
 			return errors.Trace(err)
 		}
 		e.Secret = *secret
-
-		return nil
 	}
+
+	// Validate id.
+	id, owner, token, err := ValidateID(ctx, pat.Param(r, "transaction"))
+	if err != nil {
+		return errors.Trace(err)
+	}
+	e.ID = *id
+	e.Token = *token
+	e.Owner = *owner
 
 	return nil
 }
@@ -102,10 +104,15 @@ func (e *SettleTransaction) Validate(
 func (e *SettleTransaction) Execute(
 	ctx context.Context,
 ) (*int, *svc.Resp, error) {
-	if authentication.Get(ctx).Status == authentication.AutStSucceeded {
+	switch authentication.Get(ctx).Status {
+	case authentication.AutStSkipped:
+		return e.ExecutePropagated(ctx)
+	case authentication.AutStSucceeded:
 		return e.ExecuteCanonical(ctx)
 	}
-	return e.ExecutePropagated(ctx)
+	return nil, nil, errors.Trace(errors.Newf(
+		"Authentication status not expected: %s",
+		authentication.Get(ctx).Status))
 }
 
 // ExecuteCanonical executes the canonical settlement of a transaction (owner
@@ -428,6 +435,12 @@ func (e *SettleTransaction) Settle(
 				op.Owner, op.Token, op.Created, op.Propagation, op.Asset,
 				op.Source, op.Destination, (*big.Int)(&op.Amount).String(),
 				op.Status, *op.Transaction)
+
+			opID := fmt.Sprintf("%s[%s]", op.Owner, op.Token)
+			err = async.Queue(ctx, task.NewPropagateOperation(ctx, opID))
+			if err != nil {
+				return errors.Trace(err)
+			}
 
 		case TxActTpCrossing:
 
