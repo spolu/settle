@@ -5,6 +5,7 @@ package endpoint
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
 	"math/big"
 	"net/http"
 
@@ -16,6 +17,8 @@ import (
 	"github.com/spolu/settle/lib/ptr"
 	"github.com/spolu/settle/lib/svc"
 	"github.com/spolu/settle/mint"
+	"github.com/spolu/settle/mint/async"
+	"github.com/spolu/settle/mint/async/task"
 	"github.com/spolu/settle/mint/lib/authentication"
 	"github.com/spolu/settle/mint/model"
 	"goji.io/pat"
@@ -432,6 +435,12 @@ func (e *SettleTransaction) Settle(
 				op.Owner, op.Token, op.Created, op.Propagation, op.Asset,
 				op.Source, op.Destination, (*big.Int)(&op.Amount).String(),
 				op.Status, *op.Transaction)
+
+			opID := fmt.Sprintf("%s[%s]", op.Owner, op.Token)
+			err = async.Queue(ctx, task.NewPropagateOperation(ctx, opID))
+			if err != nil {
+				return errors.Trace(err)
+			}
 
 		case TxActTpCrossing:
 

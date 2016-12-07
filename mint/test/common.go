@@ -24,6 +24,7 @@ import (
 	"github.com/spolu/settle/lib/token"
 	"github.com/spolu/settle/mint"
 	"github.com/spolu/settle/mint/app"
+	"github.com/spolu/settle/mint/async"
 	"github.com/spolu/settle/mint/lib/authentication"
 	"github.com/spolu/settle/mint/model"
 	goji "goji.io"
@@ -78,11 +79,18 @@ func CreateMint(
 	}
 	ctx = db.WithDB(ctx, mintDB)
 
+	a, err := async.NewAsync(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx = async.With(ctx, a)
+
 	mux := goji.NewMux()
 	mux.Use(requestlogger.Middleware)
 	mux.Use(recoverer.Middleware)
 	mux.Use(db.Middleware(db.GetDB(ctx)))
 	mux.Use(env.Middleware(env.Get(ctx)))
+	mux.Use(async.Middleware(async.Get(ctx)))
 	mux.Use(authentication.Middleware)
 
 	(&app.Controller{}).Bind(mux)

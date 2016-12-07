@@ -158,7 +158,7 @@ func (e *CreateOffer) ExecuteCanonical(
 	}
 
 	// Create canonical offer locally.
-	offer, err := model.CreateCanonicalOffer(ctx,
+	of, err := model.CreateCanonicalOffer(ctx,
 		e.Owner,
 		e.Pair[0].Name,
 		e.Pair[1].Name,
@@ -172,9 +172,18 @@ func (e *CreateOffer) ExecuteCanonical(
 		return nil, nil, errors.Trace(err) // 500
 	}
 
-	of := model.NewOfferResource(ctx, offer)
+	mint.Logf(ctx,
+		"Created offer: id=%s[%s] created=%q propagation=%s "+
+			"base_asset=%s quote_asset=%s base_price=%s quote_price=%s "+
+			"amount=%s status=%s remainder=%s",
+		of.Owner, of.Token, of.Created, of.Propagation, of.BaseAsset,
+		of.QuoteAsset, of.BasePrice, of.QuotePrice,
+		(*big.Int)(&of.Amount).String(), of.Status,
+		(*big.Int)(&of.Remainder).String())
 
-	err = async.Queue(ctx, task.NewPropagateOffer(ctx, of.ID))
+	offer := model.NewOfferResource(ctx, of)
+
+	err = async.Queue(ctx, task.NewPropagateOffer(ctx, offer.ID))
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
 	}
@@ -182,7 +191,7 @@ func (e *CreateOffer) ExecuteCanonical(
 	db.Commit(ctx)
 
 	return ptr.Int(http.StatusCreated), &svc.Resp{
-		"offer": format.JSONPtr(of),
+		"offer": format.JSONPtr(offer),
 	}, nil
 }
 
@@ -333,6 +342,15 @@ func (e *CreateOffer) ExecutePropagated(
 		if err != nil {
 			return nil, nil, errors.Trace(err) // 500
 		}
+
+		mint.Logf(ctx,
+			"Propagated offer: id=%s[%s] created=%q propagation=%s "+
+				"base_asset=%s quote_asset=%s base_price=%s quote_price=%s "+
+				"amount=%s status=%s remainder=%s",
+			of.Owner, of.Token, of.Created, of.Propagation, of.BaseAsset,
+			of.QuoteAsset, of.BasePrice, of.QuotePrice,
+			(*big.Int)(&of.Amount).String(), of.Status,
+			(*big.Int)(&of.Remainder).String())
 	}
 
 	db.Commit(ctx)

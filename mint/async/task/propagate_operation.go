@@ -93,7 +93,7 @@ func (t *PropagateOperation) Execute(
 	}
 
 	if host != mint.GetHost(ctx) {
-		_, err := client.PropagateOffer(ctx, t.ID, host)
+		_, err := client.PropagateOperation(ctx, t.ID, host)
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -106,7 +106,7 @@ func (t *PropagateOperation) Execute(
 	}
 
 	if host != mint.GetHost(ctx) {
-		_, err := client.PropagateOffer(ctx, t.ID, host)
+		_, err := client.PropagateOperation(ctx, t.ID, host)
 		if err != nil {
 			return errors.Trace(err)
 		}

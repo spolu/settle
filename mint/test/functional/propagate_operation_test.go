@@ -7,6 +7,8 @@ import (
 
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/mint"
+	"github.com/spolu/settle/mint/async"
+	"github.com/spolu/settle/mint/model"
 	"github.com/spolu/settle/mint/test"
 	"github.com/stretchr/testify/assert"
 )
@@ -67,25 +69,18 @@ func TestPropagateOperationSimple(
 
 	assert.Equal(t, 200, status)
 
-	status, raw = m[1].Post(t, nil,
-		fmt.Sprintf("/operations/%s", tx.Operations[0].ID),
-		url.Values{})
+	async.TestRunOne(m[0].Ctx)
 
-	var op mint.OperationResource
-	err = raw.Extract("operation", &op)
+	owner, token, err := mint.NormalizedOwnerAndTokenFromID(m[1].Ctx,
+		tx.Operations[0].ID)
 	assert.Nil(t, err)
 
-	assert.Equal(t, 201, status)
-	assert.Equal(t, tx.Operations[0].ID, op.ID)
-	assert.Equal(t, tx.Operations[0].Created, op.Created)
-	assert.Equal(t, tx.Operations[0].Owner, op.Owner)
-	assert.Equal(t, tx.Operations[0].Asset, op.Asset)
-	assert.Equal(t, tx.Operations[0].Source, op.Source)
-	assert.Equal(t, tx.Operations[0].Destination, op.Destination)
-	assert.Equal(t, tx.Operations[0].Amount, op.Amount)
-	assert.Equal(t, mint.TxStSettled, op.Status)
-	assert.Equal(t, tx.Operations[0].Transaction, op.Transaction)
-	assert.Equal(t, tx.Operations[0].TransactionHop, op.TransactionHop)
+	op, err := model.LoadPropagatedOperationByOwnerToken(m[1].Ctx,
+		owner, token)
+	assert.Nil(t, err)
+
+	assert.Equal(t, owner, op.Owner)
+	assert.Equal(t, token, op.Token)
 }
 
 func TestPropagateOperationNotSettled(

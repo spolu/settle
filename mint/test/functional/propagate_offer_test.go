@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"github.com/spolu/settle/mint"
+	"github.com/spolu/settle/mint/async"
+	"github.com/spolu/settle/mint/model"
 	"github.com/spolu/settle/mint/test"
 	"github.com/stretchr/testify/assert"
 )
@@ -59,21 +61,14 @@ func TestPropagateOfferSimple(
 
 	assert.Equal(t, 201, status)
 
-	status, raw = m[1].Post(t, nil,
-		fmt.Sprintf("/offers/%s", offer.ID),
-		url.Values{})
+	async.TestRunOne(m[0].Ctx)
 
-	var prop mint.OfferResource
-	err = raw.Extract("offer", &prop)
+	owner, token, err := mint.NormalizedOwnerAndTokenFromID(m[1].Ctx, offer.ID)
 	assert.Nil(t, err)
 
-	assert.Equal(t, 201, status)
-	assert.Equal(t, offer.ID, prop.ID)
-	assert.Equal(t, offer.Created, prop.Created)
-	assert.Equal(t, offer.Owner, prop.Owner)
-	assert.Equal(t, offer.Pair, prop.Pair)
-	assert.Equal(t, offer.Price, prop.Price)
-	assert.Equal(t, offer.Amount, prop.Amount)
-	assert.Equal(t, offer.Status, prop.Status)
-	assert.Equal(t, offer.Remainder, prop.Remainder)
+	of, err := model.LoadPropagatedOfferByOwnerToken(m[1].Ctx, owner, token)
+	assert.Nil(t, err)
+
+	assert.Equal(t, owner, of.Owner)
+	assert.Equal(t, token, of.Token)
 }

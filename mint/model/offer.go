@@ -245,7 +245,7 @@ func LoadPropagatedOfferByOwnerToken(
 	offer := Offer{
 		Owner:       owner,
 		Token:       token,
-		Propagation: mint.PgTpCanonical,
+		Propagation: mint.PgTpPropagated,
 	}
 
 	ext := db.Ext(ctx)

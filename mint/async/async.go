@@ -193,6 +193,10 @@ func (a *Async) AppendAndSchedule(
 func (a *Async) RunOne(
 	d Deadline,
 ) {
+	mint.Logf(a.Ctx, "Executing task: "+
+		"name=%s subject=%s retry=%d deadline=%q",
+		d.Task.Name(), d.Task.Subject(), d.Model.Retry, d.Deadline())
+
 	err := d.Task.Execute(a.Ctx)
 
 	ctx := db.Begin(a.Ctx)

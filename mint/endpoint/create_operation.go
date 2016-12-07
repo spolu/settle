@@ -4,6 +4,7 @@ package endpoint
 
 import (
 	"context"
+	"math/big"
 	"net/http"
 	"time"
 
@@ -214,6 +215,14 @@ func (e *CreateOperation) ExecutePropagated(
 		if err != nil {
 			return nil, nil, errors.Trace(err) // 500
 		}
+
+		mint.Logf(ctx,
+			"Propagated operation: id=%s[%s] created=%q propagation=%s "+
+				"asset=%s source=%s destination=%s amount=%s "+
+				"status=%s transaction=%s",
+			op.Owner, op.Token, op.Created, op.Propagation, op.Asset,
+			op.Source, op.Destination, (*big.Int)(&op.Amount).String(),
+			op.Status, *op.Transaction)
 	}
 
 	db.Commit(ctx)
