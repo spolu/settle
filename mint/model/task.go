@@ -24,7 +24,7 @@ type Task struct {
 	Subject string
 
 	Status mint.TkStatus
-	Retry  uint64
+	Retry  uint
 }
 
 // CreateTask creates and stores a new Task.
@@ -33,7 +33,7 @@ func CreateTask(
 	name mint.TkName,
 	subject string,
 	status mint.TkStatus,
-	retry uint64,
+	retry uint,
 ) (*Task, error) {
 	task := Task{
 		Token:   token.New("task"),

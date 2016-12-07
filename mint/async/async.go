@@ -22,27 +22,22 @@ type Task interface {
 	// Subject is the subject of the task, generally an object ID.
 	Subject() string
 
-	// Status is the status of the task.
-	Status() mint.TkStatus
+	// MaxRetries caps the total number of retries.
+	MaxRetries() uint
+
+	// DeadlineforRetry returns the deadline for the provided retry count.
+	DeadlineForRetry(retry uint) time.Time
 
 	// Execute idempotently runs the task to completion or errors.
 	Execute(ctx context.Context) error
-
-	// MaxRetries caps the total number of retries.
-	MaxRetries() uint64
-
-	// DeadlineforRetry returns the deadline for the provided retry count.
-	DeadlineForRetry(retry uint64) time.Time
 }
 
-// registrar is used to register task generators within the module. The role of
+// Registrar is used to register task generators within the module. The role of
 // the generator for a given mint.TkName is to reconstruct a task from its
 // subject, status and retry.
-var registrar = map[mint.TkName](func(
+var Registrar = map[mint.TkName](func(
 	context.Context,
 	string,
-	mint.TkStatus,
-	uint64,
 ) Task){}
 
 // Deadline represent an execution deadline for task.
@@ -106,18 +101,13 @@ func NewAsync(
 
 	deadlines := Deadlines{}
 	for _, m := range tasks {
-		generator, ok := registrar[m.Name]
+		generator, ok := Registrar[m.Name]
 		if !ok {
 			return nil, errors.Trace(
 				errors.Newf("Unregistered task name: %s", m.Name))
 		}
-		t := generator(ctx,
-			m.Subject,
-			m.Status,
-			m.Retry,
-		)
 		deadlines = append(deadlines, Deadline{
-			Task:  t,
+			Task:  generator(ctx, m.Subject),
 			Model: m,
 		})
 	}
@@ -125,7 +115,7 @@ func NewAsync(
 	a.Pending = deadlines
 	sort.Sort(a.Pending)
 
-	a.schedule()
+	a.schedule(ctx)
 
 	return a, nil
 }
@@ -134,7 +124,9 @@ func NewAsync(
 // there is no task to schedule or the Scheduled channel is blocked, it's a
 // no-op. Can be called as often as needed.
 // a.mutex must be held.
-func (a *Async) schedule() {
+func (a *Async) schedule(
+	ctx context.Context,
+) {
 	if len(a.Pending) == 0 {
 		return
 	}
@@ -144,7 +136,7 @@ func (a *Async) schedule() {
 		case a.Scheduled <- d:
 			a.Pending = a.Pending[:len(a.Pending)-1]
 
-			mint.Logf(a.Ctx, "Scheduled task: "+
+			mint.Logf(ctx, "Scheduled task: "+
 				"name=%s subject=%s retry=%d deadline=%q",
 				d.Task.Name(), d.Task.Subject(), d.Model.Retry, d.Deadline())
 		}
@@ -152,13 +144,13 @@ func (a *Async) schedule() {
 }
 
 // Queue queues a new task by adding it to the list of pending tasks and
-// calling Schedule.
+// calling Schedule. Queue does not begin a new transaction as it is meant to
+// be called within a transaction block (offer creation, operation creation,
+// ...).
 func (a *Async) Queue(
+	ctx context.Context,
 	t Task,
 ) error {
-	ctx := db.Begin(a.Ctx)
-	defer db.LoggedRollback(ctx)
-
 	m, err := model.CreateTask(ctx,
 		t.Name(),
 		t.Subject(),
@@ -169,9 +161,7 @@ func (a *Async) Queue(
 		return errors.Trace(err)
 	}
 
-	db.Commit(ctx)
-
-	a.AppendAndSchedule(Deadline{
+	a.AppendAndSchedule(ctx, Deadline{
 		Task:  t,
 		Model: m,
 	})
@@ -182,6 +172,7 @@ func (a *Async) Queue(
 // AppendAndSchedule appends a deadline to the list of pending deadlines while
 // preserving its order and calls schedule.
 func (a *Async) AppendAndSchedule(
+	ctx context.Context,
 	d Deadline,
 ) {
 	a.mutex.Lock()
@@ -190,11 +181,11 @@ func (a *Async) AppendAndSchedule(
 	a.Pending = append(a.Pending, d)
 	sort.Sort(a.Pending)
 
-	mint.Logf(a.Ctx, "Queued task: "+
+	mint.Logf(ctx, "Queued task: "+
 		"name=%s subject=%s retry=%d deadline=%q",
 		d.Task.Name(), d.Task.Subject(), d.Model.Retry, d.Deadline())
 
-	a.schedule()
+	a.schedule(ctx)
 }
 
 // RunOne runs the specified deadline and re-add it to the list of pending
@@ -211,6 +202,9 @@ func (a *Async) RunOne(
 		mint.Logf(ctx, "Error executing task: "+
 			"name=%s subject=%s retry=%d error=%s",
 			d.Task.Name(), d.Task.Subject(), d.Model.Retry, err.Error())
+		for _, line := range errors.ErrorStack(err) {
+			mint.Logf(ctx, "  %s", line)
+		}
 
 		d.Model.Retry++
 		if d.Model.Retry > d.Task.MaxRetries() {
@@ -234,7 +228,7 @@ func (a *Async) RunOne(
 	db.Commit(ctx)
 
 	if d.Model.Status == mint.TkStPending {
-		a.AppendAndSchedule(d)
+		a.AppendAndSchedule(ctx, d)
 	}
 }
 
@@ -276,7 +270,7 @@ func Queue(
 	t Task,
 ) error {
 	async := Get(ctx)
-	return async.Queue(t)
+	return async.Queue(ctx, t)
 }
 
 // TestRunOne runs one task off of the list of pending tasks, In tests we don't

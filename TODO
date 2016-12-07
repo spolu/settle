@@ -1,8 +1,9 @@
 # mint
 
- [ ] async proceses
+ [ ] transaction cancelation
  [ ] attempt to use Amount everywhere?
  [ ] pass DSN for DB, support Postgres
+ [x] async proceses
  [x] propagation protocol for both operations and offers
  [x] idempotency of propagation (load offer/operation and save if they exist and return 200)
  [x] validate asset is created when creating offer and test
@@ -30,6 +31,7 @@
 
   # test
 
+    [ ] test async offer/operation propagation
     [ ] test that consumes an offer entirely (check status)
     [~] transaction tests with misbehaving mint
     [x] operation propagation
@@ -46,8 +48,8 @@
   # async processes
 
     [ ] transaction cancelation
-    [ ] offer propagation
-    [ ] operation propagation
+    [x] offer propagation
+    [x] operation propagation
 
 # site
 
@@ -71,3 +73,10 @@
   - Task is an interface backed by storage in the mint DB
      Execute() error
      Type() TkType
+
+# contact r?
+
+  dm
+  gdb
+  rauchg
+  https://blog.filippo.io/giving-up-on-long-term-pgp/

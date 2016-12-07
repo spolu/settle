@@ -17,6 +17,8 @@ import (
 	"github.com/spolu/settle/lib/ptr"
 	"github.com/spolu/settle/lib/svc"
 	"github.com/spolu/settle/mint"
+	"github.com/spolu/settle/mint/async"
+	"github.com/spolu/settle/mint/async/task"
 	"github.com/spolu/settle/mint/lib/authentication"
 	"github.com/spolu/settle/mint/model"
 )
@@ -170,10 +172,17 @@ func (e *CreateOffer) ExecuteCanonical(
 		return nil, nil, errors.Trace(err) // 500
 	}
 
+	of := model.NewOfferResource(ctx, offer)
+
+	err = async.Queue(ctx, task.NewPropagateOffer(ctx, of.ID))
+	if err != nil {
+		return nil, nil, errors.Trace(err) // 500
+	}
+
 	db.Commit(ctx)
 
 	return ptr.Int(http.StatusCreated), &svc.Resp{
-		"offer": format.JSONPtr(model.NewOfferResource(ctx, offer)),
+		"offer": format.JSONPtr(of),
 	}, nil
 }
 

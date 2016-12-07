@@ -227,6 +227,19 @@ WHERE owner = :owner
 	return &operation, nil
 }
 
+// LoadCanonicalOperationByID attempts to load the canonical operation for the
+// given id.
+func LoadCanonicalOperationByID(
+	ctx context.Context,
+	id string,
+) (*Operation, error) {
+	owner, token, err := mint.NormalizedOwnerAndTokenFromID(ctx, id)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	return LoadCanonicalOperationByOwnerToken(ctx, owner, token)
+}
+
 // LoadCanonicalOperationByTransactionHop attempts to load the canonical
 // operation for the given transaction and hop.
 func LoadCanonicalOperationByTransactionHop(
