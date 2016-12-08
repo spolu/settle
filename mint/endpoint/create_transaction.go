@@ -19,6 +19,8 @@ import (
 	"github.com/spolu/settle/lib/ptr"
 	"github.com/spolu/settle/lib/svc"
 	"github.com/spolu/settle/mint"
+	"github.com/spolu/settle/mint/async"
+	"github.com/spolu/settle/mint/async/task"
 	"github.com/spolu/settle/mint/lib/authentication"
 	"github.com/spolu/settle/mint/model"
 )
@@ -240,6 +242,11 @@ func (e *CreateTransaction) ExecuteCanonical(
 		))
 	}
 
+	err = async.Queue(ctx, task.NewExpireTransaction(ctx, time.Now(), e.ID))
+	if err != nil {
+		return nil, nil, errors.Trace(err) // 500
+	}
+
 	db.Commit(ctx)
 
 	return ptr.Int(http.StatusCreated), &svc.Resp{
@@ -404,6 +411,11 @@ func (e *CreateTransaction) ExecutePropagated(
 	}
 
 	if mustCommit {
+		err = async.Queue(ctx, task.NewExpireTransaction(ctx, time.Now(), e.ID))
+		if err != nil {
+			return nil, nil, errors.Trace(err) // 500
+		}
+
 		db.Commit(ctx)
 	}
 

@@ -274,3 +274,39 @@ WHERE owner = :owner
 
 	return &transaction, nil
 }
+
+// LoadTransactionByID attempts to load the transaction (canonical or
+// propagated) for the given owner and token.
+func LoadTransactionByID(
+	ctx context.Context,
+	id string,
+) (*Transaction, error) {
+	owner, token, err := mint.NormalizedOwnerAndTokenFromID(ctx, id)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	transaction := Transaction{
+		Owner: owner,
+		Token: token,
+	}
+
+	ext := db.Ext(ctx)
+	if rows, err := sqlx.NamedQuery(ext, `
+SELECT *
+FROM transactions
+WHERE owner = :owner
+  AND token = :token
+`, transaction); err != nil {
+		return nil, errors.Trace(err)
+	} else if !rows.Next() {
+		return nil, nil
+	} else if err := rows.StructScan(&transaction); err != nil {
+		defer rows.Close()
+		return nil, errors.Trace(err)
+	} else if err := rows.Close(); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &transaction, nil
+}

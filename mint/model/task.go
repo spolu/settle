@@ -30,6 +30,7 @@ type Task struct {
 // CreateTask creates and stores a new Task.
 func CreateTask(
 	ctx context.Context,
+	created time.Time,
 	name mint.TkName,
 	subject string,
 	status mint.TkStatus,
@@ -37,7 +38,7 @@ func CreateTask(
 ) (*Task, error) {
 	task := Task{
 		Token:   token.New("task"),
-		Created: time.Now(),
+		Created: created,
 
 		Name:    name,
 		Subject: subject,

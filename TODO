@@ -1,6 +1,8 @@
 # mint
 
  [ ] pass DSN for DB, support Postgres
+ [ ] expose expiry of transactions?
+ [x] transaction expiration
  [x] async proceses
  [x] propagation protocol for both operations and offers
  [x] idempotency of propagation (load offer/operation and save if they exist and return 200)
@@ -47,6 +49,7 @@
 
     [x] offer propagation
     [x] operation propagation
+    [x] transaction expiry
 
 # site
 
@@ -70,6 +73,12 @@
   - Task is an interface backed by storage in the mint DB
      Execute() error
      Type() TkType
+
+  # transactions
+
+  - Transactions reservation have only impact on the balance of the originating
+    mint. They do also consume offer remainders, but are not blocking any
+    funds.
 
 # contact r?
 
