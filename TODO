@@ -1,7 +1,5 @@
 # mint
 
- [ ] transaction cancelation
- [ ] attempt to use Amount everywhere?
  [ ] pass DSN for DB, support Postgres
  [x] async proceses
  [x] propagation protocol for both operations and offers
@@ -47,7 +45,6 @@
 
   # async processes
 
-    [ ] transaction cancelation
     [x] offer propagation
     [x] operation propagation
 
