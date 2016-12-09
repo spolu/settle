@@ -11,6 +11,9 @@ const (
 	// TransactionExpiryMs is the time it takes to expire a transaction for
 	// this mint (get it canceled if not settled). Expressed in ms.
 	TransactionExpiryMs int64 = 1000 * 60 * 60
+	// TransactionExpiryBufferMs is the minimal acceptable duration between a
+	// transaction expiry and its creation time.
+	TransactionExpiryBufferMs int64 = 1000 * 60
 )
 
 // PgType is the propagation type of an object.
@@ -116,8 +119,8 @@ type TransactionResource struct {
 	Destination string   `json:"destination"`
 	Path        []string `json:"path"`
 
-	Expiry int64    `json:"expiry"`
 	Status TxStatus `json:"status"`
+	Expiry int64    `json:"expiry"`
 	Lock   string   `json:"lock"`
 
 	Operations []OperationResource `json:"operations"`

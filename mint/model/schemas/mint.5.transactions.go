@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS transactions(
   path VARCHAR(2048) NOT NULL,       -- join of offer ids
 
   status VARCHAR(32) NOT NULL,       -- status (reserved, settled, canceled)
+  expiry TIMESTAMP NOT NULL,         -- transaction expiry
   lock VARCHAR(256) NOT NULL,        -- lock = hex(scrypt(secret, id))
   secret VARCHAR(256),               -- lock secret
 

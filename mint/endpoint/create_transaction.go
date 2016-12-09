@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
+	"sync"
 	"time"
 
 	"goji.io/pat"
@@ -177,6 +178,8 @@ func (e *CreateTransaction) ExecuteCanonical(
 		e.Destination,
 		model.OfPath(e.Path),
 		mint.TxStReserved,
+		time.Now().Add(
+			time.Duration(mint.TransactionExpiryMs)*time.Millisecond),
 	)
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
@@ -211,7 +214,7 @@ func (e *CreateTransaction) ExecuteCanonical(
 		))
 	}
 
-	err = e.Propagate(ctx)
+	_, err = e.Propagate(ctx)
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 			402, "transaction_failed",
@@ -223,13 +226,20 @@ func (e *CreateTransaction) ExecuteCanonical(
 	// Check all the hops in the transaction in parallel before committing (as
 	// we are the canonical mint for it).
 	g, ctx := errgroup.WithContext(ctx)
+	expiry := e.Tx.Expiry.UnixNano() / mint.TimeResolutionNs
+	l := &sync.Mutex{}
 
 	for hop := 1; hop < len(e.Plan.Actions); hop++ {
 		hop := hop
 		g.Go(func() error {
-			err = e.Plan.Check(ctx, e.Client, int8(hop))
+			txn, err := e.Plan.Check(ctx, e.Client, int8(hop))
 			if err != nil {
 				return errors.Trace(err)
+			}
+			l.Lock()
+			defer l.Unlock()
+			if txn.Expiry < expiry {
+				expiry = txn.Expiry
 			}
 			return nil
 		})
@@ -240,6 +250,12 @@ func (e *CreateTransaction) ExecuteCanonical(
 			"Failed to check plan for transaction %s",
 			e.ID,
 		))
+	}
+
+	e.Tx.Expiry = time.Unix(0, expiry*mint.TimeResolutionNs)
+	err = e.Tx.Save(ctx)
+	if err != nil {
+		return nil, nil, errors.Trace(err) // 500
 	}
 
 	err = async.Queue(ctx, task.NewExpireTransaction(ctx, time.Now(), e.ID))
@@ -344,6 +360,8 @@ func (e *CreateTransaction) ExecutePropagated(
 			e.Destination,
 			model.OfPath(e.Path),
 			mint.TxStReserved,
+			time.Now().Add(
+				time.Duration(mint.TransactionExpiryMs)*time.Millisecond),
 			transaction.Lock,
 		)
 		if err != nil {
@@ -380,7 +398,7 @@ func (e *CreateTransaction) ExecutePropagated(
 
 	// Check the plan at previous hop before we execute this hop, to convince
 	// ourselves that the funds are reserved!
-	err := e.Plan.Check(ctx, e.Client, e.Hop-1)
+	_, err := e.Plan.Check(ctx, e.Client, e.Hop-1)
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 			402, "transaction_failed",
@@ -401,7 +419,7 @@ func (e *CreateTransaction) ExecutePropagated(
 	// We unlock the tranaction before propagating.
 	unlock()
 
-	err = e.Propagate(ctx)
+	_, err = e.Propagate(ctx)
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 			402, "transaction_failed",
@@ -432,7 +450,7 @@ func (e *CreateTransaction) ExecutePropagated(
 // involved in a transaction.
 func (e *CreateTransaction) Propagate(
 	ctx context.Context,
-) error {
+) (*mint.TransactionResource, error) {
 	if int(e.Hop)+1 < len(e.Plan.Actions) {
 
 		m := e.Plan.Actions[e.Hop+1].Mint
@@ -441,12 +459,13 @@ func (e *CreateTransaction) Propagate(
 			"Propagating transaction: transaction=%s hop=%d mint=%s",
 			e.ID, e.Hop, m)
 
-		_, err := e.Client.PropagateTransaction(ctx, e.ID, e.Hop+1, m)
+		txn, err := e.Client.PropagateTransaction(ctx, e.ID, e.Hop+1, m)
 		if err != nil {
-			return errors.Trace(err)
+			return nil, errors.Trace(err)
 		}
+		return txn, nil
 	}
-	return nil
+	return nil, nil
 }
 
 // ExecutePlan executes the action locally at the current hop.

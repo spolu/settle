@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/mint"
@@ -277,12 +278,20 @@ func (p *TxPlan) Check(
 	ctx context.Context,
 	client *mint.Client,
 	hop int8,
-) error {
+) (*mint.TransactionResource, error) {
 	action := p.Actions[hop]
 	transaction, err := client.RetrieveTransaction(ctx,
 		p.Transaction, &action.Mint)
 	if err != nil {
-		return errors.Trace(err)
+		return nil, errors.Trace(err)
+	}
+
+	if time.Now().Add(
+		time.Duration(mint.TransactionExpiryBufferMs) * time.Millisecond).After(
+		time.Unix(0, transaction.Expiry*mint.TimeResolutionNs)) {
+		return nil, errors.Newf(
+			"Expiry of transaction at hop %d is too short: %d",
+			hop, transaction.Expiry)
 	}
 
 	switch action.Type {
@@ -296,30 +305,30 @@ func (p *TxPlan) Check(
 			}
 		}
 		if operation == nil {
-			return errors.Newf("Operation at hop %d not found", hop)
+			return nil, errors.Newf("Operation at hop %d not found", hop)
 		}
 		if operation.Owner != action.Owner {
-			return errors.Newf("Operation at hop %d owner mismatch: "+
+			return nil, errors.Newf("Operation at hop %d owner mismatch: "+
 				"%s expected %s",
 				hop, operation.Owner, action.Owner)
 		}
 		if operation.Amount.Cmp(action.Amount) != 0 {
-			return errors.Newf("Operation at hop %d amount mismatch: "+
+			return nil, errors.Newf("Operation at hop %d amount mismatch: "+
 				"%s expected %s",
 				hop, operation.Amount.String(), action.Amount.String())
 		}
 		if operation.Asset != *action.OperationAsset {
-			return errors.Newf("Operation at hop %d asset mismatch: "+
+			return nil, errors.Newf("Operation at hop %d asset mismatch: "+
 				"%s expected %s",
 				hop, operation.Asset, *action.OperationAsset)
 		}
 		if operation.Source != *action.OperationSource {
-			return errors.Newf("Operation at hop %d source mismatch: "+
+			return nil, errors.Newf("Operation at hop %d source mismatch: "+
 				"%s expected %s",
 				hop, operation.Source, *action.OperationSource)
 		}
 		if operation.Destination != *action.OperationDestination {
-			return errors.Newf("Operation at hop %d destination mismatch: "+
+			return nil, errors.Newf("Operation at hop %d destination mismatch: "+
 				"%s expected %s",
 				hop, operation.Destination, *action.OperationDestination)
 		}
@@ -334,24 +343,24 @@ func (p *TxPlan) Check(
 			}
 		}
 		if crossing == nil {
-			return errors.Newf("Crossing at hop %d not found", hop)
+			return nil, errors.Newf("Crossing at hop %d not found", hop)
 		}
 		if crossing.Owner != action.Owner {
-			return errors.Newf("Crossing at hop %d owner mismatch: "+
+			return nil, errors.Newf("Crossing at hop %d owner mismatch: "+
 				"%s expected %s",
 				hop, crossing.Owner, action.Owner)
 		}
 		if crossing.Amount.Cmp(action.Amount) != 0 {
-			return errors.Newf("Crossing at hop %d amount mismatch: "+
+			return nil, errors.Newf("Crossing at hop %d amount mismatch: "+
 				"%s expected %s",
 				hop, crossing.Amount.String(), action.Amount.String())
 		}
 		if crossing.Offer != *action.CrossingOffer {
-			return errors.Newf("Crossing at hop %d offer mismatch: "+
+			return nil, errors.Newf("Crossing at hop %d offer mismatch: "+
 				"%s expected %s",
 				hop, crossing.Offer, *action.CrossingOffer)
 		}
 	}
 
-	return nil
+	return transaction, nil
 }

@@ -93,6 +93,10 @@ func TestCreateTransactionWith2Offers(
 	assert.Equal(t, u[2].Address, tx0.Destination)
 	assert.Equal(t, []string{o[1].ID, o[2].ID}, tx0.Path)
 	assert.Equal(t, mint.TxStReserved, tx0.Status)
+	assert.WithinDuration(t,
+		time.Unix(0, tx0.Expiry*mint.TimeResolutionNs),
+		time.Unix(0, tx0.Created*mint.TimeResolutionNs),
+		time.Duration(mint.TransactionExpiryMs)*time.Millisecond)
 	assert.Equal(t, 1, len(tx0.Operations))
 	assert.Equal(t, []mint.CrossingResource{}, tx0.Crossings)
 
