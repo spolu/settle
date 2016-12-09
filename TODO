@@ -1,6 +1,7 @@
 # mint
 
  [ ] pass DSN for DB, support Postgres
+ [x] check expiry at settlement
  [x] check expiry of transactions at creation
  [x] transaction expiration
  [x] async proceses
@@ -31,6 +32,8 @@
 
   # test
 
+    [ ] test canonical expiry calculation (min)
+    [ ] test settling an expired transaction
     [ ] test that consumes an offer entirely (check status)
     [~] transaction tests with misbehaving mint
     [x] test async offer/operation propagation

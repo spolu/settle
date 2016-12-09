@@ -141,6 +141,22 @@ func (e *SettleTransaction) ExecuteCanonical(
 	}
 	e.Tx = tx
 
+	if e.Tx.Expiry.After(time.Now()) {
+		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
+			402, "settlement_failed",
+			"The transaction you are trying to settle has expired: %s. It "+
+				"will automatically be canceled within an hour of its "+
+				"creation.", e.ID,
+		))
+	}
+	if e.Tx.Status == mint.TxStCanceled {
+		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
+			402, "settlement_failed",
+			"The transaction you are trying to settle is already "+
+				"canceled: %s.", e.ID,
+		))
+	}
+
 	// Store the transcation in memory so that it's latest version is available
 	// through API before we commit.
 	txStore.Store(ctx, e.ID, tx)
@@ -256,12 +272,30 @@ func (e *SettleTransaction) ExecutePropagated(
 				"transaction": format.JSONPtr(model.NewTransactionResource(ctx,
 					e.Tx, ops, crs)),
 			}, nil
+		} else if e.Tx.Status == mint.TxStCanceled {
+			mint.Logf(ctx,
+				"Transaction already canceled: transaction=%s hop=%d",
+				e.ID, e.Hop)
+			return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
+				402, "settlement_failed",
+				"The transaction you are trying to settle is already "+
+					"canceled: %s.", e.ID,
+			))
 		}
 
 		// Store the transcation in memory so that it's latest version is available
 		// through API before we commit.
 		txStore.Store(ctx, e.ID, tx)
 		defer txStore.Clear(ctx, e.ID)
+	}
+
+	if e.Tx.Expiry.After(time.Now()) {
+		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
+			402, "settlement_failed",
+			"The transaction you are trying to settle has expired: %s. It "+
+				"will automatically be canceled within an hour of its "+
+				"creation.", e.ID,
+		))
 	}
 
 	h, err := scrypt.Key([]byte(e.Secret), []byte(e.Tx.Token), 16384, 8, 1, 64)
