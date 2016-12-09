@@ -7,7 +7,7 @@
  [ ] list endpoint
  [ ] order book
  [ ] list of operations
- [ ] pass DSN for DB, support Postgres
+ [x] pass DSN for DB, support Postgres
  [x] check expiry at settlement
  [x] check expiry of transactions at creation
  [x] transaction expiration
