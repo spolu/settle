@@ -35,6 +35,7 @@ type Transaction struct {
 
 	Status mint.TxStatus
 
+	Expiry time.Time
 	Lock   string
 	Secret *string
 }
@@ -56,12 +57,11 @@ func NewTransactionResource(
 		Amount:      (*big.Int)(&transaction.Amount),
 		Destination: transaction.Destination,
 		Path:        []string(transaction.Path),
-		Expiry: transaction.Created.UnixNano()/mint.TimeResolutionNs +
-			mint.TransactionExpiryMs,
-		Status:     transaction.Status,
-		Lock:       transaction.Lock,
-		Operations: []mint.OperationResource{},
-		Crossings:  []mint.CrossingResource{},
+		Expiry:      transaction.Expiry.UnixNano() / mint.TimeResolutionNs,
+		Status:      transaction.Status,
+		Lock:        transaction.Lock,
+		Operations:  []mint.OperationResource{},
+		Crossings:   []mint.CrossingResource{},
 	}
 	for _, op := range operations {
 		tx.Operations = append(tx.Operations, NewOperationResource(ctx, op))
@@ -83,6 +83,7 @@ func CreateCanonicalTransaction(
 	destination string,
 	path []string,
 	status mint.TxStatus,
+	expiry time.Time,
 ) (*Transaction, error) {
 	tok := token.New("transaction")
 
@@ -106,6 +107,7 @@ func CreateCanonicalTransaction(
 		Path:        OfPath(path),
 		Status:      status,
 
+		Expiry: expiry,
 		Lock:   lock,
 		Secret: &secret,
 	}
@@ -114,10 +116,10 @@ func CreateCanonicalTransaction(
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO transactions
   (owner, token, created, propagation, base_asset, quote_asset,
-   amount, destination, path, status, lock, secret)
+   amount, destination, path, status, expiry, lock, secret)
 VALUES
   (:owner, :token, :created, :propagation, :base_asset, :quote_asset,
-   :amount, :destination, :path, :status, :lock, :secret)
+   :amount, :destination, :path, :status, :expiry, :lock, :secret)
 `, transaction); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:
@@ -148,6 +150,7 @@ func CreatePropagatedTransaction(
 	destination string,
 	path []string,
 	status mint.TxStatus,
+	expiry time.Time,
 	lock string,
 ) (*Transaction, error) {
 	transaction := Transaction{
@@ -162,6 +165,7 @@ func CreatePropagatedTransaction(
 		Destination: destination,
 		Path:        OfPath(path),
 		Status:      status,
+		Expiry:      expiry,
 		Lock:        lock,
 		Secret:      nil,
 	}
@@ -170,10 +174,10 @@ func CreatePropagatedTransaction(
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO transactions
   (owner, token, created, propagation, base_asset, quote_asset,
-   amount, destination, path, status, lock, secret)
+   amount, destination, path, status, expiry, lock, secret)
 VALUES
   (:owner, :token, :created, :propagation, :base_asset, :quote_asset,
-   :amount, :destination, :path, :status, :lock, :secret)
+   :amount, :destination, :path, :status, :expiry, :lock, :secret)
 `, transaction); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:
@@ -198,7 +202,7 @@ func (t *Transaction) Save(
 	ext := db.Ext(ctx)
 	_, err := sqlx.NamedExec(ext, `
 UPDATE transactions
-SET status = :status
+SET status = :status, expiry = :expiry
 WHERE owner = :owner
   AND token = :token
 `, t)
