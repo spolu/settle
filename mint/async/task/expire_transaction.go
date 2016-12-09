@@ -65,7 +65,8 @@ func (t *ExpireTransaction) MaxRetries() uint {
 func (t *ExpireTransaction) DeadlineForRetry(
 	retry uint,
 ) time.Time {
-	return t.Created().Add(time.Duration(retry+1) * time.Hour)
+	expiry := time.Duration(mint.TransactionExpiryMs) * time.Millisecond
+	return t.Created().Add(expiry + time.Duration(retry+1)*expiry)
 }
 
 // Execute idempotently runs the task to completion or errors.

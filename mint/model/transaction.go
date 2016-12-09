@@ -56,10 +56,12 @@ func NewTransactionResource(
 		Amount:      (*big.Int)(&transaction.Amount),
 		Destination: transaction.Destination,
 		Path:        []string(transaction.Path),
-		Status:      transaction.Status,
-		Lock:        transaction.Lock,
-		Operations:  []mint.OperationResource{},
-		Crossings:   []mint.CrossingResource{},
+		Expiry: transaction.Created.UnixNano()/mint.TimeResolutionNs +
+			mint.TransactionExpiryMs,
+		Status:     transaction.Status,
+		Lock:       transaction.Lock,
+		Operations: []mint.OperationResource{},
+		Crossings:  []mint.CrossingResource{},
 	}
 	for _, op := range operations {
 		tx.Operations = append(tx.Operations, NewOperationResource(ctx, op))
