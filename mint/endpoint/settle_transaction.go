@@ -141,13 +141,20 @@ func (e *SettleTransaction) ExecuteCanonical(
 	}
 	e.Tx = tx
 
+	fmt.Printf(
+		"\n>>>created: %s\n>>>expiry: %s\n>>>now: %s\n\n",
+		e.Tx.Created.Format(time.UnixDate),
+		e.Tx.Expiry.Format(time.UnixDate),
+		time.Now().Format(time.UnixDate),
+	)
+
 	if e.Tx.Expiry.Before(time.Now()) {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
 			402, "settlement_failed",
 			"The transaction you are trying to settle has expired: %s. It "+
 				"will automatically be canceled within an hour of its "+
 				"creation (created at %s).", e.ID,
-			e.Tx.Created.UTC().Format(time.UnixDate),
+			e.Tx.Created.Format(time.UnixDate),
 		))
 	}
 	if e.Tx.Status == mint.TxStCanceled {
@@ -296,7 +303,7 @@ func (e *SettleTransaction) ExecutePropagated(
 			"The transaction you are trying to settle has expired: %s. It "+
 				"will automatically be canceled within an hour of its "+
 				"creation (created at %s).", e.ID,
-			e.Tx.Created.UTC().Format(time.UnixDate),
+			e.Tx.Created.Format(time.UnixDate),
 		))
 	}
 

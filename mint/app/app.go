@@ -24,7 +24,7 @@ import (
 // with everything that could be extracted from the flags.
 func BackgroundContextFromFlags(
 	envFlag string,
-	dbpFlag string,
+	dsnFlag string,
 	hstFlag string,
 ) (context.Context, error) {
 	ctx := context.Background()
@@ -39,7 +39,7 @@ func BackgroundContextFromFlags(
 	mintEnv.Config[mint.EnvCfgMintHost] = hstFlag
 	ctx = env.With(ctx, &mintEnv)
 
-	mintDB, err := db.NewSqlite3DBForPath(ctx, dbpFlag)
+	mintDB, err := db.NewDBForDSN(ctx, dsnFlag)
 	if err != nil {
 		return nil, err
 	}

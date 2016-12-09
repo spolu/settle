@@ -11,12 +11,12 @@ CREATE TABLE IF NOT EXISTS crossings(
   token VARCHAR(256) NOT NULL,  -- token
   created TIMESTAMP NOT NULL,
 
-  offer VARCHAR(256) NOT NULL,                     -- offer id
-  amount VARCHAR(64) NOT NULL CHECK (amount > 0),  -- crossing amount
+  offer VARCHAR(256) NOT NULL,  -- offer id
+  amount VARCHAR(64) NOT NULL,  -- crossing amount
 
-  status VARCHAR(32) NOT NULL,       -- status (reserved, settled, canceled)
-  txn VARCHAR(256) NOT NULL,         -- transaction id
-  hop SMALLINT NOT NULL,             -- transaction hop
+  status VARCHAR(32) NOT NULL,  -- status (reserved, settled, canceled)
+  txn VARCHAR(256) NOT NULL,    -- transaction id
+  hop SMALLINT NOT NULL,        -- transaction hop
 
   PRIMARY KEY(owner, token)
 );
