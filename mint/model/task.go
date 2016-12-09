@@ -38,7 +38,7 @@ func CreateTask(
 ) (*Task, error) {
 	task := Task{
 		Token:   token.New("task"),
-		Created: created,
+		Created: created.UTC(),
 
 		Name:    name,
 		Subject: subject,

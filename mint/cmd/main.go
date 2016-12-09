@@ -21,7 +21,7 @@ import (
 var actFlag string
 
 var envFlag string
-var dbpFlag string
+var dsnFlag string
 var hstFlag string
 
 var usrFlag string
@@ -33,10 +33,10 @@ func init() {
 
 	flag.StringVar(&envFlag, "env",
 		"qa", "The environment to run in (qa, production), default: qa")
-	flag.StringVar(&dbpFlag, "dbpath",
-		"", "The path of the sqlite3 mintDB, default: ~/.mint/mint-$env.db")
+	flag.StringVar(&dsnFlag, "db_dsn",
+		"", "The DSN of the database to use, default: sqlite3://~/.mint/mint-$env.db")
 	flag.StringVar(&hstFlag, "mint_host",
-		"", "The externally accessible hostname of this mint, default: none")
+		"", "The externally accessible hostname of this mint, default: none (required for production)")
 
 	flag.StringVar(&usrFlag, "username",
 		"foo", "The user name of the user to upsert")
@@ -84,7 +84,7 @@ func main() {
 	}
 
 	ctx, err := app.BackgroundContextFromFlags(
-		envFlag, dbpFlag, hstFlag,
+		envFlag, dsnFlag, hstFlag,
 	)
 	if err != nil {
 		log.Fatal(errors.Details(err))

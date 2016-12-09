@@ -63,7 +63,7 @@ func CreateCrossing(
 	crossing := Crossing{
 		Owner:   owner,
 		Token:   token.New("crossing"),
-		Created: time.Now(),
+		Created: time.Now().UTC(),
 
 		Offer:  offer,
 		Amount: amount,

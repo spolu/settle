@@ -39,7 +39,7 @@ func CreateBalance(
 	balance := Balance{
 		Owner:   owner,
 		Token:   token.New("balance"),
-		Created: time.Now(),
+		Created: time.Now().UTC(),
 
 		Asset:  asset,
 		Holder: holder,

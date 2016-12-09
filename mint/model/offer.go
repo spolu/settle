@@ -77,7 +77,7 @@ func CreateCanonicalOffer(
 	offer := Offer{
 		Owner:       owner,
 		Token:       token.New("offer"),
-		Created:     time.Now(),
+		Created:     time.Now().UTC(),
 		Propagation: mint.PgTpCanonical,
 
 		BaseAsset:  baseAsset,
@@ -132,7 +132,7 @@ func CreatePropagatedOffer(
 	offer := Offer{
 		Owner:       owner,
 		Token:       token,
-		Created:     created,
+		Created:     created.UTC(),
 		Propagation: mint.PgTpPropagated,
 
 		BaseAsset:  baseAsset,

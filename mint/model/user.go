@@ -35,7 +35,7 @@ func CreateUser(
 ) (*User, error) {
 	user := User{
 		Token:   token.New("user"),
-		Created: time.Now(),
+		Created: time.Now().UTC(),
 
 		Username: username,
 	}

@@ -1,6 +1,13 @@
+# cli?
+
+# api?
+
 # mint
 
- [ ] pass DSN for DB, support Postgres
+ [ ] list endpoint
+ [ ] order book
+ [ ] list of operations
+ [x] pass DSN for DB, support Postgres
  [x] check expiry at settlement
  [x] check expiry of transactions at creation
  [x] transaction expiration
@@ -69,19 +76,14 @@
   - propagation happens asynchronously and can be triggered by clients
   - POST /operations/:op unauthenticated
 
-  # async
-
-  - operation types: operation, offer propagation; transaction cancelation
-  - async.Queue(t Task)
-  - Task is an interface backed by storage in the mint DB
-     Execute() error
-     Type() TkType
-
   # transactions
 
   - Transactions reservation have only impact on the balance of the originating
     mint. They do also consume offer remainders, but are not blocking any
     funds.
+  - Transaction expiry is a bit racy but that's OK since exploiting it is
+    equivalent to simply not settling your end of the transaction, and equally
+    impacts your trust and the value of your assets.
 
 # contact r?
 

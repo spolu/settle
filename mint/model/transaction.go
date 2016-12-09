@@ -97,7 +97,7 @@ func CreateCanonicalTransaction(
 	transaction := Transaction{
 		Owner:       owner,
 		Token:       tok,
-		Created:     time.Now(),
+		Created:     time.Now().UTC(),
 		Propagation: mint.PgTpCanonical,
 
 		BaseAsset:   baseAsset,
@@ -107,7 +107,7 @@ func CreateCanonicalTransaction(
 		Path:        OfPath(path),
 		Status:      status,
 
-		Expiry: expiry,
+		Expiry: expiry.UTC(),
 		Lock:   lock,
 		Secret: &secret,
 	}
@@ -156,7 +156,7 @@ func CreatePropagatedTransaction(
 	transaction := Transaction{
 		Owner:       owner,
 		Token:       token,
-		Created:     created,
+		Created:     created.UTC(),
 		Propagation: mint.PgTpPropagated,
 
 		BaseAsset:   baseAsset,
@@ -165,7 +165,7 @@ func CreatePropagatedTransaction(
 		Destination: destination,
 		Path:        OfPath(path),
 		Status:      status,
-		Expiry:      expiry,
+		Expiry:      expiry.UTC(),
 		Lock:        lock,
 		Secret:      nil,
 	}
@@ -199,6 +199,7 @@ VALUES
 func (t *Transaction) Save(
 	ctx context.Context,
 ) error {
+	t.Expiry = t.Expiry.UTC()
 	ext := db.Ext(ctx)
 	_, err := sqlx.NamedExec(ext, `
 UPDATE transactions

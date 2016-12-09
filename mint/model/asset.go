@@ -66,7 +66,7 @@ func CreateAsset(
 	asset := Asset{
 		Owner:   owner,
 		Token:   token.New("asset"),
-		Created: time.Now(),
+		Created: time.Now().UTC(),
 
 		Code:  code,
 		Scale: scale,

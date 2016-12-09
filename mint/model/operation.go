@@ -82,7 +82,7 @@ func CreateCanonicalOperation(
 	operation := Operation{
 		Owner:       owner,
 		Token:       token.New("operation"),
-		Created:     time.Now(),
+		Created:     time.Now().UTC(),
 		Propagation: mint.PgTpCanonical,
 
 		Asset:       asset,
@@ -137,7 +137,7 @@ func CreatePropagatedOperation(
 	operation := Operation{
 		Owner:       owner,
 		Token:       token,
-		Created:     created,
+		Created:     created.UTC(),
 		Propagation: mint.PgTpPropagated,
 
 		Asset:       asset,
