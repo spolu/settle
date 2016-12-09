@@ -26,16 +26,19 @@ func init() {
 // (up to one mint since the base asset of an offer must be owned by the offer
 // owner).
 type PropagateOffer struct {
-	ID string
+	created time.Time
+	id      string
 }
 
 // NewPropagateOffer constructs and initializes the task.
 func NewPropagateOffer(
 	ctx context.Context,
+	created time.Time,
 	subject string,
 ) async.Task {
 	return &PropagateOffer{
-		ID: subject,
+		created: created,
+		id:      subject,
 	}
 }
 
@@ -44,9 +47,14 @@ func (t *PropagateOffer) Name() mint.TkName {
 	return TkPropagateOffer
 }
 
+// Created returns the task creation time.
+func (t *PropagateOffer) Created() time.Time {
+	return t.created
+}
+
 // Subject returns the task subject.
 func (t *PropagateOffer) Subject() string {
-	return t.ID
+	return t.id
 }
 
 // MaxRetries returns the max retries for the task.
@@ -58,7 +66,7 @@ func (t *PropagateOffer) MaxRetries() uint {
 func (t *PropagateOffer) DeadlineForRetry(
 	retry uint,
 ) time.Time {
-	return time.Now().Add((1<<retry - 1) * time.Second)
+	return t.Created().Add((1<<retry - 1) * time.Second)
 }
 
 // Execute idempotently runs the task to completion or errors.
@@ -74,11 +82,11 @@ func (t *PropagateOffer) Execute(
 	ctx = db.Begin(ctx)
 	defer db.LoggedRollback(ctx)
 
-	offer, err := model.LoadCanonicalOfferByID(ctx, t.ID)
+	offer, err := model.LoadCanonicalOfferByID(ctx, t.id)
 	if err != nil {
 		return errors.Trace(err)
 	} else if offer == nil {
-		return errors.Trace(errors.Newf("Canonical offer not found: %s", t.ID))
+		return errors.Trace(errors.Newf("Canonical offer not found: %s", t.id))
 	}
 
 	db.Commit(ctx)
@@ -94,7 +102,7 @@ func (t *PropagateOffer) Execute(
 	}
 
 	if host != mint.GetHost(ctx) {
-		_, err := client.PropagateOffer(ctx, t.ID, host)
+		_, err := client.PropagateOffer(ctx, t.id, host)
 		if err != nil {
 			return errors.Trace(err)
 		}

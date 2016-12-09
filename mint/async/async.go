@@ -19,6 +19,9 @@ type Task interface {
 	// Name is the name of the task.
 	Name() mint.TkName
 
+	// Created is the time of creation of the task.
+	Created() time.Time
+
 	// Subject is the subject of the task, generally an object ID.
 	Subject() string
 
@@ -37,6 +40,7 @@ type Task interface {
 // subject, status and retry.
 var Registrar = map[mint.TkName](func(
 	context.Context,
+	time.Time,
 	string,
 ) Task){}
 
@@ -107,7 +111,7 @@ func NewAsync(
 				errors.Newf("Unregistered task name: %s", m.Name))
 		}
 		deadlines = append(deadlines, Deadline{
-			Task:  generator(ctx, m.Subject),
+			Task:  generator(ctx, m.Created, m.Subject),
 			Model: m,
 		})
 	}
@@ -152,6 +156,7 @@ func (a *Async) Queue(
 	t Task,
 ) error {
 	m, err := model.CreateTask(ctx,
+		t.Created(),
 		t.Name(),
 		t.Subject(),
 		mint.TkStPending,

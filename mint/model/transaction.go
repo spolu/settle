@@ -56,10 +56,12 @@ func NewTransactionResource(
 		Amount:      (*big.Int)(&transaction.Amount),
 		Destination: transaction.Destination,
 		Path:        []string(transaction.Path),
-		Status:      transaction.Status,
-		Lock:        transaction.Lock,
-		Operations:  []mint.OperationResource{},
-		Crossings:   []mint.CrossingResource{},
+		Expiry: transaction.Created.UnixNano()/mint.TimeResolutionNs +
+			mint.TransactionExpiryMs,
+		Status:     transaction.Status,
+		Lock:       transaction.Lock,
+		Operations: []mint.OperationResource{},
+		Crossings:  []mint.CrossingResource{},
 	}
 	for _, op := range operations {
 		tx.Operations = append(tx.Operations, NewOperationResource(ctx, op))
@@ -261,6 +263,42 @@ FROM transactions
 WHERE owner = :owner
   AND token = :token
   AND propagation = :propagation
+`, transaction); err != nil {
+		return nil, errors.Trace(err)
+	} else if !rows.Next() {
+		return nil, nil
+	} else if err := rows.StructScan(&transaction); err != nil {
+		defer rows.Close()
+		return nil, errors.Trace(err)
+	} else if err := rows.Close(); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &transaction, nil
+}
+
+// LoadTransactionByID attempts to load the transaction (canonical or
+// propagated) for the given owner and token.
+func LoadTransactionByID(
+	ctx context.Context,
+	id string,
+) (*Transaction, error) {
+	owner, token, err := mint.NormalizedOwnerAndTokenFromID(ctx, id)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	transaction := Transaction{
+		Owner: owner,
+		Token: token,
+	}
+
+	ext := db.Ext(ctx)
+	if rows, err := sqlx.NamedQuery(ext, `
+SELECT *
+FROM transactions
+WHERE owner = :owner
+  AND token = :token
 `, transaction); err != nil {
 		return nil, errors.Trace(err)
 	} else if !rows.Next() {

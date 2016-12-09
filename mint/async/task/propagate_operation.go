@@ -26,18 +26,19 @@ func init() {
 // mints (up to two other mints, the source's and destination's if they are not
 // the same as the operation's owner).
 type PropagateOperation struct {
-	Client *mint.Client
-
-	ID string
+	created time.Time
+	id      string
 }
 
 // NewPropagateOperation constructs and initializes the task.
 func NewPropagateOperation(
 	ctx context.Context,
+	created time.Time,
 	subject string,
 ) async.Task {
 	return &PropagateOperation{
-		ID: subject,
+		created: created,
+		id:      subject,
 	}
 }
 
@@ -46,9 +47,14 @@ func (t *PropagateOperation) Name() mint.TkName {
 	return TkPropagateOperation
 }
 
+// Created returns the task creation time.
+func (t *PropagateOperation) Created() time.Time {
+	return t.created
+}
+
 // Subject returns the task subject.
 func (t *PropagateOperation) Subject() string {
-	return t.ID
+	return t.id
 }
 
 // MaxRetries returns the max retries for the task.
@@ -60,7 +66,7 @@ func (t *PropagateOperation) MaxRetries() uint {
 func (t *PropagateOperation) DeadlineForRetry(
 	retry uint,
 ) time.Time {
-	return time.Now().Add((1<<retry - 1) * time.Second)
+	return t.Created().Add((1<<retry - 1) * time.Second)
 }
 
 // Execute idempotently runs the task to completion or errors.
@@ -76,12 +82,12 @@ func (t *PropagateOperation) Execute(
 	ctx = db.Begin(ctx)
 	defer db.LoggedRollback(ctx)
 
-	operation, err := model.LoadCanonicalOperationByID(ctx, t.ID)
+	operation, err := model.LoadCanonicalOperationByID(ctx, t.id)
 	if err != nil {
 		return errors.Trace(err)
 	} else if operation == nil {
 		return errors.Trace(
-			errors.Newf("Canonical operation not found: %s", t.ID))
+			errors.Newf("Canonical operation not found: %s", t.id))
 	}
 
 	db.Commit(ctx)
@@ -93,7 +99,7 @@ func (t *PropagateOperation) Execute(
 	}
 
 	if host != mint.GetHost(ctx) {
-		_, err := client.PropagateOperation(ctx, t.ID, host)
+		_, err := client.PropagateOperation(ctx, t.id, host)
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -106,7 +112,7 @@ func (t *PropagateOperation) Execute(
 	}
 
 	if host != mint.GetHost(ctx) {
-		_, err := client.PropagateOperation(ctx, t.ID, host)
+		_, err := client.PropagateOperation(ctx, t.id, host)
 		if err != nil {
 			return errors.Trace(err)
 		}

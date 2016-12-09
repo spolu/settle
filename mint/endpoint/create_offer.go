@@ -183,7 +183,7 @@ func (e *CreateOffer) ExecuteCanonical(
 
 	offer := model.NewOfferResource(ctx, of)
 
-	err = async.Queue(ctx, task.NewPropagateOffer(ctx, offer.ID))
+	err = async.Queue(ctx, task.NewPropagateOffer(ctx, time.Now(), offer.ID))
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
 	}

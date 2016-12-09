@@ -8,6 +8,9 @@ const (
 	// TimeResolutionNs is the resolution of our time variables in nanoseconds
 	// (aka resolution in milliseconds).
 	TimeResolutionNs int64 = 1000 * 1000
+	// TransactionExpiryMs is the time it takes to expire a transaction for
+	// this mint (get it canceled if not settled). Expressed in ms.
+	TransactionExpiryMs int64 = 1000 * 60 * 60
 )
 
 // PgType is the propagation type of an object.
@@ -113,6 +116,7 @@ type TransactionResource struct {
 	Destination string   `json:"destination"`
 	Path        []string `json:"path"`
 
+	Expiry int64    `json:"expiry"`
 	Status TxStatus `json:"status"`
 	Lock   string   `json:"lock"`
 
