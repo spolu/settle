@@ -1,7 +1,7 @@
 # mint
 
+ [ ] check expiry of transactions at creation
  [ ] pass DSN for DB, support Postgres
- [ ] expose expiry of transactions?
  [x] transaction expiration
  [x] async proceses
  [x] propagation protocol for both operations and offers
