@@ -35,7 +35,7 @@ func (c *Controller) Bind(
 
 	mux.HandleFunc(pat.Post("/transactions/:transaction"), endpoint.HandlerFor(endpoint.EndPtCreateTransaction))
 	mux.HandleFunc(pat.Post("/operations/:operation"), endpoint.HandlerFor(endpoint.EndPtCreateOperation))
-	mux.HandleFunc(pat.Post("/offers/:offer"), endpoint.HandlerFor(endpoint.EndPtCreateOffer))
+	mux.HandleFunc(pat.Post("/offers/:offer"), endpoint.HandlerFor(endpoint.EndPtPropagateOffer))
 	mux.HandleFunc(pat.Post("/balances/:balance"), endpoint.HandlerFor(endpoint.EndPtPropagateBalance))
 
 	// mux.HandleFunc(pat.Get("/assets/:asset/offers"), endpoint.HandlerFor(endpoint.EndPtListOffers))

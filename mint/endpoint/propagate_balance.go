@@ -28,8 +28,8 @@ func init() {
 	registrar[EndPtPropagateBalance] = NewPropagateBalance
 }
 
-// PropagateBalance fetches the balance propagated and creates a local copy of
-// it.
+// PropagateBalance fetches the balance propagated and creates a local
+// propagated copy of it.
 type PropagateBalance struct {
 	Client *mint.Client
 
