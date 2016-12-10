@@ -20,19 +20,17 @@ import (
 )
 
 const (
-	// EndPtCreateOperation creates a new operation.
-	EndPtCreateOperation EndPtName = "CreateOperation"
+	// EndPtPropagateOperation creates a new operation.
+	EndPtPropagateOperation EndPtName = "PropagateOperation"
 )
 
 func init() {
-	registrar[EndPtCreateOperation] = NewCreateOperation
+	registrar[EndPtPropagateOperation] = NewPropagateOperation
 }
 
-// CreateOperation is used for the propagation of operations across mints. It's
-// an unauthenticated endpoint called by canonical mints (or clients if
-// necessary) that triggers the retrieval and local storage of an operation.
-// Note that canonical Operations are exclusively created by transactions.
-type CreateOperation struct {
+// PropagateOperation retrieves a canonical operation and creates a local
+// propagated copy of it.
+type PropagateOperation struct {
 	Client *mint.Client
 
 	ID    string
@@ -40,8 +38,8 @@ type CreateOperation struct {
 	Token string
 }
 
-// NewCreateOperation constructs and initialiezes the endpoint.
-func NewCreateOperation(
+// NewPropagateOperation constructs and initialiezes the endpoint.
+func NewPropagateOperation(
 	r *http.Request,
 ) (Endpoint, error) {
 	ctx := r.Context()
@@ -52,13 +50,13 @@ func NewCreateOperation(
 		return nil, errors.Trace(err) // 500
 	}
 
-	return &CreateOperation{
+	return &PropagateOperation{
 		Client: client,
 	}, nil
 }
 
 // Validate validates the input parameters.
-func (e *CreateOperation) Validate(
+func (e *PropagateOperation) Validate(
 	r *http.Request,
 ) error {
 	ctx := r.Context()
@@ -76,7 +74,7 @@ func (e *CreateOperation) Validate(
 }
 
 // Execute executes the endpoint.
-func (e *CreateOperation) Execute(
+func (e *PropagateOperation) Execute(
 	ctx context.Context,
 ) (*int, *svc.Resp, error) {
 	// Technically this is a propagation so out of consistency with other
@@ -85,7 +83,7 @@ func (e *CreateOperation) Execute(
 }
 
 // ExecutePropagated executes the propagation of an operation (involved mint).
-func (e *CreateOperation) ExecutePropagated(
+func (e *PropagateOperation) ExecutePropagated(
 	ctx context.Context,
 ) (*int, *svc.Resp, error) {
 	operation, err := e.Client.RetrieveOperation(ctx, e.ID)

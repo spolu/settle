@@ -1,14 +1,12 @@
 # cli?
 
-# api?
-
 # mint
 
- [ ] split endpoints between creation and propagation
  [ ] list endpoint
  [ ] order book: list of offers
  [ ] list of operations
  [ ] list of balances
+ [x] split endpoints between creation and propagation
  [x] balance propogation
  [x] pass DSN for DB, support Postgres
  [x] check expiry at settlement
