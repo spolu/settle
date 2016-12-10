@@ -132,6 +132,12 @@ func (t *ExpireTransaction) Execute(
 			if err != nil {
 				return errors.Trace(err)
 			}
+
+			err = async.Queue(ctx,
+				NewPropagateBalance(ctx, time.Now(), srcBalance.ID()))
+			if err != nil {
+				return errors.Trace(err)
+			}
 		}
 
 		op.Status = mint.TxStCanceled

@@ -70,6 +70,7 @@ func TestPropagateOperationSimple(
 	assert.Equal(t, 200, status)
 
 	async.TestRunOne(m[0].Ctx)
+	async.TestRunOne(m[0].Ctx)
 
 	owner, token, err := mint.NormalizedOwnerAndTokenFromID(m[1].Ctx,
 		tx.Operations[0].ID)

@@ -578,6 +578,12 @@ func (e *CreateTransaction) ExecutePlan(
 			if err != nil {
 				return errors.Trace(err)
 			}
+
+			err = async.Queue(ctx,
+				task.NewPropagateBalance(ctx, time.Now(), srcBalance.ID()))
+			if err != nil {
+				return errors.Trace(err)
+			}
 		}
 
 		mint.Logf(ctx,

@@ -5,11 +5,11 @@
 # mint
 
  [ ] split endpoints between creation and propagation
- [ ] balance propogation
  [ ] list endpoint
  [ ] order book: list of offers
  [ ] list of operations
  [ ] list of balances
+ [x] balance propogation
  [x] pass DSN for DB, support Postgres
  [x] check expiry at settlement
  [x] check expiry of transactions at creation

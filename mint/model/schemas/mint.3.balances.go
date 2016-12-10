@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS balances(
   value VARCHAR(64) NOT NULL,   -- balance value
 
   PRIMARY KEY(owner, token),
-  CONSTRAINT balances_asset_holder_u UNIQUE (asset, holder) -- not propagated
+  CONSTRAINT balances_asset_holder_u UNIQUE (asset, holder)
 );
 `
 )
