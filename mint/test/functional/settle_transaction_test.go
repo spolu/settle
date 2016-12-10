@@ -127,13 +127,13 @@ func TestSettleTransactionWith2Offers(
 	assert.Equal(t, mint.TxStSettled, tx2.Operations[0].Status)
 
 	// Check balance on m[0]
-	balance, err := model.LoadBalanceByAssetHolder(m[0].Ctx,
+	balance, err := model.LoadCanonicalBalanceByAssetHolder(m[0].Ctx,
 		a[0].Name, u[1].Address)
 	assert.Nil(t, err)
 	assert.Equal(t, big.NewInt(11), (*big.Int)(&balance.Value))
 
 	// Check balance on m[1]
-	balance, err = model.LoadBalanceByAssetHolder(m[1].Ctx,
+	balance, err = model.LoadCanonicalBalanceByAssetHolder(m[1].Ctx,
 		a[1].Name, u[2].Address)
 	assert.Nil(t, err)
 	assert.Equal(t, big.NewInt(11), (*big.Int)(&balance.Value))
@@ -227,7 +227,7 @@ func TestSettleTransactionmWithNoOffer(
 	assert.Equal(t, int8(0), *tx0.Operations[0].TransactionHop)
 
 	// Check balance on m[0]
-	balance, err := model.LoadBalanceByAssetHolder(m[0].Ctx,
+	balance, err := model.LoadCanonicalBalanceByAssetHolder(m[0].Ctx,
 		a[0].Name, u[1].Address)
 	assert.Nil(t, err)
 	assert.Equal(t, big.NewInt(10), (*big.Int)(&balance.Value))

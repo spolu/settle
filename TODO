@@ -1,12 +1,13 @@
 # cli?
 
-# api?
-
 # mint
 
  [ ] list endpoint
- [ ] order book
+ [ ] order book: list of offers
  [ ] list of operations
+ [ ] list of balances
+ [x] split endpoints between creation and propagation
+ [x] balance propogation
  [x] pass DSN for DB, support Postgres
  [x] check expiry at settlement
  [x] check expiry of transactions at creation
@@ -37,8 +38,9 @@
  [x] split controller into endpoint.CreateXXX object with Execute and Validate
  [x] move mint host to context
 
-  # test
+  # tests
 
+    [ ] transaction expiration and balance fixup
     [ ] test canonical expiry calculation (min)
     [ ] test settling an expired transaction
     [ ] test that consumes an offer entirely (check status)

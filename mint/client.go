@@ -177,6 +177,41 @@ func FullMintURL(
 	return &url
 }
 
+// RetrieveBalance retrieves an balance given its ID by extracting the mint and
+// retrieving it from there.
+func (c *Client) RetrieveBalance(
+	ctx context.Context,
+	id string,
+) (*BalanceResource, error) {
+	owner, _, err := NormalizedOwnerAndTokenFromID(ctx, id)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	_, host, err := UsernameAndMintHostFromAddress(ctx, owner)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	r, err := c.httpClient.Get(
+		FullMintURL(ctx, host, fmt.Sprintf("/balances/%s", id)).String())
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	defer r.Body.Close()
+
+	var raw svc.Resp
+	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	var balance BalanceResource
+	if err := raw.Extract("balance", &balance); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &balance, nil
+}
+
 // RetrieveOffer retrieves an offer given its ID by extracting the mint and
 // retrieving it from there.
 func (c *Client) RetrieveOffer(
@@ -285,6 +320,39 @@ func (c *Client) RetrieveTransaction(
 	}
 
 	return &transaction, nil
+}
+
+// PropagateBalance propagates an balance to the specified mint.
+func (c *Client) PropagateBalance(
+	ctx context.Context,
+	id string,
+	mint string,
+) (*BalanceResource, error) {
+	req, err := http.NewRequest("POST",
+		FullMintURL(ctx, mint,
+			fmt.Sprintf("/balances/%s", id)).String(), nil)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	r, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	defer r.Body.Close()
+
+	var raw svc.Resp
+	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	var balance BalanceResource
+	if err := raw.Extract("balance", &balance); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &balance, nil
 }
 
 // PropagateOffer propagates an offer to the specified mint.

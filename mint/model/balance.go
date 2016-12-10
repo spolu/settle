@@ -4,6 +4,8 @@ package model
 
 import (
 	"context"
+	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -12,24 +14,45 @@ import (
 	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/token"
+	"github.com/spolu/settle/mint"
 )
 
 // Balance represents a user balance for a given asset. Balances are updated as
-// operations are created.
+// operations are created and then propagated.
+// - Canonical balances are stored on the mint of the balance's asset owner
+//   (which acts as source of truth on its state).
+// - Propagated balances are indicatively stored on the mints of the balances's
+//   holders.
 type Balance struct {
-	Owner   string
-	Token   string
-	Created time.Time
+	Owner       string
+	Token       string
+	Created     time.Time
+	Propagation mint.PgType
 
 	Asset  string // Asset name.
 	Holder string // Holder address.
 	Value  Amount
 }
 
-// CreateBalance creates and store a new Balance object. Only one balance can
-// exist for an asset, holder pair (since they are not propagated). Existing
-// balance should be retrieved and updated instead.
-func CreateBalance(
+// NewBalanceResource generates a new resource.
+func NewBalanceResource(
+	ctx context.Context,
+	balance *Balance,
+) mint.BalanceResource {
+	return mint.BalanceResource{
+		ID: fmt.Sprintf(
+			"%s[%s]", balance.Owner, balance.Token),
+		Created: balance.Created.UnixNano() / mint.TimeResolutionNs,
+		Owner:   balance.Owner,
+		Asset:   balance.Asset,
+		Holder:  balance.Holder,
+		Value:   (*big.Int)(&balance.Value),
+	}
+}
+
+// CreateCanonicalBalance creates and store a new Balance object. Only one
+// balance can exist for an asset, holder pair.
+func CreateCanonicalBalance(
 	ctx context.Context,
 	owner string,
 	asset string,
@@ -37,9 +60,10 @@ func CreateBalance(
 	value Amount,
 ) (*Balance, error) {
 	balance := Balance{
-		Owner:   owner,
-		Token:   token.New("balance"),
-		Created: time.Now().UTC(),
+		Owner:       owner,
+		Token:       token.New("balance"),
+		Created:     time.Now().UTC(),
+		Propagation: mint.PgTpCanonical,
 
 		Asset:  asset,
 		Holder: holder,
@@ -49,9 +73,9 @@ func CreateBalance(
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO balances
-  (owner, token, created, asset, holder, value)
+  (owner, token, created, propagation, asset, holder, value)
 VALUES
-  (:owner, :token, :created, :asset, :holder, :value)
+  (:owner, :token, :created, :propagation, :asset, :holder, :value)
 `, balance); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:
@@ -67,6 +91,55 @@ VALUES
 	}
 
 	return &balance, nil
+}
+
+// CreatePropagatedBalance creates and store a new propagated Balance object.
+func CreatePropagatedBalance(
+	ctx context.Context,
+	owner string,
+	token string,
+	created time.Time,
+	asset string,
+	holder string,
+	value Amount,
+) (*Balance, error) {
+	balance := Balance{
+		Owner:       owner,
+		Token:       token,
+		Created:     created.UTC(),
+		Propagation: mint.PgTpPropagated,
+
+		Asset:  asset,
+		Holder: holder,
+		Value:  value,
+	}
+
+	ext := db.Ext(ctx)
+	if _, err := sqlx.NamedExec(ext, `
+INSERT INTO balances
+  (owner, token, created, propagation, asset, holder, value)
+VALUES
+  (:owner, :token, :created, :propagation, :asset, :holder, :value)
+`, balance); err != nil {
+		switch err := err.(type) {
+		case *pq.Error:
+			if err.Code.Name() == "unique_violation" {
+				return nil, errors.Trace(ErrUniqueConstraintViolation{err})
+			}
+		case sqlite3.Error:
+			if err.ExtendedCode == sqlite3.ErrConstraintUnique {
+				return nil, errors.Trace(ErrUniqueConstraintViolation{err})
+			}
+		}
+		return nil, errors.Trace(err)
+	}
+
+	return &balance, nil
+}
+
+// ID returns the ID of the object.
+func (b *Balance) ID() string {
+	return fmt.Sprintf("%s[%s]", b.Owner, b.Token)
 }
 
 // Save updates the object database representation with the in-memory values.
@@ -87,16 +160,17 @@ WHERE owner = :owner
 	return nil
 }
 
-// LoadBalanceByAssetHolder attempts to load a balance for the given holder
-// address and asset name.
-func LoadBalanceByAssetHolder(
+// LoadCanonicalBalanceByAssetHolder attempts to load a balance for the given
+// holder address and asset name.
+func LoadCanonicalBalanceByAssetHolder(
 	ctx context.Context,
 	asset string,
 	holder string,
 ) (*Balance, error) {
 	balance := Balance{
-		Asset:  asset,
-		Holder: holder,
+		Asset:       asset,
+		Holder:      holder,
+		Propagation: mint.PgTpCanonical,
 	}
 
 	ext := db.Ext(ctx)
@@ -119,22 +193,105 @@ WHERE asset = :asset
 	return &balance, nil
 }
 
-// LoadOrCreateBalanceByAssetHolder loads an existing balance for the specified
-// asset and holder or creates one (with a 0 value) if it does not exist.
-func LoadOrCreateBalanceByAssetHolder(
+// LoadOrCreateCanonicalBalanceByAssetHolder loads an existing balance for the
+// specified asset and holder or creates one (with a 0 value) if it does not
+// exist.
+func LoadOrCreateCanonicalBalanceByAssetHolder(
 	ctx context.Context,
 	owner string,
 	asset string,
 	holder string,
 ) (*Balance, error) {
-	balance, err := LoadBalanceByAssetHolder(ctx, asset, holder)
+	balance, err := LoadCanonicalBalanceByAssetHolder(ctx, asset, holder)
 	if err != nil {
 		return nil, errors.Trace(err)
 	} else if balance == nil {
-		balance, err = CreateBalance(ctx, owner, asset, holder, Amount{})
+		balance, err = CreateCanonicalBalance(ctx,
+			owner, asset, holder, Amount{})
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
 	}
 	return balance, nil
+}
+
+// LoadCanonicalBalanceByOwnerToken attempts to load a canonical balance for
+// the given owner and token.
+func LoadCanonicalBalanceByOwnerToken(
+	ctx context.Context,
+	owner string,
+	token string,
+) (*Balance, error) {
+	balance := Balance{
+		Owner:       owner,
+		Token:       token,
+		Propagation: mint.PgTpCanonical,
+	}
+
+	ext := db.Ext(ctx)
+	if rows, err := sqlx.NamedQuery(ext, `
+SELECT *
+FROM balances
+WHERE owner = :owner
+  AND token = :token
+  AND propagation = :propagation
+`, balance); err != nil {
+		return nil, errors.Trace(err)
+	} else if !rows.Next() {
+		return nil, nil
+	} else if err := rows.StructScan(&balance); err != nil {
+		defer rows.Close()
+		return nil, errors.Trace(err)
+	} else if err := rows.Close(); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &balance, nil
+}
+
+// LoadCanonicalBalanceByID attempts to load the canonical balanceffer for the
+// given id.
+func LoadCanonicalBalanceByID(
+	ctx context.Context,
+	id string,
+) (*Balance, error) {
+	owner, token, err := mint.NormalizedOwnerAndTokenFromID(ctx, id)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	return LoadCanonicalBalanceByOwnerToken(ctx, owner, token)
+}
+
+// LoadPropagatedBalanceByOwnerToken attempts to load a propagated balance for
+// the given owner and token.
+func LoadPropagatedBalanceByOwnerToken(
+	ctx context.Context,
+	owner string,
+	token string,
+) (*Balance, error) {
+	balance := Balance{
+		Owner:       owner,
+		Token:       token,
+		Propagation: mint.PgTpPropagated,
+	}
+
+	ext := db.Ext(ctx)
+	if rows, err := sqlx.NamedQuery(ext, `
+SELECT *
+FROM balances
+WHERE owner = :owner
+  AND token = :token
+  AND propagation = :propagation
+`, balance); err != nil {
+		return nil, errors.Trace(err)
+	} else if !rows.Next() {
+		return nil, nil
+	} else if err := rows.StructScan(&balance); err != nil {
+		defer rows.Close()
+		return nil, errors.Trace(err)
+	} else if err := rows.Close(); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &balance, nil
 }

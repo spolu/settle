@@ -4,6 +4,7 @@ package task
 
 import (
 	"context"
+	"math/big"
 	"time"
 
 	"github.com/spolu/settle/lib/db"
@@ -97,6 +98,48 @@ func (t *ExpireTransaction) Execute(
 		}
 	}
 	for _, op := range ops {
+		asset, err := model.LoadAssetByName(ctx, op.Asset)
+		if err != nil {
+			return errors.Trace(err)
+		} else if asset == nil {
+			return errors.Trace(errors.Newf("Asset not found: %s", op.Asset))
+		}
+
+		// Restore the source balance if applicable.
+		var srcBalance *model.Balance
+		if asset.Owner != op.Source {
+			srcBalance, err = model.LoadCanonicalBalanceByAssetHolder(ctx,
+				op.Asset, op.Source)
+			if err != nil {
+				return errors.Trace(err)
+			} else if srcBalance == nil {
+				return errors.Trace(errors.Newf(
+					"Source has no balance in %s: %s", op.Asset, op.Source))
+			}
+			(*big.Int)(&srcBalance.Value).Add(
+				(*big.Int)(&srcBalance.Value), (*big.Int)(&op.Amount))
+
+			// Checks if the srcBalance is positive and not overflown.
+			b := (*big.Int)(&srcBalance.Value)
+			if new(big.Int).Abs(b).Cmp(model.MaxAssetAmount) >= 0 ||
+				b.Cmp(new(big.Int)) < 0 {
+				return errors.Trace(errors.Newf(
+					"Invalid resulting balance for %s: %s",
+					srcBalance.Holder, b.String()))
+			}
+
+			err = srcBalance.Save(ctx)
+			if err != nil {
+				return errors.Trace(err)
+			}
+
+			err = async.Queue(ctx,
+				NewPropagateBalance(ctx, time.Now(), srcBalance.ID()))
+			if err != nil {
+				return errors.Trace(err)
+			}
+		}
+
 		op.Status = mint.TxStCanceled
 		err = op.Save(ctx)
 		if err != nil {

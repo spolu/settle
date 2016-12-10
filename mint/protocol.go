@@ -64,6 +64,17 @@ type AssetResource struct {
 	Scale int8   `json:"scale"`
 }
 
+// BalanceResource is the representation of an asset balance in the mint API.
+type BalanceResource struct {
+	ID      string `json:"id"`
+	Created int64  `json:"created"`
+	Owner   string `json:"owner"`
+
+	Asset  string   `json:"asset"`
+	Holder string   `json:"holder"`
+	Value  *big.Int `json:"value"`
+}
+
 // OperationResource is the representation of an operation in the mint API.
 type OperationResource struct {
 	ID      string `json:"id"`

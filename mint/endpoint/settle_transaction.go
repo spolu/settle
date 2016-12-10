@@ -141,13 +141,6 @@ func (e *SettleTransaction) ExecuteCanonical(
 	}
 	e.Tx = tx
 
-	fmt.Printf(
-		"\n>>>created: %s\n>>>expiry: %s\n>>>now: %s\n\n",
-		e.Tx.Created.Format(time.UnixDate),
-		e.Tx.Expiry.Format(time.UnixDate),
-		time.Now().Format(time.UnixDate),
-	)
-
 	if e.Tx.Expiry.Before(time.Now()) {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
 			402, "settlement_failed",
@@ -428,8 +421,9 @@ func (e *SettleTransaction) Settle(
 			var dstBalance *model.Balance
 			if a.OperationDestination != nil &&
 				asset.Owner != *a.OperationDestination {
-				dstBalance, err = model.LoadOrCreateBalanceByAssetHolder(ctx,
-					asset.Owner, *a.OperationAsset, *a.OperationDestination)
+				dstBalance, err =
+					model.LoadOrCreateCanonicalBalanceByAssetHolder(ctx,
+						asset.Owner, *a.OperationAsset, *a.OperationDestination)
 				if err != nil {
 					return errors.Trace(err)
 				}
@@ -457,6 +451,12 @@ func (e *SettleTransaction) Settle(
 				}
 
 				err = dstBalance.Save(ctx)
+				if err != nil {
+					return errors.Trace(err)
+				}
+
+				err = async.Queue(ctx,
+					task.NewPropagateBalance(ctx, time.Now(), dstBalance.ID()))
 				if err != nil {
 					return errors.Trace(err)
 				}

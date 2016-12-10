@@ -505,7 +505,7 @@ func (e *CreateTransaction) ExecutePlan(
 
 		var srcBalance *model.Balance
 		if a.OperationSource != nil && asset.Owner != *a.OperationSource {
-			srcBalance, err = model.LoadBalanceByAssetHolder(ctx,
+			srcBalance, err = model.LoadCanonicalBalanceByAssetHolder(ctx,
 				*a.OperationAsset, *a.OperationSource)
 			if err != nil {
 				return errors.Trace(err)
@@ -519,8 +519,9 @@ func (e *CreateTransaction) ExecutePlan(
 		var dstBalance *model.Balance
 		if a.OperationDestination != nil &&
 			asset.Owner != *a.OperationDestination {
-			dstBalance, err = model.LoadOrCreateBalanceByAssetHolder(ctx,
-				asset.Owner, *a.OperationAsset, *a.OperationDestination)
+			dstBalance, err =
+				model.LoadOrCreateCanonicalBalanceByAssetHolder(ctx,
+					asset.Owner, *a.OperationAsset, *a.OperationDestination)
 			if err != nil {
 				return errors.Trace(err)
 			}
@@ -574,6 +575,12 @@ func (e *CreateTransaction) ExecutePlan(
 					srcBalance.Holder, b.String()))
 			}
 			err = srcBalance.Save(ctx)
+			if err != nil {
+				return errors.Trace(err)
+			}
+
+			err = async.Queue(ctx,
+				task.NewPropagateBalance(ctx, time.Now(), srcBalance.ID()))
 			if err != nil {
 				return errors.Trace(err)
 			}
