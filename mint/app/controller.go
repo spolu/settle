@@ -19,10 +19,10 @@ func (c *Controller) Bind(
 	mux.HandleFunc(pat.Post("/transactions"), endpoint.HandlerFor(endpoint.EndPtCreateTransaction))
 	mux.HandleFunc(pat.Post("/offers/:offer/close"), endpoint.HandlerFor(endpoint.EndPtCloseOffer))
 
-	// mux.HandleFunc(pat.Get("/assets"), endpoint.HandlerFor(endpoint.EndPtListAssets))
-	// mux.HandleFunc(pat.Get("/assets/:asset/balances"), endpoint.HandlerFor(endpoint.EndPtListBalances))
+	mux.HandleFunc(pat.Get("/assets"), endpoint.HandlerFor(endpoint.EndPtListAssets))
+	mux.HandleFunc(pat.Get("/balances"), endpoint.HandlerFor(endpoint.EndPtListBalances))
+	mux.HandleFunc(pat.Get("/assets/:asset/balances"), endpoint.HandlerFor(endpoint.EndPtListAssetBalances))
 	// mux.HandleFunc(pat.Get("/assets/:asset/operations"), endpoint.HandlerFor(endpoint.EndPtListOperations))
-	// mux.HandleFunc(pat.Get("/assets/:asset/transactions"), endpoint.HandlerFor(endpoint.EndPtListTransactions))
 
 	// Mixed.
 	mux.HandleFunc(pat.Post("/transactions/:transaction/settle"), endpoint.HandlerFor(endpoint.EndPtSettleTransaction))
@@ -38,5 +38,5 @@ func (c *Controller) Bind(
 	mux.HandleFunc(pat.Post("/offers/:offer"), endpoint.HandlerFor(endpoint.EndPtPropagateOffer))
 	mux.HandleFunc(pat.Post("/balances/:balance"), endpoint.HandlerFor(endpoint.EndPtPropagateBalance))
 
-	// mux.HandleFunc(pat.Get("/assets/:asset/offers"), endpoint.HandlerFor(endpoint.EndPtListOffers))
+	mux.HandleFunc(pat.Get("/assets/:asset/offers"), endpoint.HandlerFor(endpoint.EndPtListAssetOffers))
 }

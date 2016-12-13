@@ -265,7 +265,7 @@ func (e *SettleTransaction) ExecutePropagated(
 			if err != nil {
 				return nil, nil, errors.Trace(err) // 500
 			}
-			crs, err := model.LoadCrossingsByTransaction(ctx, e.ID)
+			crs, err := model.LoadCanonicalCrossingsByTransaction(ctx, e.ID)
 			if err != nil {
 				return nil, nil, errors.Trace(err) // 500
 			}
@@ -410,7 +410,7 @@ func (e *SettleTransaction) Settle(
 		switch a.Type {
 		case TxActTpOperation:
 
-			asset, err := model.LoadAssetByName(ctx, *a.OperationAsset)
+			asset, err := model.LoadCanonicalAssetByName(ctx, *a.OperationAsset)
 			if err != nil {
 				return errors.Trace(err)
 			} else if asset == nil {
@@ -489,7 +489,8 @@ func (e *SettleTransaction) Settle(
 
 		case TxActTpCrossing:
 
-			cr, err := model.LoadCrossingByTransactionHop(ctx, e.ID, int8(h))
+			cr, err := model.LoadCanonicalCrossingByTransactionHop(ctx,
+				e.ID, int8(h))
 			if err != nil {
 				return errors.Trace(err)
 			} else if cr == nil {

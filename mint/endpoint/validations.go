@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"regexp"
 	"strconv"
+	"time"
 
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/mint"
@@ -14,6 +15,23 @@ import (
 // PriceRegexp is used to validate and parse a transaction price.
 var PriceRegexp = regexp.MustCompile(
 	"^([0-9]+)\\/([0-9]+)$")
+
+// ValidateAsset vlaidates an asset name.
+func ValidateAsset(
+	ctx context.Context,
+	asset string,
+) (*mint.AssetResource, error) {
+	a, err := mint.AssetResourceFromName(ctx, asset)
+	if err != nil {
+		return nil, errors.Trace(errors.NewUserErrorf(err,
+			400, "asset_invalid",
+			"The asset you provided is invalid: %s.",
+			asset,
+		))
+	}
+
+	return a, nil
+}
 
 // ValidatePrice validates a price (pB/pQ).
 func ValidatePrice(
@@ -168,4 +186,76 @@ func ValidateHop(
 	converted := int8(h)
 
 	return &converted, nil
+}
+
+// ValidateCreatedBefore validates a paging created_before.
+func ValidateCreatedBefore(
+	ctx context.Context,
+	createdBefore string,
+) (*time.Time, error) {
+	if createdBefore == "" {
+		t := time.Now()
+		return &t, nil
+	}
+
+	c, err := strconv.ParseInt(createdBefore, 10, 64)
+	if err != nil || c < 0 {
+		return nil, errors.Trace(errors.NewUserErrorf(err,
+			400, "created_before_invalid",
+			"The paging created_before value provided is invalid: %s. "+
+				"Paging created_before must be a positive integer "+
+				"representing a unix time in milliseconds.",
+			createdBefore,
+		))
+	}
+	converted := time.Unix(0, c*mint.TimeResolutionNs)
+
+	return &converted, nil
+}
+
+// ValidateLimit validates a paging limit.
+func ValidateLimit(
+	ctx context.Context,
+	limit string,
+) (*uint, error) {
+	if limit == "" {
+		l := uint(100)
+		return &l, nil
+	}
+
+	l, err := strconv.ParseInt(limit, 10, 64)
+	if err != nil || l < 0 || l > 1000 {
+		return nil, errors.Trace(errors.NewUserErrorf(err,
+			400, "created_before_invalid",
+			"The paging limit provided is invalid: %s. Paging limit must be "+
+				"an integer between 0 and 1000.",
+			limit,
+		))
+	}
+	converted := uint(l)
+
+	return &converted, nil
+}
+
+// ValidatePropagation validates a propagation type.
+func ValidatePropagation(
+	ctx context.Context,
+	propagation string,
+) (*mint.PgType, error) {
+	p := mint.PgTpCanonical
+	switch propagation {
+	case string(mint.PgTpCanonical):
+		p = mint.PgTpCanonical
+	case string(mint.PgTpPropagated):
+		p = mint.PgTpPropagated
+	default:
+		return nil, errors.Trace(errors.NewUserErrorf(nil,
+			400, "propagation_invalid",
+			"The propagation type you provided is invalid: %s. It can be "+
+				"either canonical or propagated.",
+			propagation,
+		))
+	}
+
+	return &p, nil
 }

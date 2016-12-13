@@ -57,6 +57,7 @@ func NewOperationResource(
 			"%s[%s]", operation.Owner, operation.Token),
 		Created:        operation.Created.UnixNano() / mint.TimeResolutionNs,
 		Owner:          operation.Owner,
+		Propagation:    operation.Propagation,
 		Asset:          operation.Asset,
 		Source:         operation.Source,
 		Destination:    operation.Destination,
@@ -284,9 +285,9 @@ func LoadCanonicalOperationsByTransaction(
 	ctx context.Context,
 	transaction string,
 ) ([]*Operation, error) {
-	query := Operation{
-		Transaction: &transaction,
-		Propagation: mint.PgTpCanonical,
+	query := map[string]interface{}{
+		"txn":         &transaction,
+		"propagation": mint.PgTpCanonical,
 	}
 
 	ext := db.Ext(ctx)

@@ -97,7 +97,7 @@ func TestCreateOfferWithNotOwnedAsset(
 	assert.Nil(t, err)
 
 	assert.Equal(t, 400, status)
-	assert.Equal(t, "offer_not_authorized", e.ErrCode)
+	assert.Equal(t, "not_authorized", e.ErrCode)
 }
 
 func TestCreateOfferWithInexistantAsset(

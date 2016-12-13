@@ -49,9 +49,10 @@ func NewOfferResource(
 	return mint.OfferResource{
 		ID: fmt.Sprintf(
 			"%s[%s]", offer.Owner, offer.Token),
-		Created: offer.Created.UnixNano() / mint.TimeResolutionNs,
-		Owner:   offer.Owner,
-		Pair:    fmt.Sprintf("%s/%s", offer.BaseAsset, offer.QuoteAsset),
+		Created:     offer.Created.UnixNano() / mint.TimeResolutionNs,
+		Owner:       offer.Owner,
+		Propagation: offer.Propagation,
+		Pair:        fmt.Sprintf("%s/%s", offer.BaseAsset, offer.QuoteAsset),
 		Price: fmt.Sprintf(
 			"%s/%s",
 			(*big.Int)(&offer.BasePrice).String(),
@@ -267,4 +268,88 @@ WHERE owner = :owner
 	}
 
 	return &offer, nil
+}
+
+// LoadOfferListByBaseAsset loads a balance list by base asset.
+func LoadOfferListByBaseAsset(
+	ctx context.Context,
+	createdBefore time.Time,
+	limit uint,
+	asset string,
+) ([]Offer, error) {
+	query := map[string]interface{}{
+		"base_asset":     asset,
+		"created_before": createdBefore.UTC(),
+		"limit":          limit,
+	}
+
+	ext := db.Ext(ctx)
+	rows, err := sqlx.NamedQuery(ext, `
+SELECT *
+FROM offers
+WHERE base_asset = :base_asset
+  AND created < :created_before
+ORDER BY created DESC
+LIMIT :limit
+`, query)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	offers := []Offer{}
+
+	defer rows.Close()
+	for rows.Next() {
+		o := Offer{}
+		err := rows.StructScan(&o)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+
+		offers = append(offers, o)
+	}
+
+	return offers, nil
+}
+
+// LoadOfferListByQuoteAsset loads a balance list by quote asset.
+func LoadOfferListByQuoteAsset(
+	ctx context.Context,
+	createdBefore time.Time,
+	limit uint,
+	asset string,
+) ([]Offer, error) {
+	query := map[string]interface{}{
+		"quote_asset":    asset,
+		"created_before": createdBefore.UTC(),
+		"limit":          limit,
+	}
+
+	ext := db.Ext(ctx)
+	rows, err := sqlx.NamedQuery(ext, `
+SELECT *
+FROM offers
+WHERE quote_asset = :quote_asset
+  AND created < :created_before
+ORDER BY created DESC
+LIMIT :limit
+`, query)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	offers := []Offer{}
+
+	defer rows.Close()
+	for rows.Next() {
+		o := Offer{}
+		err := rows.StructScan(&o)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+
+		offers = append(offers, o)
+	}
+
+	return offers, nil
 }

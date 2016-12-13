@@ -85,7 +85,7 @@ func (t *ExpireTransaction) Execute(
 	if err != nil {
 		return errors.Trace(err)
 	}
-	crs, err := model.LoadCrossingsByTransaction(ctx, t.id)
+	crs, err := model.LoadCanonicalCrossingsByTransaction(ctx, t.id)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -98,7 +98,7 @@ func (t *ExpireTransaction) Execute(
 		}
 	}
 	for _, op := range ops {
-		asset, err := model.LoadAssetByName(ctx, op.Asset)
+		asset, err := model.LoadCanonicalAssetByName(ctx, op.Asset)
 		if err != nil {
 			return errors.Trace(err)
 		} else if asset == nil {

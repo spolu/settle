@@ -81,7 +81,7 @@ func (e *CreateOffer) Validate(
 	// Validate that the base asset's owner matches the offer owner
 	if e.Pair[0].Owner != e.Owner {
 		return errors.Trace(errors.NewUserErrorf(nil,
-			400, "offer_not_authorized",
+			400, "not_authorized",
 			"You can only create offers whose base asset is owned by the "+
 				"account you are currently authenticated with: %s. This "+
 				"offer base asset was created by: %s.",
@@ -115,7 +115,7 @@ func (e *CreateOffer) Execute(
 	defer db.LoggedRollback(ctx)
 
 	// Validate that the asset exists locally.
-	asset, err := model.LoadAssetByName(ctx, e.Pair[0].Name)
+	asset, err := model.LoadCanonicalAssetByName(ctx, e.Pair[0].Name)
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
 	} else if asset == nil {

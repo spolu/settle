@@ -55,9 +55,10 @@ const (
 
 // AssetResource is the representation of an asset in the mint API.
 type AssetResource struct {
-	ID      string `json:"id"`
-	Created int64  `json:"created"`
-	Owner   string `json:"owner"`
+	ID          string `json:"id"`
+	Created     int64  `json:"created"`
+	Owner       string `json:"owner"`
+	Propagation PgType `json:"propagation"`
 
 	Name  string `json:"name"`
 	Code  string `json:"code"`
@@ -66,9 +67,10 @@ type AssetResource struct {
 
 // BalanceResource is the representation of an asset balance in the mint API.
 type BalanceResource struct {
-	ID      string `json:"id"`
-	Created int64  `json:"created"`
-	Owner   string `json:"owner"`
+	ID          string `json:"id"`
+	Created     int64  `json:"created"`
+	Owner       string `json:"owner"`
+	Propagation PgType `json:"propagation"`
 
 	Asset  string   `json:"asset"`
 	Holder string   `json:"holder"`
@@ -77,9 +79,10 @@ type BalanceResource struct {
 
 // OperationResource is the representation of an operation in the mint API.
 type OperationResource struct {
-	ID      string `json:"id"`
-	Created int64  `json:"created"`
-	Owner   string `json:"owner"`
+	ID          string `json:"id"`
+	Created     int64  `json:"created"`
+	Owner       string `json:"owner"`
+	Propagation PgType `json:"propagation"`
 
 	Asset       string   `json:"asset"`
 	Source      string   `json:"source"`
@@ -93,9 +96,10 @@ type OperationResource struct {
 
 // OfferResource is the representation of an offer in the mint API.
 type OfferResource struct {
-	ID      string `json:"id"`
-	Created int64  `json:"created"`
-	Owner   string `json:"owner"`
+	ID          string `json:"id"`
+	Created     int64  `json:"created"`
+	Owner       string `json:"owner"`
+	Propagation PgType `json:"propagation"`
 
 	Pair   string   `json:"pair"`
 	Price  string   `json:"price"`
@@ -107,9 +111,10 @@ type OfferResource struct {
 
 // CrossingResource is the representation of a crossing in the mint API.
 type CrossingResource struct {
-	ID      string `json:"id"`
-	Created int64  `json:"created"`
-	Owner   string `json:"owner"`
+	ID          string `json:"id"`
+	Created     int64  `json:"created"`
+	Owner       string `json:"owner"`
+	Propagation PgType `json:"propagation"`
 
 	Offer  string   `json:"offer"`
 	Amount *big.Int `json:"amount"`
@@ -121,9 +126,10 @@ type CrossingResource struct {
 
 // TransactionResource is the representation of a transaction in the mint API.
 type TransactionResource struct {
-	ID      string `json:"id"`
-	Created int64  `json:"created"`
-	Owner   string `json:"owner"`
+	ID          string `json:"id"`
+	Created     int64  `json:"created"`
+	Owner       string `json:"owner"`
+	Propagation PgType `json:"propagation"`
 
 	Pair        string   `json:"pair"`
 	Amount      *big.Int `json:"amount"`
