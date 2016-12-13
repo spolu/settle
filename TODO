@@ -2,9 +2,10 @@
 
 # mint
 
- [ ] list endpoint
-   [ ] list asset offers (order book)
+ [ ] fix offer fixup on transaction expiration
+ [~] list endpoint
    [ ] list asset operations
+   [x] list asset offers (order book)
    [x] list asset balances
    [x] list balances
    [x] list assets

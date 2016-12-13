@@ -248,8 +248,6 @@ func ValidatePropagation(
 		p = mint.PgTpCanonical
 	case string(mint.PgTpPropagated):
 		p = mint.PgTpPropagated
-	case "":
-		return nil, nil
 	default:
 		return nil, errors.Trace(errors.NewUserErrorf(nil,
 			400, "propagation_invalid",
