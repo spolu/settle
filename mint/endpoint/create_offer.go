@@ -115,7 +115,7 @@ func (e *CreateOffer) Execute(
 	defer db.LoggedRollback(ctx)
 
 	// Validate that the asset exists locally.
-	asset, err := model.LoadAssetByName(ctx, e.Pair[0].Name)
+	asset, err := model.LoadCanonicalAssetByName(ctx, e.Pair[0].Name)
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
 	} else if asset == nil {

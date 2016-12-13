@@ -20,9 +20,10 @@ import (
 // Crossing represents a transaction crossing an offer and consuming some of
 // its amount. Crossings are not propagated.
 type Crossing struct {
-	Owner   string
-	Token   string
-	Created time.Time
+	Owner       string
+	Token       string
+	Created     time.Time
+	Propagation mint.PgType
 
 	Offer  string
 	Amount Amount
@@ -42,6 +43,7 @@ func NewCrossingResource(
 			"%s[%s]", crossing.Owner, crossing.Token),
 		Created:        crossing.Created.UnixNano() / mint.TimeResolutionNs,
 		Owner:          crossing.Owner,
+		Propagation:    crossing.Propagation,
 		Offer:          crossing.Offer,
 		Amount:         (*big.Int)(&crossing.Amount),
 		Status:         crossing.Status,
@@ -50,8 +52,8 @@ func NewCrossingResource(
 	}
 }
 
-// CreateCrossing creates and stores a new Crossing object.
-func CreateCrossing(
+// CreateCanonicalCrossing creates and stores a new Crossing object.
+func CreateCanonicalCrossing(
 	ctx context.Context,
 	owner string,
 	offer string,
@@ -61,9 +63,10 @@ func CreateCrossing(
 	hop int8,
 ) (*Crossing, error) {
 	crossing := Crossing{
-		Owner:   owner,
-		Token:   token.New("crossing"),
-		Created: time.Now().UTC(),
+		Owner:       owner,
+		Token:       token.New("crossing"),
+		Created:     time.Now().UTC(),
+		Propagation: mint.PgTpCanonical,
 
 		Offer:  offer,
 		Amount: amount,
@@ -76,9 +79,9 @@ func CreateCrossing(
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO crossings
-  (owner, token, created, offer, amount, status, txn, hop)
+  (owner, token, created, propagation, offer, amount, status, txn, hop)
 VALUES
-  (:owner, :token, :created, :offer, :amount, :status, :txn, :hop)
+  (:owner, :token, :created, :propagation, :offer, :amount, :status, :txn, :hop)
 `, crossing); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:
@@ -114,9 +117,9 @@ WHERE owner = :owner
 	return nil
 }
 
-// LoadCrossingByTransactionHop attempts to load the crossing for the given
-// transaction and hop.
-func LoadCrossingByTransactionHop(
+// LoadCanonicalCrossingByTransactionHop attempts to load the crossing for the
+// given transaction and hop.
+func LoadCanonicalCrossingByTransactionHop(
 	ctx context.Context,
 	transaction string,
 	hop int8,
@@ -124,6 +127,7 @@ func LoadCrossingByTransactionHop(
 	crossing := Crossing{
 		Transaction: transaction,
 		Hop:         hop,
+		Propagation: mint.PgTpCanonical,
 	}
 
 	ext := db.Ext(ctx)
@@ -132,6 +136,7 @@ SELECT *
 FROM crossings
 WHERE txn = :txn
   AND hop = :hop
+  AND propagation = :propagation
 `, crossing); err != nil {
 		return nil, errors.Trace(err)
 	} else if !rows.Next() {
@@ -146,14 +151,15 @@ WHERE txn = :txn
 	return &crossing, nil
 }
 
-// LoadCrossingsByTransaction loads all crossings that are associated with the
-// specified transaction.
-func LoadCrossingsByTransaction(
+// LoadCanonicalCrossingsByTransaction loads all crossings that are associated
+// with the specified transaction.
+func LoadCanonicalCrossingsByTransaction(
 	ctx context.Context,
 	transaction string,
 ) ([]*Crossing, error) {
-	query := Crossing{
-		Transaction: transaction,
+	query := map[string]interface{}{
+		"txn":         transaction,
+		"propagation": mint.PgTpCanonical,
 	}
 
 	ext := db.Ext(ctx)
@@ -161,6 +167,7 @@ func LoadCrossingsByTransaction(
 SELECT *
 FROM crossings
 WHERE txn = :txn
+  AND propagation = :propagation
 `, query)
 	if err != nil {
 		return nil, errors.Trace(err)

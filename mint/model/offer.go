@@ -49,9 +49,10 @@ func NewOfferResource(
 	return mint.OfferResource{
 		ID: fmt.Sprintf(
 			"%s[%s]", offer.Owner, offer.Token),
-		Created: offer.Created.UnixNano() / mint.TimeResolutionNs,
-		Owner:   offer.Owner,
-		Pair:    fmt.Sprintf("%s/%s", offer.BaseAsset, offer.QuoteAsset),
+		Created:     offer.Created.UnixNano() / mint.TimeResolutionNs,
+		Owner:       offer.Owner,
+		Propagation: offer.Propagation,
+		Pair:        fmt.Sprintf("%s/%s", offer.BaseAsset, offer.QuoteAsset),
 		Price: fmt.Sprintf(
 			"%s/%s",
 			(*big.Int)(&offer.BasePrice).String(),

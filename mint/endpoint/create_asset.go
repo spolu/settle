@@ -82,7 +82,7 @@ func (e *CreateAsset) Execute(
 	ctx = db.Begin(ctx)
 	defer db.LoggedRollback(ctx)
 
-	asset, err := model.CreateAsset(ctx,
+	asset, err := model.CreateCanonicalAsset(ctx,
 		e.Owner,
 		e.Code,
 		e.Scale,

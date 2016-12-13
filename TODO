@@ -1,11 +1,12 @@
-# cli?
+# cli
 
 # mint
 
  [ ] list endpoint
- [ ] order book: list of offers
- [ ] list of operations
- [ ] list of balances
+   [ ] list asset offers (order book)
+   [ ] list asset operations
+   [x] list balances
+   [x] list assets
  [x] split endpoints between creation and propagation
  [x] balance propogation
  [x] pass DSN for DB, support Postgres
@@ -86,6 +87,11 @@
   - Transaction expiry is a bit racy but that's OK since exploiting it is
     equivalent to simply not settling your end of the transaction, and equally
     impacts your trust and the value of your assets.
+
+  # signup
+
+  - username > not a robot > phone > SMS verification
+  - out of cli (cli should be purely mint related)
 
 # contact r?
 

@@ -50,8 +50,9 @@ func NewTransactionResource(
 	tx := mint.TransactionResource{
 		ID: fmt.Sprintf(
 			"%s[%s]", transaction.Owner, transaction.Token),
-		Created: transaction.Created.UnixNano() / mint.TimeResolutionNs,
-		Owner:   transaction.Owner,
+		Created:     transaction.Created.UnixNano() / mint.TimeResolutionNs,
+		Owner:       transaction.Owner,
+		Propagation: transaction.Propagation,
 		Pair: fmt.Sprintf("%s/%s",
 			transaction.BaseAsset, transaction.QuoteAsset),
 		Amount:      (*big.Int)(&transaction.Amount),

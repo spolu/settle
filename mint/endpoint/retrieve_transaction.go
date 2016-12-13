@@ -96,7 +96,7 @@ func (e *RetrieveTransaction) Execute(
 
 	crossings := txStore.GetCrossings(ctx, e.ID)
 	if crossings == nil {
-		crs, err := model.LoadCrossingsByTransaction(ctx, e.ID)
+		crs, err := model.LoadCanonicalCrossingsByTransaction(ctx, e.ID)
 		if err != nil {
 			return nil, nil, errors.Trace(err) // 500
 		}

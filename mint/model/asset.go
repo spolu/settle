@@ -29,9 +29,10 @@ var AssetCodeRegexp = regexp.MustCompile("^[A-Z0-9\\-]{1,64}$")
 
 // Asset represents an asset object. Asset are created by users (issuer).
 type Asset struct {
-	Owner   string
-	Token   string
-	Created time.Time
+	Owner       string
+	Token       string
+	Created     time.Time
+	Propagation mint.PgType
 
 	Code  string // Asset code.
 	Scale int8   // Asset scale.
@@ -45,8 +46,9 @@ func NewAssetResource(
 	return mint.AssetResource{
 		ID: fmt.Sprintf(
 			"%s[%s]", asset.Owner, asset.Token),
-		Created: asset.Created.UnixNano() / mint.TimeResolutionNs,
-		Owner:   asset.Owner,
+		Created:     asset.Created.UnixNano() / mint.TimeResolutionNs,
+		Owner:       asset.Owner,
+		Propagation: asset.Propagation,
 		Name: fmt.Sprintf(
 			"%s[%s.%d]",
 			asset.Owner, asset.Code, asset.Scale,
@@ -56,17 +58,18 @@ func NewAssetResource(
 	}
 }
 
-// CreateAsset creates and stores a new Asset object.
-func CreateAsset(
+// CreateCanonicalAsset creates and stores a new Asset object.
+func CreateCanonicalAsset(
 	ctx context.Context,
 	owner string,
 	code string,
 	scale int8,
 ) (*Asset, error) {
 	asset := Asset{
-		Owner:   owner,
-		Token:   token.New("asset"),
-		Created: time.Now().UTC(),
+		Owner:       owner,
+		Token:       token.New("asset"),
+		Created:     time.Now().UTC(),
+		Propagation: mint.PgTpCanonical,
 
 		Code:  code,
 		Scale: scale,
@@ -75,9 +78,9 @@ func CreateAsset(
 	ext := db.Ext(ctx)
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO assets
-  (owner, token, created, code, scale)
+  (owner, token, created, propagation, code, scale)
 VALUES
-  (:owner, :token, :created, :code, :scale)
+  (:owner, :token, :created, :propagation, :code, :scale)
 `, asset); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:
@@ -95,18 +98,19 @@ VALUES
 	return &asset, nil
 }
 
-// LoadAssetByOwnerCodeScale attempts to load an asset by its owner address,
-// code and scale.
-func LoadAssetByOwnerCodeScale(
+// LoadCanonicalAssetByOwnerCodeScale attempts to load an asset by its owner
+// address, code and scale.
+func LoadCanonicalAssetByOwnerCodeScale(
 	ctx context.Context,
 	owner string,
 	code string,
 	scale int8,
 ) (*Asset, error) {
 	asset := Asset{
-		Owner: owner,
-		Code:  code,
-		Scale: scale,
+		Owner:       owner,
+		Code:        code,
+		Scale:       scale,
+		Propagation: mint.PgTpCanonical,
 	}
 
 	ext := db.Ext(ctx)
@@ -116,6 +120,7 @@ FROM assets
 WHERE owner = :owner
   AND code = :code
   AND scale = :scale
+  AND propagation = :propagation
 `, asset); err != nil {
 		return nil, errors.Trace(err)
 	} else if !rows.Next() {
@@ -130,8 +135,8 @@ WHERE owner = :owner
 	return &asset, nil
 }
 
-// LoadAssetByName attempts to load an asset by its name.
-func LoadAssetByName(
+// LoadCanonicalAssetByName attempts to load an asset by its name.
+func LoadCanonicalAssetByName(
 	ctx context.Context,
 	name string,
 ) (*Asset, error) {
@@ -140,6 +145,47 @@ func LoadAssetByName(
 		return nil, errors.Trace(err)
 	}
 
-	return LoadAssetByOwnerCodeScale(ctx,
+	return LoadCanonicalAssetByOwnerCodeScale(ctx,
 		r.Owner, r.Code, r.Scale)
+}
+
+// LoadAssetListByOwner loads an asset list by owner.
+func LoadAssetListByOwner(
+	ctx context.Context,
+	createdBefore time.Time,
+	limit uint,
+	owner string,
+) ([]Asset, error) {
+	query := map[string]interface{}{
+		"owner":          owner,
+		"created_before": createdBefore.UTC(),
+		"limit":          limit,
+	}
+
+	ext := db.Ext(ctx)
+	rows, err := sqlx.NamedQuery(ext, `
+SELECT *
+FROM assets
+WHERE owner = :owner
+AND created < :created_before
+ORDER BY created DESC
+LIMIT :limit
+`, query)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	assets := []Asset{}
+
+	defer rows.Close()
+	for rows.Next() {
+		a := Asset{}
+		err := rows.StructScan(&a)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		assets = append(assets, a)
+	}
+
+	return assets, nil
 }

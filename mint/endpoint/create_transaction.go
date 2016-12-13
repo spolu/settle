@@ -495,7 +495,7 @@ func (e *CreateTransaction) ExecutePlan(
 	switch a.Type {
 	case TxActTpOperation:
 
-		asset, err := model.LoadAssetByName(ctx, *a.OperationAsset)
+		asset, err := model.LoadCanonicalAssetByName(ctx, *a.OperationAsset)
 		if err != nil {
 			return errors.Trace(err)
 		} else if asset == nil {
@@ -605,7 +605,7 @@ func (e *CreateTransaction) ExecutePlan(
 				"Offer not found: %s", *a.CrossingOffer))
 		}
 
-		cr, err := model.CreateCrossing(ctx,
+		cr, err := model.CreateCanonicalCrossing(ctx,
 			offer.Owner,
 			*a.CrossingOffer,
 			model.Amount(*a.Amount),
