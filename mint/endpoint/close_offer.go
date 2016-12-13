@@ -4,6 +4,7 @@ package endpoint
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/spolu/settle/mint"
 	"github.com/spolu/settle/mint/async"
 	"github.com/spolu/settle/mint/async/task"
+	"github.com/spolu/settle/mint/lib/authentication"
 	"github.com/spolu/settle/mint/model"
 	"goji.io/pat"
 )
@@ -48,14 +50,27 @@ func (e *CloseOffer) Validate(
 ) error {
 	ctx := r.Context()
 
+	e.Owner = fmt.Sprintf("%s@%s",
+		authentication.Get(ctx).User.Username, mint.GetHost(ctx))
+
 	// Validate id.
 	id, owner, token, err := ValidateID(ctx, pat.Param(r, "offer"))
 	if err != nil {
 		return errors.Trace(err)
 	}
 	e.ID = *id
-	e.Owner = *owner
 	e.Token = *token
+
+	// Validate that the authenticated owner owns the offer.
+	if e.Owner != *owner {
+		return errors.Trace(errors.NewUserErrorf(nil,
+			400, "not_authorized",
+			"You can only close an offer that is owned by the account you "+
+				"are currently authenticated with: %s. The requested asset "+
+				"is owned by: %s.",
+			e.Owner, *owner,
+		))
+	}
 
 	return nil
 }

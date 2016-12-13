@@ -16,6 +16,23 @@ import (
 var PriceRegexp = regexp.MustCompile(
 	"^([0-9]+)\\/([0-9]+)$")
 
+// ValidateAsset vlaidates an asset name.
+func ValidateAsset(
+	ctx context.Context,
+	asset string,
+) (*mint.AssetResource, error) {
+	a, err := mint.AssetResourceFromName(ctx, asset)
+	if err != nil {
+		return nil, errors.Trace(errors.NewUserErrorf(err,
+			400, "asset_invalid",
+			"The asset you provided is invalid: %s.",
+			asset,
+		))
+	}
+
+	return a, nil
+}
+
 // ValidatePrice validates a price (pB/pQ).
 func ValidatePrice(
 	ctx context.Context,

@@ -5,6 +5,7 @@
  [ ] list endpoint
    [ ] list asset offers (order book)
    [ ] list asset operations
+   [x] list asset balances
    [x] list balances
    [x] list assets
  [x] split endpoints between creation and propagation
@@ -41,8 +42,11 @@
 
   # tests
 
+    [ ] offer closing + attempt transaction on it
+    [ ] offer closing of an offer not owned by caller
     [ ] transaction expiration and balance fixup
-    [ ] test canonical expiry calculation (min)
+    [ ] transaction expiration and offer fixup
+    [ ] test canonical transaction expiry calculation (min of all propagated)
     [ ] test settling an expired transaction
     [ ] test that consumes an offer entirely (check status)
     [~] transaction tests with misbehaving mint

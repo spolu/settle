@@ -338,3 +338,45 @@ LIMIT :limit
 
 	return balances, nil
 }
+
+// LoadBalanceListByAsset loads a balance list by asset.
+func LoadBalanceListByAsset(
+	ctx context.Context,
+	createdBefore time.Time,
+	limit uint,
+	asset string,
+) ([]Balance, error) {
+	query := map[string]interface{}{
+		"asset":          asset,
+		"created_before": createdBefore.UTC(),
+		"limit":          limit,
+	}
+
+	ext := db.Ext(ctx)
+	rows, err := sqlx.NamedQuery(ext, `
+SELECT *
+FROM balances
+WHERE asset = :asset
+AND created < :created_before
+ORDER BY created DESC
+LIMIT :limit
+`, query)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	balances := []Balance{}
+
+	defer rows.Close()
+	for rows.Next() {
+		b := Balance{}
+		err := rows.StructScan(&b)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+
+		balances = append(balances, b)
+	}
+
+	return balances, nil
+}
