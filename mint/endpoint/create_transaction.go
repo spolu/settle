@@ -574,6 +574,7 @@ func (e *CreateTransaction) ExecutePlan(
 					"Invalid resulting balance for %s: %s",
 					srcBalance.Holder, b.String()))
 			}
+
 			err = srcBalance.Save(ctx)
 			if err != nil {
 				return errors.Trace(err)
@@ -605,6 +606,11 @@ func (e *CreateTransaction) ExecutePlan(
 				"Offer not found: %s", *a.CrossingOffer))
 		}
 
+		if offer.Status != mint.OfStActive {
+			return errors.Trace(errors.Newf(
+				"Offer is not active (%s)", offer.Status))
+		}
+
 		cr, err := model.CreateCanonicalCrossing(ctx,
 			offer.Owner,
 			*a.CrossingOffer,
@@ -623,6 +629,7 @@ func (e *CreateTransaction) ExecutePlan(
 
 		(*big.Int)(&offer.Remainder).Sub(
 			(*big.Int)(&offer.Remainder), (*big.Int)(&cr.Amount))
+
 		// Checks if the remainder is positive and not overflown.
 		b := (*big.Int)(&offer.Remainder)
 		if new(big.Int).Abs(b).Cmp(model.MaxAssetAmount) >= 0 ||
@@ -637,6 +644,12 @@ func (e *CreateTransaction) ExecutePlan(
 		}
 
 		err = offer.Save(ctx)
+		if err != nil {
+			return errors.Trace(err)
+		}
+
+		err = async.Queue(ctx,
+			task.NewPropagateOffer(ctx, time.Now(), offer.ID()))
 		if err != nil {
 			return errors.Trace(err)
 		}

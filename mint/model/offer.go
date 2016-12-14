@@ -171,6 +171,11 @@ VALUES
 	return &offer, nil
 }
 
+// ID returns the ID of the object.
+func (o *Offer) ID() string {
+	return fmt.Sprintf("%s[%s]", o.Owner, o.Token)
+}
+
 // Save updates the object database representation with the in-memory values.
 func (o *Offer) Save(
 	ctx context.Context,
@@ -268,6 +273,19 @@ WHERE owner = :owner
 	}
 
 	return &offer, nil
+}
+
+// LoadPropagatedOfferByID attempts to load the propagated offer for the given
+// id.
+func LoadPropagatedOfferByID(
+	ctx context.Context,
+	id string,
+) (*Offer, error) {
+	owner, token, err := mint.NormalizedOwnerAndTokenFromID(ctx, id)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	return LoadPropagatedOfferByOwnerToken(ctx, owner, token)
 }
 
 // LoadOfferListByBaseAsset loads a balance list by base asset.
