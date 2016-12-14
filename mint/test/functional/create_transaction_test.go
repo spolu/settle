@@ -36,13 +36,13 @@ func setupCreateTransaction(
 
 	o := []mint.OfferResource{
 		u[0].CreateOffer(t,
-			fmt.Sprintf("%s[USD.2]/%s[USD.2]", u[0].Address, u[2].Address),
+			fmt.Sprintf("%s/%s", a[0].Name, a[2].Name),
 			"100/100", big.NewInt(100)),
 		u[1].CreateOffer(t,
-			fmt.Sprintf("%s[USD.2]/%s[USD.2]", u[1].Address, u[0].Address),
+			fmt.Sprintf("%s/%s", a[1].Name, a[0].Name),
 			"100/100", big.NewInt(100)),
 		u[2].CreateOffer(t,
-			fmt.Sprintf("%s[USD.2]/%s[USD.2]", u[2].Address, u[1].Address),
+			fmt.Sprintf("%s/%s", a[2].Name, a[1].Name),
 			"100/98", big.NewInt(100)),
 	}
 
@@ -62,13 +62,13 @@ func TestCreateTransactionWith2Offers(
 	t *testing.T,
 ) {
 	t.Parallel()
-	m, u, _, o := setupCreateTransaction(t)
+	m, u, a, o := setupCreateTransaction(t)
 	defer tearDownCreateTransaction(t, m)
 
 	status, raw := u[0].Post(t,
 		fmt.Sprintf("/transactions"),
 		url.Values{
-			"pair":        {fmt.Sprintf("%s[USD.2]/%s[USD.2]", u[0].Address, u[2].Address)},
+			"pair":        {fmt.Sprintf("%s/%s", a[0].Name, a[2].Name)},
 			"amount":      {"10"},
 			"destination": {u[2].Address},
 			"path[]": {
@@ -89,7 +89,7 @@ func TestCreateTransactionWith2Offers(
 	assert.Equal(t, u[0].Address, tx0.Owner)
 
 	assert.Equal(t,
-		fmt.Sprintf("%s[USD.2]/%s[USD.2]", u[0].Address, u[2].Address),
+		fmt.Sprintf("%s/%s", a[0].Name, a[2].Name),
 		tx0.Pair)
 	assert.Equal(t, big.NewInt(10), tx0.Amount)
 	assert.Equal(t, u[2].Address, tx0.Destination)
@@ -108,8 +108,7 @@ func TestCreateTransactionWith2Offers(
 		time.Unix(0, tx0.Operations[0].Created*mint.TimeResolutionNs),
 		10*test.PostLatency)
 	assert.Equal(t, u[0].Address, tx0.Operations[0].Owner)
-	assert.Equal(t,
-		fmt.Sprintf("%s[USD.2]", u[0].Address), tx0.Operations[0].Asset)
+	assert.Equal(t, a[0].Name, tx0.Operations[0].Asset)
 	assert.Equal(t, u[0].Address, tx0.Operations[0].Source)
 	assert.Equal(t, u[1].Address, tx0.Operations[0].Destination)
 	assert.Equal(t, big.NewInt(11), tx0.Operations[0].Amount)
@@ -132,7 +131,7 @@ func TestCreateTransactionWith2Offers(
 	assert.Equal(t, u[0].Address, tx1.Owner)
 
 	assert.Equal(t,
-		fmt.Sprintf("%s[USD.2]/%s[USD.2]", u[0].Address, u[2].Address),
+		fmt.Sprintf("%s/%s", a[0].Name, a[2].Name),
 		tx1.Pair)
 	assert.Equal(t, big.NewInt(10), tx1.Amount)
 	assert.Equal(t, u[2].Address, tx1.Destination)
@@ -160,8 +159,7 @@ func TestCreateTransactionWith2Offers(
 		time.Unix(0, tx1.Operations[0].Created*mint.TimeResolutionNs),
 		10*test.PostLatency)
 	assert.Equal(t, u[1].Address, tx1.Operations[0].Owner)
-	assert.Equal(t,
-		fmt.Sprintf("%s[USD.2]", u[1].Address), tx1.Operations[0].Asset)
+	assert.Equal(t, a[1].Name, tx1.Operations[0].Asset)
 	assert.Equal(t, u[1].Address, tx1.Operations[0].Source)
 	assert.Equal(t, u[2].Address, tx1.Operations[0].Destination)
 	assert.Equal(t, big.NewInt(11), tx1.Operations[0].Amount)
@@ -184,7 +182,7 @@ func TestCreateTransactionWith2Offers(
 	assert.Equal(t, u[0].Address, tx2.Owner)
 
 	assert.Equal(t,
-		fmt.Sprintf("%s[USD.2]/%s[USD.2]", u[0].Address, u[2].Address),
+		fmt.Sprintf("%s/%s", a[0].Name, a[2].Name),
 		tx2.Pair)
 	assert.Equal(t, big.NewInt(10), tx2.Amount)
 	assert.Equal(t, u[2].Address, tx2.Destination)
@@ -212,8 +210,7 @@ func TestCreateTransactionWith2Offers(
 		time.Unix(0, tx2.Operations[0].Created*mint.TimeResolutionNs),
 		10*test.PostLatency)
 	assert.Equal(t, u[2].Address, tx2.Operations[0].Owner)
-	assert.Equal(t,
-		fmt.Sprintf("%s[USD.2]", u[2].Address), tx2.Operations[0].Asset)
+	assert.Equal(t, a[2].Name, tx2.Operations[0].Asset)
 	assert.Equal(t, u[2].Address, tx2.Operations[0].Source)
 	assert.Equal(t, u[2].Address, tx2.Operations[0].Destination)
 	assert.Equal(t, big.NewInt(10), tx2.Operations[0].Amount)
@@ -226,17 +223,17 @@ func TestCreateTransactionWithInsufficientOfferAmount(
 	t *testing.T,
 ) {
 	t.Parallel()
-	m, u, _, o := setupCreateTransaction(t)
+	m, u, a, o := setupCreateTransaction(t)
 	defer tearDownCreateTransaction(t, m)
 
 	o1 := u[1].CreateOffer(t,
-		fmt.Sprintf("%s[USD.2]/%s[USD.2]", u[1].Address, u[0].Address),
+		fmt.Sprintf("%s/%s", a[1].Name, a[0].Name),
 		"100/100", big.NewInt(5))
 
 	status, raw := u[0].Post(t,
 		fmt.Sprintf("/transactions"),
 		url.Values{
-			"pair":        {fmt.Sprintf("%s[USD.2]/%s[USD.2]", u[0].Address, u[2].Address)},
+			"pair":        {fmt.Sprintf("%s/%s", a[0].Name, a[2].Name)},
 			"amount":      {"10"},
 			"destination": {u[2].Address},
 			"path[]": {
@@ -303,13 +300,13 @@ func TestCreateTransactionWithNoOffer(
 	t *testing.T,
 ) {
 	t.Parallel()
-	m, u, _, _ := setupCreateTransaction(t)
+	m, u, a, _ := setupCreateTransaction(t)
 	defer tearDownCreateTransaction(t, m)
 
 	status, raw := u[0].Post(t,
 		fmt.Sprintf("/transactions"),
 		url.Values{
-			"pair":        {fmt.Sprintf("%s[USD.2]/%s[USD.2]", u[0].Address, u[0].Address)},
+			"pair":        {fmt.Sprintf("%s/%s", a[0].Name, a[0].Name)},
 			"amount":      {"10"},
 			"destination": {u[2].Address},
 			"path[]":      {},
@@ -332,13 +329,13 @@ func TestCreateTransactionWith1Offer(
 	t *testing.T,
 ) {
 	t.Parallel()
-	m, u, _, o := setupCreateTransaction(t)
+	m, u, a, o := setupCreateTransaction(t)
 	defer tearDownCreateTransaction(t, m)
 
 	status, raw := u[0].Post(t,
 		fmt.Sprintf("/transactions"),
 		url.Values{
-			"pair":        {fmt.Sprintf("%s[USD.2]/%s[USD.2]", u[0].Address, u[1].Address)},
+			"pair":        {fmt.Sprintf("%s/%s", a[0].Name, a[1].Name)},
 			"amount":      {"10"},
 			"destination": {u[2].Address},
 			"path[]": {
@@ -385,14 +382,14 @@ func TestCreateTransactionWithRemoteBaseAsset(
 	t *testing.T,
 ) {
 	t.Parallel()
-	m, u, _, o := setupCreateTransaction(t)
+	m, u, a, o := setupCreateTransaction(t)
 	defer tearDownCreateTransaction(t, m)
 
 	// Credit u[0] of u[1] USD.2
 	status, raw := u[1].Post(t,
 		fmt.Sprintf("/transactions"),
 		url.Values{
-			"pair":        {fmt.Sprintf("%s[USD.2]/%s[USD.2]", u[1].Address, u[1].Address)},
+			"pair":        {fmt.Sprintf("%s/%s", a[1].Name, a[1].Name)},
 			"amount":      {"11"},
 			"destination": {u[0].Address},
 			"path[]":      {},
@@ -413,7 +410,7 @@ func TestCreateTransactionWithRemoteBaseAsset(
 	status, raw = u[0].Post(t,
 		fmt.Sprintf("/transactions"),
 		url.Values{
-			"pair":        {fmt.Sprintf("%s[USD.2]/%s[USD.2]", u[1].Address, u[2].Address)},
+			"pair":        {fmt.Sprintf("%s/%s", a[1].Name, a[2].Name)},
 			"amount":      {"10"},
 			"destination": {u[2].Address},
 			"path[]": {
@@ -441,7 +438,7 @@ func TestCreateTransactionWithRemoteBaseAsset(
 	assert.Equal(t, 0, len(tx1.Crossings))
 	assert.Equal(t, 1, len(tx1.Operations))
 
-	assert.Equal(t, fmt.Sprintf("%s[USD.2]", u[1].Address), tx1.Operations[0].Asset)
+	assert.Equal(t, a[1].Name, tx1.Operations[0].Asset)
 	assert.Equal(t, u[0].Address, tx1.Operations[0].Source)
 	assert.Equal(t, u[2].Address, tx1.Operations[0].Destination)
 	assert.Equal(t, big.NewInt(11), tx1.Operations[0].Amount)
@@ -477,13 +474,13 @@ func TestCreateTransactionWithNegativeAmount(
 	t *testing.T,
 ) {
 	t.Parallel()
-	m, u, _, o := setupCreateTransaction(t)
+	m, u, a, o := setupCreateTransaction(t)
 	defer tearDownCreateTransaction(t, m)
 
 	status, raw := u[0].Post(t,
 		fmt.Sprintf("/transactions"),
 		url.Values{
-			"pair":        {fmt.Sprintf("%s[USD.2]/%s[USD.2]", u[0].Address, u[2].Address)},
+			"pair":        {fmt.Sprintf("%s/%s", a[0].Name, a[2].Name)},
 			"amount":      {"-10"},
 			"destination": {u[2].Address},
 			"path[]": {
