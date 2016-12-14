@@ -46,9 +46,9 @@
     [ ] offer closing + attempt transaction on it
     [ ] offer closing of an offer not owned by caller
     [ ] test canonical transaction expiry calculation (min of all propagated)
-    [ ] test settling an expired transaction
     [ ] test that consumes an offer entirely (check status)
     [~] transaction tests with misbehaving mint
+    [x] test settling an expired transaction
     [x] transaction expiration and balance fixup
     [x] transaction expiration and offer fixup
     [x] test async offer/operation propagation
