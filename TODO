@@ -1,7 +1,15 @@
 # cli
 
+# api
+
+ [ ] signup in a way that scales to an app:
+   [ ] enter email and get credentials over email?
+   [ ] enter email and verify to get credentials
+   [ ] eventually phone number + SMS?
+
 # mint
 
+ [ ] retrieve asset publicly
  [~] list endpoint
    [ ] list asset operations
    [x] list asset offers (order book)
