@@ -9,6 +9,8 @@ import (
 
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/mint"
+	"github.com/spolu/settle/mint/async"
+	"github.com/spolu/settle/mint/model"
 	"github.com/spolu/settle/mint/test"
 	"github.com/stretchr/testify/assert"
 )
@@ -554,4 +556,113 @@ func TestCreateTransactionWithInvalidQuoteAsset(
 
 	assert.Equal(t, 400, status)
 	assert.Equal(t, "pair_invalid", e.ErrCode)
+}
+
+func TestCreateTransactionWith1OfferExpired(
+	t *testing.T,
+) {
+	t.Parallel()
+	m, u, a, o := setupCreateTransaction(t)
+	defer tearDownCreateTransaction(t, m)
+
+	// Execute offers propagations.
+	async.TestRunOne(m[0].Ctx)
+	async.TestRunOne(m[1].Ctx)
+	async.TestRunOne(m[2].Ctx)
+
+	// Credit u[2] with a[0]
+	status, raw := u[0].Post(t,
+		fmt.Sprintf("/transactions"),
+		url.Values{
+			"pair":        {fmt.Sprintf("%s/%s", a[0].Name, a[0].Name)},
+			"amount":      {"20"},
+			"destination": {u[2].Address},
+		})
+
+	var tx mint.TransactionResource
+	err := raw.Extract("transaction", &tx)
+	assert.Nil(t, err)
+
+	assert.Equal(t, 201, status)
+
+	status, _ = u[0].Post(t,
+		fmt.Sprintf("/transactions/%s/settle", tx.ID),
+		url.Values{})
+
+	assert.Equal(t, 200, status)
+
+	async.TestRunOne(m[0].Ctx)
+	async.TestRunOne(m[0].Ctx)
+	async.TestRunOne(m[0].Ctx)
+
+	// Credit u[1] with a[1] using o[1] (from u[2] balance in a[0])
+	status, raw = u[2].Post(t,
+		fmt.Sprintf("/transactions"),
+		url.Values{
+			"pair":        {fmt.Sprintf("%s/%s", a[0].Name, a[1].Name)},
+			"amount":      {"10"},
+			"destination": {u[1].Address},
+			"path[]": {
+				o[1].ID,
+			},
+		})
+
+	err = raw.Extract("transaction", &tx)
+	assert.Nil(t, err)
+
+	assert.Equal(t, 201, status)
+
+	async.TestRunOne(m[0].Ctx)
+	async.TestRunOne(m[1].Ctx)
+
+	// Check balance on m[0]
+	balance, err := model.LoadCanonicalBalanceByAssetHolder(m[0].Ctx,
+		a[0].Name, u[2].Address)
+	assert.Nil(t, err)
+	assert.Equal(t, big.NewInt(10), (*big.Int)(&balance.Value))
+
+	// Check balance on m[2]
+	balance, err = model.LoadPropagatedBalanceByOwnerToken(m[2].Ctx,
+		balance.Owner, balance.Token)
+	assert.Nil(t, err)
+	assert.Equal(t, big.NewInt(10), (*big.Int)(&balance.Value))
+
+	// Check offer on m[1]
+	offer, err := model.LoadCanonicalOfferByID(m[1].Ctx, o[1].ID)
+	assert.Nil(t, err)
+	assert.Equal(t, big.NewInt(90), (*big.Int)(&offer.Remainder))
+
+	// Check offer on m[0]
+	offer, err = model.LoadPropagatedOfferByID(m[0].Ctx, o[1].ID)
+	assert.Nil(t, err)
+	assert.Equal(t, big.NewInt(90), (*big.Int)(&offer.Remainder))
+
+	// Run the expiration of the transaction on all mints with propagations.
+	async.TestRunOne(m[0].Ctx)
+	async.TestRunOne(m[0].Ctx)
+	async.TestRunOne(m[1].Ctx)
+	async.TestRunOne(m[1].Ctx)
+	async.TestRunOne(m[2].Ctx)
+
+	// Check balance on m[0]
+	balance, err = model.LoadCanonicalBalanceByAssetHolder(m[0].Ctx,
+		a[0].Name, u[2].Address)
+	assert.Nil(t, err)
+	assert.Equal(t, big.NewInt(20), (*big.Int)(&balance.Value))
+
+	// Check balance on m[2]
+	balance, err = model.LoadPropagatedBalanceByOwnerToken(m[2].Ctx,
+		balance.Owner, balance.Token)
+	assert.Nil(t, err)
+	assert.Equal(t, big.NewInt(20), (*big.Int)(&balance.Value))
+
+	// Check offer on m[1]
+	offer, err = model.LoadCanonicalOfferByID(m[1].Ctx, o[1].ID)
+	assert.Nil(t, err)
+	assert.Equal(t, big.NewInt(100), (*big.Int)(&offer.Remainder))
+
+	// Check offer on m[0]
+	offer, err = model.LoadPropagatedOfferByID(m[0].Ctx, o[1].ID)
+	assert.Nil(t, err)
+	assert.Equal(t, big.NewInt(100), (*big.Int)(&offer.Remainder))
 }

@@ -151,9 +151,7 @@ func (e *CreateOffer) Execute(
 		(*big.Int)(&of.Amount).String(), of.Status,
 		(*big.Int)(&of.Remainder).String())
 
-	offer := model.NewOfferResource(ctx, of)
-
-	err = async.Queue(ctx, task.NewPropagateOffer(ctx, time.Now(), offer.ID))
+	err = async.Queue(ctx, task.NewPropagateOffer(ctx, time.Now(), of.ID()))
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
 	}
@@ -161,6 +159,6 @@ func (e *CreateOffer) Execute(
 	db.Commit(ctx)
 
 	return ptr.Int(http.StatusCreated), &svc.Resp{
-		"offer": format.JSONPtr(offer),
+		"offer": format.JSONPtr(model.NewOfferResource(ctx, of)),
 	}, nil
 }

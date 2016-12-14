@@ -101,7 +101,7 @@ func (e *CloseOffer) Execute(
 		return nil, nil, errors.Trace(err) // 500
 	}
 
-	err = async.Queue(ctx, task.NewPropagateOffer(ctx, time.Now(), e.ID))
+	err = async.Queue(ctx, task.NewPropagateOffer(ctx, time.Now(), offer.ID()))
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
 	}

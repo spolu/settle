@@ -90,67 +90,111 @@ func (t *ExpireTransaction) Execute(
 		return errors.Trace(err)
 	}
 
-	if txn != nil {
+	if txn != nil && txn.Status != mint.TxStCanceled {
 		txn.Status = mint.TxStCanceled
 		err = txn.Save(ctx)
 		if err != nil {
 			return errors.Trace(err)
 		}
-	}
-	for _, op := range ops {
-		asset, err := model.LoadCanonicalAssetByName(ctx, op.Asset)
-		if err != nil {
-			return errors.Trace(err)
-		} else if asset == nil {
-			return errors.Trace(errors.Newf("Asset not found: %s", op.Asset))
-		}
-
-		// Restore the source balance if applicable.
-		var srcBalance *model.Balance
-		if asset.Owner != op.Source {
-			srcBalance, err = model.LoadCanonicalBalanceByAssetHolder(ctx,
-				op.Asset, op.Source)
+		for _, op := range ops {
+			if op.Status == mint.TxStCanceled {
+				continue
+			}
+			asset, err := model.LoadCanonicalAssetByName(ctx, op.Asset)
 			if err != nil {
 				return errors.Trace(err)
-			} else if srcBalance == nil {
-				return errors.Trace(errors.Newf(
-					"Source has no balance in %s: %s", op.Asset, op.Source))
+			} else if asset == nil {
+				return errors.Trace(errors.Newf("Asset not found: %s", op.Asset))
 			}
-			(*big.Int)(&srcBalance.Value).Add(
-				(*big.Int)(&srcBalance.Value), (*big.Int)(&op.Amount))
 
-			// Checks if the srcBalance is positive and not overflown.
-			b := (*big.Int)(&srcBalance.Value)
+			// Restore the source balance if applicable (that is if the op
+			// source is not owner of the asset, in which case the asset was
+			// issued on the fly).
+			var srcBalance *model.Balance
+			if asset.Owner != op.Source {
+				srcBalance, err = model.LoadCanonicalBalanceByAssetHolder(ctx,
+					op.Asset, op.Source)
+				if err != nil {
+					return errors.Trace(err)
+				} else if srcBalance == nil {
+					return errors.Trace(errors.Newf(
+						"Source has no balance in %s: %s", op.Asset, op.Source))
+				}
+				(*big.Int)(&srcBalance.Value).Add(
+					(*big.Int)(&srcBalance.Value), (*big.Int)(&op.Amount))
+
+				// Checks if the srcBalance is positive and not overflown.
+				b := (*big.Int)(&srcBalance.Value)
+				if new(big.Int).Abs(b).Cmp(model.MaxAssetAmount) >= 0 ||
+					b.Cmp(new(big.Int)) < 0 {
+					return errors.Trace(errors.Newf(
+						"Invalid resulting balance for %s: %s",
+						srcBalance.Holder, b.String()))
+				}
+
+				err = srcBalance.Save(ctx)
+				if err != nil {
+					return errors.Trace(err)
+				}
+
+				err = async.Queue(ctx,
+					NewPropagateBalance(ctx, time.Now(), srcBalance.ID()))
+				if err != nil {
+					return errors.Trace(err)
+				}
+			}
+
+			op.Status = mint.TxStCanceled
+			err = op.Save(ctx)
+			if err != nil {
+				return errors.Trace(err)
+			}
+		}
+		for _, cr := range crs {
+			if cr.Status == mint.TxStCanceled {
+				continue
+			}
+
+			offer, err := model.LoadCanonicalOfferByID(ctx, cr.Offer)
+			if err != nil {
+				return errors.Trace(err)
+			} else if offer == nil {
+				return errors.Trace(errors.Newf(
+					"Offer not found: %s", cr.Offer))
+			}
+
+			(*big.Int)(&offer.Remainder).Add(
+				(*big.Int)(&offer.Remainder), (*big.Int)(&cr.Amount))
+
+			// Checks if the remainder is positive and not overflown.
+			b := (*big.Int)(&offer.Remainder)
 			if new(big.Int).Abs(b).Cmp(model.MaxAssetAmount) >= 0 ||
 				b.Cmp(new(big.Int)) < 0 {
 				return errors.Trace(errors.Newf(
-					"Invalid resulting balance for %s: %s",
-					srcBalance.Holder, b.String()))
+					"Invalid resulting remainder: %s", b.String()))
+			}
+			// Set the offer as active if the remainder is not 0 and the offer
+			// is not closed.
+			if offer.Status != mint.OfStClosed && b.Cmp(new(big.Int)) > 0 {
+				offer.Status = mint.OfStActive
 			}
 
-			err = srcBalance.Save(ctx)
+			err = offer.Save(ctx)
 			if err != nil {
 				return errors.Trace(err)
 			}
 
 			err = async.Queue(ctx,
-				NewPropagateBalance(ctx, time.Now(), srcBalance.ID()))
+				NewPropagateOffer(ctx, time.Now(), offer.ID()))
 			if err != nil {
 				return errors.Trace(err)
 			}
-		}
 
-		op.Status = mint.TxStCanceled
-		err = op.Save(ctx)
-		if err != nil {
-			return errors.Trace(err)
-		}
-	}
-	for _, cr := range crs {
-		cr.Status = mint.TxStCanceled
-		err = cr.Save(ctx)
-		if err != nil {
-			return errors.Trace(err)
+			cr.Status = mint.TxStCanceled
+			err = cr.Save(ctx)
+			if err != nil {
+				return errors.Trace(err)
+			}
 		}
 	}
 

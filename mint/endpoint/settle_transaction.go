@@ -481,8 +481,8 @@ func (e *SettleTransaction) Settle(
 				op.Status, *op.Transaction)
 
 			opID := fmt.Sprintf("%s[%s]", op.Owner, op.Token)
-			err = async.Queue(ctx, task.NewPropagateOperation(ctx,
-				time.Now(), opID))
+			err = async.Queue(ctx,
+				task.NewPropagateOperation(ctx, time.Now(), opID))
 			if err != nil {
 				return errors.Trace(err)
 			}

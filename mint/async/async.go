@@ -89,7 +89,7 @@ func NewAsync(
 	a := &Async{
 		Ctx:       ctx,
 		Pending:   nil,
-		Scheduled: make(chan Deadline, 1),
+		Scheduled: make(chan Deadline),
 		mutex:     &sync.Mutex{},
 	}
 
@@ -143,6 +143,7 @@ func (a *Async) schedule(
 			mint.Logf(ctx, "Scheduled task: "+
 				"name=%s subject=%s retry=%d deadline=%q",
 				d.Task.Name(), d.Task.Subject(), d.Model.Retry, d.Deadline())
+		default:
 		}
 	}
 }
@@ -202,7 +203,7 @@ func (a *Async) RunOne(
 		"name=%s subject=%s retry=%d deadline=%q",
 		d.Task.Name(), d.Task.Subject(), d.Model.Retry, d.Deadline())
 
-	err := d.Task.Execute(a.Ctx)
+	err := d.Task.Execute(With(a.Ctx, a))
 
 	ctx := db.Begin(a.Ctx)
 	defer db.LoggedRollback(ctx)
@@ -293,6 +294,7 @@ func TestRunOne(
 	a.mutex.Lock()
 
 	if len(a.Pending) == 0 {
+		a.mutex.Unlock()
 		return
 	}
 	d, a.Pending = a.Pending[len(a.Pending)-1], a.Pending[:len(a.Pending)-1]
