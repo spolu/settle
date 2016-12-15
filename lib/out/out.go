@@ -30,8 +30,8 @@ func Boldf(format string, v ...interface{}) {
 	bold.PrintfFunc()(format, v...)
 }
 
-// Examf prints an example message.
-func Examf(format string, v ...interface{}) {
+// Valuf prints an example message.
+func Valuf(format string, v ...interface{}) {
 	cyan.PrintfFunc()(format, v...)
 }
 
