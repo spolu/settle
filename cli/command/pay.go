@@ -2,7 +2,11 @@
 
 package command
 
-import "github.com/spolu/settle/cli"
+import (
+	"context"
+
+	"github.com/spolu/settle/cli"
+)
 
 const (
 	// CmdNmPay is the command name.
@@ -28,15 +32,22 @@ func (c *Pay) Name() cli.CmdName {
 }
 
 // Help prints out the help message for the command.
-func (c *Pay) Help() {
+func (c *Pay) Help(
+	ctx context.Context,
+) {
 }
 
 // Parse parses the arguments passed to the command.
 func (c *Pay) Parse(
+	ctx context.Context,
 	args []string,
 ) error {
+	return nil
 }
 
 // Execute the command or return a human-friendly error.
-func (c *Pay) Execute() error {
+func (c *Pay) Execute(
+	ctx context.Context,
+) error {
+	return nil
 }

@@ -9,17 +9,18 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"regexp"
 
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spolu/settle/lib/env"
 	"github.com/spolu/settle/lib/errors"
+	"github.com/spolu/settle/lib/out"
+	"github.com/spolu/settle/mint"
 )
 
 // Credentials rerpesents the credentials of the currently logged in user.
 type Credentials struct {
-	Mint     string `json:"mint"`
 	Username string `json:"username"`
+	Mint     string `json:"mint"`
 	Password string `json:"password"`
 }
 
@@ -88,29 +89,24 @@ func CurrentUser(
 	return &c, nil
 }
 
-// credentialsRegexp is used to validate a credential string.
-var credentialsRegexp = regexp.MustCompile(
-	"^([a-zA-Z0-9\\-_.]{1,256})(\\+[a-zA-Z0-9\\-_.]+):" +
-		"([a-zA-Z0-9\\-\\_.]{1,256})@" +
-		"([a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+(:[0-9]{1,5}){0,1})$",
-)
-
 // Login logs the user in by storing its credentials after valdation in
 // CredentialsPath.
 func Login(
 	ctx context.Context,
-	credentials string,
+	address string,
+	password string,
 ) error {
-	m := credentialsRegexp.FindStringSubmatch(credentials)
-	if len(m) == 0 {
-		return errors.Trace(
-			errors.Newf("Invalid credentials: %s", credentials))
+	username, host, err := mint.UsernameAndMintHostFromAddress(ctx, address)
+	if err != nil {
+		return errors.Trace(err)
 	}
 	creds := &Credentials{
-		Mint:     m[4],
-		Username: m[1],
-		Password: m[3],
+		Mint:     host,
+		Username: username,
+		Password: password,
 	}
+
+	// TOOD(stan): check credentials
 
 	path, err := CredentialsPath(ctx)
 	if err != nil {
@@ -126,6 +122,8 @@ func Login(
 	if err != nil {
 		return errors.Trace(err)
 	}
+
+	out.Statf("[Stored credentials] file:%s\n", *path)
 
 	return nil
 }
@@ -143,6 +141,8 @@ func Logout(
 	if err != nil {
 		return errors.Trace(err)
 	}
+
+	out.Statf("[Removed] file:%s\n", *path)
 
 	return nil
 }

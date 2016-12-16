@@ -2,7 +2,11 @@
 
 package command
 
-import "github.com/spolu/settle/cli"
+import (
+	"context"
+
+	"github.com/spolu/settle/cli"
+)
 
 const (
 	// CmdNmTrust is the command name.
@@ -28,15 +32,22 @@ func (c *Trust) Name() cli.CmdName {
 }
 
 // Help prints out the help message for the command.
-func (c *Trust) Help() {
+func (c *Trust) Help(
+	ctx context.Context,
+) {
 }
 
 // Parse parses the arguments passed to the command.
 func (c *Trust) Parse(
+	ctx context.Context,
 	args []string,
 ) error {
+	return nil
 }
 
 // Execute the command or return a human-friendly error.
-func (c *Trust) Execute() error {
+func (c *Trust) Execute(
+	ctx context.Context,
+) error {
+	return nil
 }

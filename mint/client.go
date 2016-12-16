@@ -52,12 +52,12 @@ var DefaultScheme = map[env.Environment]string{
 }
 
 // Possible address: von.neumann@ias.edu:8989
-var addressRegexpStr = "([a-zA-Z0-9\\-_.]{1,256})(\\+[a-zA-Z0-9\\-_.]+){0,1}@" +
+var addressRegexpStr = "([a-zA-Z0-9-_.]{1,256})(\\+[a-zA-Z0-9-_.]+){0,1}@" +
 	"([a-zA-Z0-9-]+\\.[a-zA-Z0-9-.]+(:[0-9]{1,5}){0,1})"
 
 // AssetNameRegexp is used to validate and parse asset names.
 var AssetNameRegexp = regexp.MustCompile(
-	"^" + addressRegexpStr + "\\[([A-Z0-9\\-]{1,64})\\.([0-9]{1,2})\\]" + "$",
+	"^" + addressRegexpStr + "\\[([A-Z0-9-]{1,64})\\.([0-9]{1,2})\\]" + "$",
 )
 
 // AddressRegexp is used to validate and parse issuer names.

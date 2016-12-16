@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -22,7 +23,7 @@ type Command interface {
 	Name() CmdName
 
 	// Help prints out the help message for the command.
-	Help()
+	Help(context.Context)
 
 	// Parse the arguments passed to the command.
 	Parse(context.Context, []string) error
@@ -61,7 +62,7 @@ func New(
 				flags[s[0]] = s[1]
 			}
 		} else {
-			args = append(args, a)
+			args = append(args, strings.TrimSpace(a))
 		}
 	}
 
@@ -76,9 +77,6 @@ func New(
 	}
 	ctx = env.With(ctx, &cliEnv)
 
-	out.Normf("Environment: ")
-	out.Valuf("%s\n", cliEnv.Environment)
-
 	creds, err := CurrentUser(ctx)
 	if err != nil {
 		return nil, errors.Trace(err)
@@ -86,13 +84,11 @@ func New(
 
 	ctx = WithCredentials(ctx, creds)
 
-	out.Normf("User       : ")
+	user := "n/a"
 	if creds != nil {
-		out.Valuf("%s@%s", creds.Username, creds.Mint)
-	} else {
-		out.Valuf("n/a")
+		user = fmt.Sprintf("%s@%s", creds.Username, creds.Mint)
 	}
-	out.Normf("\n")
+	out.Statf("[Initialized] env:%s user:%s\n", cliEnv.Environment, user)
 
 	return &Cli{
 		Ctx:   ctx,
@@ -104,25 +100,25 @@ func New(
 // Run the cli.
 func (c *Cli) Run() error {
 	if len(c.Args) == 0 {
-		Help()
-		return nil
+		c.Args = append(c.Args, "help")
 	}
 
+	var command Command
 	cmd, args := c.Args[0], c.Args[1:]
 	if r, ok := Registrar[CmdName(cmd)]; !ok {
-		Help()
+		command = Registrar[CmdName("help")]()
 	} else {
-		command := r()
+		command = r()
+	}
 
-		err := command.Parse(c.Ctx, args)
-		if err != nil {
-			return errors.Trace(err)
-		}
+	err := command.Parse(c.Ctx, args)
+	if err != nil {
+		return errors.Trace(err)
+	}
 
-		err = command.Execute(c.Ctx)
-		if err != nil {
-			return errors.Trace(err)
-		}
+	err = command.Execute(c.Ctx)
+	if err != nil {
+		return errors.Trace(err)
 	}
 
 	return nil

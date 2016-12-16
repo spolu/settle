@@ -10,14 +10,16 @@ var white *color.Color
 var bold *color.Color
 var cyan *color.Color
 var yellow *color.Color
-var red *color.Color
+var magenta *color.Color
+var redBold *color.Color
 
 func init() {
 	white = color.New(color.FgWhite)
 	bold = color.New(color.Bold)
 	cyan = color.New(color.FgCyan)
 	yellow = color.New(color.FgYellow)
-	red = color.New(color.FgRed)
+	magenta = color.New(color.FgMagenta)
+	redBold = color.New(color.FgRed, color.Bold)
 }
 
 // Normf prints a normal message.
@@ -42,5 +44,10 @@ func Warnf(format string, v ...interface{}) {
 
 // Errof prints an error message.
 func Errof(format string, v ...interface{}) {
-	red.PrintfFunc()(format, v...)
+	redBold.PrintfFunc()(format, v...)
+}
+
+// Statf prints an error message.
+func Statf(format string, v ...interface{}) {
+	magenta.PrintfFunc()(format, v...)
 }
