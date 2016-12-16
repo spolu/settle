@@ -86,7 +86,7 @@ func New(
 
 	user := "n/a"
 	if creds != nil {
-		user = fmt.Sprintf("%s@%s", creds.Username, creds.Mint)
+		user = fmt.Sprintf("%s@%s", creds.Username, creds.Host)
 	}
 	out.Statf("[Initialized] env:%s user:%s\n", cliEnv.Environment, user)
 

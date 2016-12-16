@@ -20,7 +20,7 @@ import (
 // Credentials rerpesents the credentials of the currently logged in user.
 type Credentials struct {
 	Username string `json:"username"`
-	Mint     string `json:"mint"`
+	Host     string `json:"mint"`
 	Password string `json:"password"`
 }
 
@@ -101,7 +101,7 @@ func Login(
 		return errors.Trace(err)
 	}
 	creds := &Credentials{
-		Mint:     host,
+		Host:     host,
 		Username: username,
 		Password: password,
 	}

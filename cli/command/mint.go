@@ -4,11 +4,16 @@ package command
 
 import (
 	"context"
+	"fmt"
+	"net/http"
+	"net/url"
 	"regexp"
+	"strconv"
 
 	"github.com/spolu/settle/cli"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/out"
+	"github.com/spolu/settle/mint"
 )
 
 const (
@@ -22,7 +27,8 @@ func init() {
 
 // Mint a user up to a certain amount of a given asset they issued.
 type Mint struct {
-	Asset string
+	Code  string
+	Scale int8
 }
 
 // NewMint constructs and initializes the command.
@@ -47,8 +53,9 @@ func (c *Mint) Help(
 	out.Normf("\n")
 	out.Normf("Arguments:\n")
 	out.Boldf("  asset\n")
-	out.Normf("    The asset you want to mint of the form {CODE}.{SCALE}\n")
-	out.Valuf("    USD.2\n")
+	out.Normf("    The asset you want to mint of the form `{code}.{scale}`. The code must be composed\n")
+	out.Normf("    of alphanumeric characters or '-'. The scale is an integer between 0 and 24.\n")
+	out.Valuf("    USD.2 HOURS-OF-WORK.0 BTC.7 EUR.2 DRINK.0\n")
 	out.Normf("\n")
 }
 
@@ -62,13 +69,25 @@ func (c *Mint) Parse(
 	args []string,
 ) error {
 	if len(args) == 0 {
-		return errors.Trace(errors.Newf("Asset name required"))
-	}
-	if !assetRegexp.MatchString(args[0]) {
-		return errors.Trace(errors.Newf("Invalid asset: %s", args[0]))
+		return errors.Trace(
+			errors.Newf("Asset name required (see `settle help mint`)"))
 	}
 
-	c.Asset = args[0]
+	m := assetRegexp.FindStringSubmatch(args[0])
+	if len(m) == 0 {
+		return errors.Trace(
+			errors.Newf("Invalid asset: %s (see `settle help mint`)", args[0]))
+	}
+
+	s, err := strconv.ParseInt(m[2], 10, 8)
+	if err != nil || s < 0 {
+		return errors.Trace(
+			errors.Newf(
+				"Invalid asset scale: %s (see `settle help mint`)", m[2]))
+	}
+
+	c.Code = m[1]
+	c.Scale = int8(s)
 
 	return nil
 }
@@ -77,5 +96,39 @@ func (c *Mint) Parse(
 func (c *Mint) Execute(
 	ctx context.Context,
 ) error {
+	m, err := cli.MintFromContextCredentials(ctx)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	status, raw, err := m.Post(ctx,
+		"/assets",
+		url.Values{
+			"code":  {c.Code},
+			"scale": {fmt.Sprintf("%d", c.Scale)},
+		})
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	if *status != http.StatusCreated && *status != http.StatusOK {
+		var e errors.ConcreteUserError
+		err = raw.Extract("error", &e)
+		if err != nil {
+			return errors.Trace(err)
+		}
+		return errors.Trace(
+			errors.Newf("(%s) %s", e.ErrCode, e.ErrMessage))
+	}
+
+	var asset mint.AssetResource
+	err = raw.Extract("asset", &asset)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	out.Statf("[Created asset] id:%s name:%s[%s.%d]\n",
+		asset.ID, asset.Owner, asset.Code, asset.Scale)
+
 	return nil
 }
