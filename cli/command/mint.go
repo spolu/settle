@@ -60,7 +60,7 @@ func (c *Mint) Help(
 }
 
 var assetRegexp = regexp.MustCompile(
-	"([A-Z0-9-]{1,64})\\.([0-9]{1,2})",
+	"^([A-Z0-9-]{1,64})\\.([0-9]{1,2})$",
 )
 
 // Parse parses the arguments passed to the command.
@@ -80,7 +80,7 @@ func (c *Mint) Parse(
 	}
 
 	s, err := strconv.ParseInt(m[2], 10, 8)
-	if err != nil || s < 0 {
+	if err != nil || s < 0 || s > 24 {
 		return errors.Trace(
 			errors.Newf(
 				"Invalid asset scale: %s (see `settle help mint`)", m[2]))
@@ -100,6 +100,9 @@ func (c *Mint) Execute(
 	if err != nil {
 		return errors.Trace(err)
 	}
+
+	out.Statf("[Creating asset] code:%s scale:%d\n",
+		c.Code, c.Scale)
 
 	status, raw, err := m.Post(ctx,
 		"/assets",
@@ -127,8 +130,19 @@ func (c *Mint) Execute(
 		return errors.Trace(err)
 	}
 
-	out.Statf("[Created asset] id:%s name:%s[%s.%d]\n",
-		asset.ID, asset.Owner, asset.Code, asset.Scale)
+	out.Boldf("Asset:\n")
+	out.Normf("  ID      : ")
+	out.Valuf("%s\n", asset.ID)
+	out.Normf("  Created : ")
+	out.Valuf("%d\n", asset.Created)
+	out.Normf("  Owner   : ")
+	out.Valuf("%s\n", asset.Owner)
+	out.Normf("  Name    : ")
+	out.Valuf("%s\n", asset.Name)
+	out.Normf("  Code    : ")
+	out.Valuf("%s\n", asset.Code)
+	out.Normf("  Scale   : ")
+	out.Valuf("%d\n", asset.Scale)
 
 	return nil
 }

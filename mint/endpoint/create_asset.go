@@ -92,8 +92,9 @@ func (e *CreateAsset) Execute(
 		case model.ErrUniqueConstraintViolation:
 			return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 				400, "asset_already_exists",
-				"You already created an asset with the same code: %s.",
-				e.Code,
+				"You already created an asset with the same code and "+
+					"scale: %s.%d",
+				e.Code, e.Scale,
 			))
 		default:
 			return nil, nil, errors.Trace(err) // 500
