@@ -81,8 +81,8 @@ func AssetResourceFromName(
 		return nil, errors.Trace(errors.Newf("Invalid asset name: %s", name))
 	}
 	s, err := strconv.ParseInt(m[6], 10, 8)
-	if err != nil {
-		return nil, errors.Trace(errors.Newf("Invalid asset name: %s", name))
+	if err != nil || s < 0 || s > 24 {
+		return nil, errors.Trace(errors.Newf("Invalid asset scale: %s", m[6]))
 	}
 
 	return &AssetResource{

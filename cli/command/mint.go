@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"regexp"
-	"strconv"
 
 	"github.com/spolu/settle/cli"
 	"github.com/spolu/settle/lib/errors"
@@ -48,46 +46,49 @@ func (c *Mint) Help(
 	out.Normf("\nUsage: ")
 	out.Boldf("settle mint <asset>\n")
 	out.Normf("\n")
-	out.Normf("  Minting an asset will create it on your mint allowing you to express trust or pay\n")
-	out.Normf("  other users. Minting assets is a prerequesite to any other action.\n")
+	out.Normf("  Minting an asset will enable you to express trust or pay other users. Minting\n")
+	out.Normf("  assets is a prerequesite to any other action.\n")
 	out.Normf("\n")
 	out.Normf("Arguments:\n")
 	out.Boldf("  asset\n")
-	out.Normf("    The asset you want to mint of the form `{code}.{scale}`. The code must be composed\n")
-	out.Normf("    of alphanumeric characters or '-'. The scale is an integer between 0 and 24.\n")
-	out.Valuf("    USD.2 HOURS-OF-WORK.0 BTC.7 EUR.2 DRINK.0\n")
+	out.Normf("    The asset you want to mint of the form `{code}.{scale}`. The code must be\n")
+	out.Normf("    composed of alphanumeric characters or '-'. The scale is an integer between\n")
+	out.Normf("    0 and 24. The scale represents the number of decimal used to express asset\n")
+	out.Normf("    amounts (USD.2 199 represents $1.99, HOUR-OF-WORK.0 1 represents 1 hour of\n")
+	out.Normf("    work, and BTC.8 252912 represents 0.00252912 BTC).\n")
+	out.Valuf("    USD.2 HOUR-OF-WORK.0 BTC.7 EUR.2 DRINK.0\n")
+	out.Normf("\n")
+	out.Normf("Examples:\n")
+	out.Valuf("   setlle mint USD.2\n")
+	out.Valuf("   setlle mint BTC.7\n")
+	out.Valuf("   setlle mint HOUR-Of-WORK.0\n")
 	out.Normf("\n")
 }
-
-var assetRegexp = regexp.MustCompile(
-	"^([A-Z0-9-]{1,64})\\.([0-9]{1,2})$",
-)
 
 // Parse parses the arguments passed to the command.
 func (c *Mint) Parse(
 	ctx context.Context,
 	args []string,
 ) error {
+	creds := cli.GetCredentials(ctx)
+	if creds == nil {
+		return errors.Trace(
+			errors.Newf("You need to be logged in."))
+	}
+
 	if len(args) == 0 {
 		return errors.Trace(
-			errors.Newf("Asset name required (see `settle help mint`)"))
+			errors.Newf("Asset required."))
 	}
 
-	m := assetRegexp.FindStringSubmatch(args[0])
-	if len(m) == 0 {
-		return errors.Trace(
-			errors.Newf("Invalid asset: %s (see `settle help mint`)", args[0]))
+	a, err := mint.AssetResourceFromName(ctx,
+		fmt.Sprintf("%s@%s[%s]", creds.Username, creds.Host, args[0]))
+	if err != nil {
+		return errors.Trace(err)
 	}
 
-	s, err := strconv.ParseInt(m[2], 10, 8)
-	if err != nil || s < 0 || s > 24 {
-		return errors.Trace(
-			errors.Newf(
-				"Invalid asset scale: %s (see `settle help mint`)", m[2]))
-	}
-
-	c.Code = m[1]
-	c.Scale = int8(s)
+	c.Code = a.Code
+	c.Scale = a.Scale
 
 	return nil
 }

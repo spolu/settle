@@ -113,6 +113,7 @@ func (c *Cli) Run() error {
 
 	err := command.Parse(c.Ctx, args)
 	if err != nil {
+		command.Help(c.Ctx)
 		return errors.Trace(err)
 	}
 
