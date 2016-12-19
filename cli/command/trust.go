@@ -196,8 +196,44 @@ func (c *Trust) Parse(
 func (c *Trust) Execute(
 	ctx context.Context,
 ) error {
-	// Check existence of base asset.
-	// If necessary create base asset.
+	// Retrieve base asset or create it if it does not exist.
+	asset, err := RetrieveAsset(ctx, c.BaseAsset)
+	if err != nil {
+		return errors.Trace(err)
+	} else if asset == nil {
+		asset, err = CreateAsset(ctx, c.BaseAsset)
+		if err != nil {
+			return errors.Trace(err)
+		}
+	}
+
 	// Create offer.
+	offer, err := CreateOffer(ctx,
+		fmt.Sprintf("%s/%s", c.BaseAsset, c.QuoteAsset),
+		c.Amount,
+		c.Price,
+	)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	out.Boldf("Trustline:\n")
+	out.Normf("  ID        : ")
+	out.Valuf("%s\n", offer.ID)
+	out.Normf("  Created   : ")
+	out.Valuf("%d\n", offer.Created)
+	out.Normf("  Owner     : ")
+	out.Valuf("%s\n", offer.Owner)
+	out.Normf("  Pair      : ")
+	out.Valuf("%s\n", offer.Pair)
+	out.Normf("  Price     : ")
+	out.Valuf("%s\n", offer.Price)
+	out.Normf("  Amount    : ")
+	out.Valuf("%s\n", offer.Amount.String())
+	out.Normf("  Status    : ")
+	out.Valuf("%s\n", offer.Status)
+	out.Normf("  Remainder : ")
+	out.Valuf("%s\n", offer.Remainder.String())
+
 	return nil
 }

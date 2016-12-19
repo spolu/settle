@@ -88,7 +88,7 @@ func New(
 	if creds != nil {
 		user = fmt.Sprintf("%s@%s", creds.Username, creds.Host)
 	}
-	out.Statf("[Initialized] env:%s user:%s\n", cliEnv.Environment, user)
+	out.Statf("[Initializing] env=%s user=%s\n", cliEnv.Environment, user)
 
 	return &Cli{
 		Ctx:   ctx,

@@ -5,8 +5,6 @@ package command
 import (
 	"context"
 	"fmt"
-	"net/http"
-	"net/url"
 
 	"github.com/spolu/settle/cli"
 	"github.com/spolu/settle/lib/errors"
@@ -25,8 +23,7 @@ func init() {
 
 // Mint a user up to a certain amount of a given asset they issued.
 type Mint struct {
-	Code  string
-	Scale int8
+	AssetName string
 }
 
 // NewMint constructs and initializes the command.
@@ -87,8 +84,7 @@ func (c *Mint) Parse(
 		return errors.Trace(err)
 	}
 
-	c.Code = a.Code
-	c.Scale = a.Scale
+	c.AssetName = a.Name
 
 	return nil
 }
@@ -97,36 +93,7 @@ func (c *Mint) Parse(
 func (c *Mint) Execute(
 	ctx context.Context,
 ) error {
-	m, err := cli.MintFromContextCredentials(ctx)
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	out.Statf("[Creating asset] code:%s scale:%d\n",
-		c.Code, c.Scale)
-
-	status, raw, err := m.Post(ctx,
-		"/assets",
-		url.Values{
-			"code":  {c.Code},
-			"scale": {fmt.Sprintf("%d", c.Scale)},
-		})
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	if *status != http.StatusCreated && *status != http.StatusOK {
-		var e errors.ConcreteUserError
-		err = raw.Extract("error", &e)
-		if err != nil {
-			return errors.Trace(err)
-		}
-		return errors.Trace(
-			errors.Newf("(%s) %s", e.ErrCode, e.ErrMessage))
-	}
-
-	var asset mint.AssetResource
-	err = raw.Extract("asset", &asset)
+	asset, err := CreateAsset(ctx, c.AssetName)
 	if err != nil {
 		return errors.Trace(err)
 	}
