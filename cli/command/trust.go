@@ -111,7 +111,7 @@ func (c *Trust) Parse(
 	creds := cli.GetCredentials(ctx)
 	if creds == nil {
 		return errors.Trace(
-			errors.Newf("You need to be logged in."))
+			errors.Newf("You need to be logged in (try `settle help login`."))
 	}
 
 	if len(args) == 0 {

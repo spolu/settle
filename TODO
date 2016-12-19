@@ -1,6 +1,8 @@
 # cli
 
   [ ] remove mint (automatically mint)
+  [ ] add confirmations
+  [ ] list balances
 
 # api
 

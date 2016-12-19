@@ -49,5 +49,7 @@ func (c *Pay) Parse(
 func (c *Pay) Execute(
 	ctx context.Context,
 ) error {
+	// Find a path \o/
+	// Create transaction
 	return nil
 }
