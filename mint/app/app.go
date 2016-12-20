@@ -69,7 +69,7 @@ func Build(
 			)
 		}
 		return nil, errors.Newf(
-			"You must set the flag `-mint_host` to the hostname that other mints can use to contact this mint over HTTP (since you're running in QA). You can use `-mint_host=127.0.0.1:2407` for testing purposes.",
+			"You must set the flag `-mint_host` to the hostname that other mints can use to contact this mint over HTTP (since you're running in QA). You can use `-mint_host=127.0.0.1` for testing purposes.",
 		)
 	}
 

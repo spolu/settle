@@ -10,7 +10,7 @@ type ConfigKey string
 
 const (
 	// Production is the production environment.
-	Production Environment = "production"
+	Production Environment = "prod"
 	// QA is the qa environment.
 	QA Environment = "qa"
 )

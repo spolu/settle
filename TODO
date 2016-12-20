@@ -1,13 +1,29 @@
 # cli
 
+  [ ] pay command
+  [ ] logout command
+  [ ] add confirmations to actions
+  [x] fix get parameter for common
+  [x] list balances
+  [x] remove mint (automatically mint)
+
+# api
+
+ [ ] signup in a way that scales to an app:
+   [ ] enter email and get credentials over email?
+   [ ] enter email and verify to get credentials
+   [ ] eventually phone number + SMS?
+
 # mint
 
+ [ ] default autocert support in production
  [~] list endpoint
    [ ] list asset operations
    [x] list asset offers (order book)
    [x] list asset balances
    [x] list balances
    [x] list assets
+ [x] retrieve asset publicly
  [x] fix offer fixup on transaction expiration
  [x] split endpoints between creation and propagation
  [x] balance propogation
@@ -48,6 +64,7 @@
     [ ] test canonical transaction expiry calculation (min of all propagated)
     [ ] test that consumes an offer entirely (check status)
     [~] transaction tests with misbehaving mint
+    [x] test asset retrieval
     [x] test settling an expired transaction
     [x] transaction expiration and balance fixup
     [x] transaction expiration and offer fixup

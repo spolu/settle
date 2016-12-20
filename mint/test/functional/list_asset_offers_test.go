@@ -109,8 +109,8 @@ func TestListAssetOffersNoPropagation(
 	t *testing.T,
 ) {
 	t.Parallel()
-	m, _, a := setupListAssetBalances(t)
-	defer tearDownListAssetBalances(t, m)
+	m, _, a, _ := setupListAssetOffers(t)
+	defer tearDownListAssetOffers(t, m)
 
 	status, raw := m[0].Get(t, nil,
 		fmt.Sprintf("/assets/%s/offers", a[0].Name))

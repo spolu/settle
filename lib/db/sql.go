@@ -56,7 +56,7 @@ func NewPostgresDBForDSN(
 ) (*sqlx.DB, error) {
 	mintDB, err := sqlx.Connect("postgres", dsn)
 	if err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 	logging.Logf(ctx, "Opened postgres DB: dsn=%s\n", dsn)
 
@@ -76,12 +76,12 @@ func NewSqlite3DBForPath(
 
 	err = os.MkdirAll(filepath.Dir(path), 0777)
 	if err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 
 	mintDB, err := sqlx.Connect("sqlite3", path)
 	if err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 	logging.Logf(ctx, "Opened sqlite3 DB: in_memory=false path=%s\n", path)
 
@@ -96,7 +96,7 @@ func NewSqlite3DBInMemory(
 
 	mintDB, err := sqlx.Connect("sqlite3", ":memory:?_txlock=exclusive")
 	if err != nil {
-		return nil, err
+		return nil, errors.Trace(err)
 	}
 	logging.Logf(ctx, "Opened sqlite3 DB: in_memory=true\n")
 
