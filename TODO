@@ -1,8 +1,9 @@
 # cli
 
   [ ] pay command
-  [ ] logout command
+  [ ] register command
   [ ] add confirmations to actions
+  [x] logout command
   [x] fix get parameter for common
   [x] list balances
   [x] remove mint (automatically mint)
