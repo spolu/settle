@@ -8,6 +8,10 @@
   [x] list balances
   [x] remove mint (automatically mint)
 
+  settle register
+    > pick mint
+    > input email
+
 # api
 
  [ ] signup in a way that scales to an app:
@@ -17,7 +21,7 @@
 
 # mint
 
- [ ] default autocert support in production
+ [ ] default ACME-based SSL cert provisioning in production
  [~] list endpoint
    [ ] list asset operations
    [x] list asset offers (order book)

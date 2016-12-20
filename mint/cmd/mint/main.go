@@ -35,8 +35,8 @@ func init() {
 		"qa", "The environment to run in (qa, production), default: qa")
 	flag.StringVar(&dsnFlag, "db_dsn",
 		"", "The DSN of the database to use, default: sqlite3://~/.mint/mint-$env.db")
-	flag.StringVar(&hstFlag, "mint_host",
-		"", "The externally accessible hostname of this mint, default: none (required for production)")
+	flag.StringVar(&hstFlag, "host",
+		"", "The externally accessible host name of this mint, default: none (required for production)")
 
 	flag.StringVar(&usrFlag, "username",
 		"foo", "The user name of the user to upsert")

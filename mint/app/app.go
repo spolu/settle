@@ -33,7 +33,7 @@ func BackgroundContextFromFlags(
 		Environment: env.QA,
 		Config:      map[env.ConfigKey]string{},
 	}
-	if envFlag == "production" {
+	if envFlag == "production" || envFlag == "prod" {
 		mintEnv.Environment = env.Production
 	}
 	mintEnv.Config[mint.EnvCfgMintHost] = hstFlag
@@ -65,11 +65,11 @@ func Build(
 	if mint.GetHost(ctx) == "" {
 		if env.Get(ctx).Environment == env.Production {
 			return nil, errors.Newf(
-				"You must set the flag `-mint_host` to an externally accessible hostname that other mints can use to contact this mint over HTTPS. If you're just testing and don't have an SSL certificate, please run with `-env=qa`",
+				"You must set the `-host` flag to an publicly accessible hostname that other mints can use to contact this mint over HTTPS (SSL certificates will be automatically generated from `Let's Encrypt` in production). If you're just testing and don't have a public domain name pointing to this machine, please run with `-env=qa` and `-host=127.0.0.1`",
 			)
 		}
 		return nil, errors.Newf(
-			"You must set the flag `-mint_host` to the hostname that other mints can use to contact this mint over HTTP (since you're running in QA). You can use `-mint_host=127.0.0.1` for testing purposes.",
+			"You must set the `-host` flag to the hostname that other mints can use to contact this mint over HTTP (since you're running in QA). You can use `-host=127.0.0.1` for testing purposes.",
 		)
 	}
 
