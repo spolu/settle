@@ -1,8 +1,9 @@
 # cli
 
-  [ ] remove mint (automatically mint)
+  [ ] fix get parameter for common
   [ ] add confirmations
-  [ ] list balances
+  [x] list balances
+  [x] remove mint (automatically mint)
 
 # api
 
@@ -13,6 +14,7 @@
 
 # mint
 
+ [ ] default autocert support in production
  [~] list endpoint
    [ ] list asset operations
    [x] list asset offers (order book)

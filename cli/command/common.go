@@ -23,7 +23,9 @@ func CreateAsset(
 		return nil, errors.Trace(err)
 	}
 
-	out.Statf("[Creating asset] asset=%s\n", name)
+	out.Statf("[Creating asset] user=%s@%s asset=%s\n",
+		m.Credentials.Username, m.Credentials.Host,
+		name)
 
 	a, err := mint.AssetResourceFromName(ctx, name)
 	if err != nil {
@@ -69,7 +71,9 @@ func RetrieveAsset(
 		return nil, errors.Trace(err)
 	}
 
-	out.Statf("[Retrieving asset] asset=%s\n", name)
+	out.Statf("[Retrieving asset] user=%s@%s asset=%s\n",
+		m.Credentials.Username, m.Credentials.Host,
+		name)
 
 	status, raw, err := m.Get(ctx,
 		fmt.Sprintf("/assets/%s", name))
@@ -111,7 +115,8 @@ func CreateOffer(
 		return nil, errors.Trace(err)
 	}
 
-	out.Statf("[Creating offer] pair=%s amount=%s price=%s\n",
+	out.Statf("[Creating offer] user=%s@%s pair=%s amount=%s price=%s\n",
+		m.Credentials.Username, m.Credentials.Host,
 		pair, amount.String(), price)
 
 	status, raw, err := m.Post(ctx,
@@ -142,4 +147,152 @@ func CreateOffer(
 	}
 
 	return &offer, nil
+}
+
+// ListAssets list assets for the current user.
+func ListAssets(
+	ctx context.Context,
+) ([]mint.AssetResource, error) {
+	m, err := cli.MintFromContextCredentials(ctx)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	out.Statf("[Listing assets] user=%s@%s\n",
+		m.Credentials.Username, m.Credentials.Host)
+
+	status, raw, err := m.Get(ctx, "/assets")
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	if *status != http.StatusOK {
+		var e errors.ConcreteUserError
+		err = raw.Extract("error", &e)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		return nil, errors.Trace(
+			errors.Newf("(%s) %s", e.ErrCode, e.ErrMessage))
+	}
+
+	var assets []mint.AssetResource
+	err = raw.Extract("assets", &assets)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return assets, nil
+}
+
+// ListBalances list balances of the current user.
+func ListBalances(
+	ctx context.Context,
+) ([]mint.BalanceResource, error) {
+	m, err := cli.MintFromContextCredentials(ctx)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	out.Statf("[Listing balances] user=%s@%s\n",
+		m.Credentials.Username, m.Credentials.Host)
+
+	status, raw, err := m.Get(ctx, "/balances")
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	if *status != http.StatusOK {
+		var e errors.ConcreteUserError
+		err = raw.Extract("error", &e)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		return nil, errors.Trace(
+			errors.Newf("(%s) %s", e.ErrCode, e.ErrMessage))
+	}
+
+	var balances []mint.BalanceResource
+	err = raw.Extract("balances", &balances)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return balances, nil
+}
+
+// ListAssetBalances list balances for one of the current user's asset.
+func ListAssetBalances(
+	ctx context.Context,
+	asset string,
+) ([]mint.BalanceResource, error) {
+	m, err := cli.MintFromContextCredentials(ctx)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	out.Statf("[Listing asset balances] user=%s@%s asset=%s\n",
+		m.Credentials.Username, m.Credentials.Host, asset)
+
+	status, raw, err := m.Get(ctx, fmt.Sprintf("/assets/%s/balances", asset))
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	if *status != http.StatusOK {
+		var e errors.ConcreteUserError
+		err = raw.Extract("error", &e)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		return nil, errors.Trace(
+			errors.Newf("(%s) %s", e.ErrCode, e.ErrMessage))
+	}
+
+	var balances []mint.BalanceResource
+	err = raw.Extract("balances", &balances)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return balances, nil
+}
+
+// ListAssetOffers list offers for one of the current user's asset.
+func ListAssetOffers(
+	ctx context.Context,
+	asset string,
+	propagation mint.PgType,
+) ([]mint.OfferResource, error) {
+	m, err := cli.MintFromContextCredentials(ctx)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	out.Statf("[Listing asset offers] user=%s@%s asset=%s propagation=%s\n",
+		m.Credentials.Username, m.Credentials.Host, asset, propagation)
+
+	status, raw, err := m.Get(ctx,
+		fmt.Sprintf("/assets/%s/offers?propagation=%s", asset, propagation))
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	if *status != http.StatusOK {
+		var e errors.ConcreteUserError
+		err = raw.Extract("error", &e)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		return nil, errors.Trace(
+			errors.Newf("(%s) %s", e.ErrCode, e.ErrMessage))
+	}
+
+	var offers []mint.OfferResource
+	err = raw.Extract("offers", &offers)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return offers, nil
 }
