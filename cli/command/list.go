@@ -54,8 +54,8 @@ func (c *List) Help(
 	out.Normf("\nUsage: ")
 	out.Boldf("settle list <type> [<asset>]\n")
 	out.Normf("\n")
-	out.Normf("  Lists assets, balances (yours or related to one of your assets), trustlines\n")
-	out.Normf("  (from you and to you for a particular asset).\n")
+	out.Normf("  Lists assets, balances (yours or related to one of your assets) or trustlines\n")
+	out.Normf("  (from you, and to you for a particular asset).\n")
 	out.Normf("\n")
 	out.Normf("Arguments:\n")
 	out.Boldf("  type\n")
@@ -63,16 +63,15 @@ func (c *List) Help(
 	out.Valuf("    assets balances trustlines\n")
 	out.Normf("\n")
 	out.Boldf("  asset\n")
-	out.Normf("    Applicable for balances and trustlines. If used with balances, list all the\n")
-	out.Normf("    balances for one of your asset (all other users' balances); if used with\n")
-	out.Normf("    trustlines, list all the trustlines for a particular asset.\n")
+	out.Normf("    Applicable for balances and required for trustlines. If used with balances,\n")
+	out.Normf("    list all the balances for one of your asset (all other users' balances);\n")
+	out.Normf("    when used with trustlines, list all the trustlines for a particular asset.\n")
 	out.Valuf("    USD.2 HOUR-OF-WORK.0 BTC.7 EUR.2 DRINK.0\n")
 	out.Normf("\n")
 	out.Normf("Examples:\n")
 	out.Valuf("   setlle list assets\n")
 	out.Valuf("   setlle list balances\n")
 	out.Valuf("   setlle list balances USD.2\n")
-	out.Valuf("   setlle list trustlines\n")
 	out.Valuf("   setlle list trustlines EUR.2\n")
 	out.Normf("\n")
 }
@@ -148,14 +147,15 @@ func (c *List) Execute(
 // OutList prints out a list of records.
 func (c *List) OutList(
 	ctx context.Context,
-	list []map[string]string,
+	list [][][2]string,
 ) error {
 	for _, d := range list {
 		out.Normf(" ")
-		for k, v := range d {
-			out.Normf(" %s: ", k)
-			out.Valuf("%s", v)
+		for _, v := range d {
+			out.Normf(" %s: ", v[0])
+			out.Valuf("%s", v[1])
 		}
+		out.Normf("\n")
 	}
 	return nil
 }
@@ -170,16 +170,16 @@ func (c *List) ExecuteAssets(
 	}
 
 	out.Boldf("Assets:\n")
-	data := []map[string]string{}
+	data := [][][2]string{}
 	for _, a := range assets {
-		data = append(data, map[string]string{
-			"ID":      a.ID,
-			"Created": fmt.Sprintf("%d", a.Created),
-			"Asset":   a.Name,
+		data = append(data, [][2]string{
+			[2]string{"ID", a.ID},
+			[2]string{"Created", fmt.Sprintf("%d", a.Created)},
+			[2]string{"Asset", a.Name},
 		})
 	}
 	if len(assets) == 0 {
-		out.Normf("No asset.")
+		out.Normf("  No asset.")
 	} else {
 		c.OutList(ctx, data)
 	}
@@ -206,18 +206,18 @@ func (c *List) ExecuteBalances(
 	}
 
 	out.Boldf("Balances:\n")
-	data := []map[string]string{}
+	data := [][][2]string{}
 	for _, b := range balances {
-		data = append(data, map[string]string{
-			"ID":      b.ID,
-			"Created": fmt.Sprintf("%d", b.Created),
-			"Asset":   b.Asset,
-			"Holder":  b.Holder,
-			"Value":   b.Value.String(),
+		data = append(data, [][2]string{
+			[2]string{"ID", b.ID},
+			[2]string{"Created", fmt.Sprintf("%d", b.Created)},
+			[2]string{"Asset", b.Asset},
+			[2]string{"Holder", b.Holder},
+			[2]string{"Value", b.Value.String()},
 		})
 	}
 	if len(balances) == 0 {
-		out.Normf("No balance.")
+		out.Normf("  No balance.")
 	} else {
 		c.OutList(ctx, data)
 	}
@@ -239,39 +239,39 @@ func (c *List) ExecuteTrustlines(
 	}
 
 	out.Boldf("Trustlines from you:\n")
-	data := []map[string]string{}
+	data := [][][2]string{}
 	for _, o := range cOffers {
-		data = append(data, map[string]string{
-			"ID":        o.ID,
-			"Created":   fmt.Sprintf("%d", o.Created),
-			"Pair":      o.Pair,
-			"Price":     o.Price,
-			"Amount":    o.Amount.String(),
-			"Status":    string(o.Status),
-			"Remainder": o.Remainder.String(),
+		data = append(data, [][2]string{
+			[2]string{"ID", o.ID},
+			[2]string{"Created", fmt.Sprintf("%d", o.Created)},
+			[2]string{"Pair", o.Pair},
+			[2]string{"Price", o.Price},
+			[2]string{"Amount", o.Amount.String()},
+			[2]string{"Status", string(o.Status)},
+			[2]string{"Remainder", o.Remainder.String()},
 		})
 	}
 	if len(cOffers) == 0 {
-		out.Normf("No trustline.\n")
+		out.Normf("  No trustline.\n")
 	} else {
 		c.OutList(ctx, data)
 	}
 
 	out.Boldf("Trustlines to you:\n")
-	data = []map[string]string{}
+	data = [][][2]string{}
 	for _, o := range pOffers {
-		data = append(data, map[string]string{
-			"ID":        o.ID,
-			"Created":   fmt.Sprintf("%d", o.Created),
-			"Pair":      o.Pair,
-			"Price":     o.Price,
-			"Amount":    o.Amount.String(),
-			"Status":    string(o.Status),
-			"Remainder": o.Remainder.String(),
+		data = append(data, [][2]string{
+			[2]string{"ID", o.ID},
+			[2]string{"Created", fmt.Sprintf("%d", o.Created)},
+			[2]string{"Pair", o.Pair},
+			[2]string{"Price", o.Price},
+			[2]string{"Amount", o.Amount.String()},
+			[2]string{"Status", string(o.Status)},
+			[2]string{"Remainder", o.Remainder.String()},
 		})
 	}
 	if len(pOffers) == 0 {
-		out.Normf("No trustline.\n")
+		out.Normf("  No trustline.\n")
 	} else {
 		c.OutList(ctx, data)
 	}
