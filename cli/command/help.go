@@ -70,13 +70,18 @@ func (c *Help) Help(
 	out.Normf("\n")
 
 	out.Boldf("  login\n")
-	out.Normf("    Login to a mint (logs the current user out).\n")
+	out.Normf("    Log into a mint.\n")
 	out.Valuf("    settle login\n")
 	out.Normf("\n")
 
 	out.Boldf("  register\n")
 	out.Normf("    Register on publicy available mints.\n")
 	out.Valuf("    settle login\n")
+	out.Normf("\n")
+
+	out.Boldf("  logout\n")
+	out.Normf("    Log the current user out.\n")
+	out.Valuf("    settle logout\n")
 	out.Normf("\n")
 }
 

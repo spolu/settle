@@ -123,7 +123,7 @@ func Login(
 		return errors.Trace(err)
 	}
 
-	out.Statf("[Stored credentials] file:%s\n", *path)
+	out.Statf("[Storing credentials] file=%s\n", *path)
 
 	return nil
 }
@@ -142,7 +142,7 @@ func Logout(
 		return errors.Trace(err)
 	}
 
-	out.Statf("[Removed] file:%s\n", *path)
+	out.Statf("[Erasing credentials] file=%s\n", *path)
 
 	return nil
 }
