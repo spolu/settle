@@ -1,7 +1,9 @@
 # cli
 
-  [ ] fix get parameter for common
-  [ ] add confirmations
+  [ ] pay command
+  [ ] logout command
+  [ ] add confirmations to actions
+  [x] fix get parameter for common
   [x] list balances
   [x] remove mint (automatically mint)
 
