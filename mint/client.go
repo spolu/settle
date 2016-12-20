@@ -165,14 +165,16 @@ func FullMintURL(
 	ctx context.Context,
 	host string,
 	path string,
+	query url.Values,
 ) *url.URL {
 	if len(strings.Split(host, ":")) == 1 {
 		host += fmt.Sprintf(":%d", DefaultPort[env.Get(ctx).Environment])
 	}
 	url := url.URL{
-		Scheme: DefaultScheme[env.Get(ctx).Environment],
-		Host:   host,
-		Path:   path,
+		Scheme:   DefaultScheme[env.Get(ctx).Environment],
+		Host:     host,
+		Path:     path,
+		RawQuery: query.Encode(),
 	}
 	return &url
 }
@@ -193,7 +195,8 @@ func (c *Client) RetrieveBalance(
 	}
 
 	r, err := c.httpClient.Get(
-		FullMintURL(ctx, host, fmt.Sprintf("/balances/%s", id)).String())
+		FullMintURL(ctx,
+			host, fmt.Sprintf("/balances/%s", id), url.Values{}).String())
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -228,7 +231,8 @@ func (c *Client) RetrieveOffer(
 	}
 
 	r, err := c.httpClient.Get(
-		FullMintURL(ctx, host, fmt.Sprintf("/offers/%s", id)).String())
+		FullMintURL(ctx,
+			host, fmt.Sprintf("/offers/%s", id), url.Values{}).String())
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -263,7 +267,8 @@ func (c *Client) RetrieveOperation(
 	}
 
 	r, err := c.httpClient.Get(
-		FullMintURL(ctx, host, fmt.Sprintf("/operations/%s", id)).String())
+		FullMintURL(ctx,
+			host, fmt.Sprintf("/operations/%s", id), url.Values{}).String())
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -303,7 +308,8 @@ func (c *Client) RetrieveTransaction(
 	}
 
 	r, err := c.httpClient.Get(
-		FullMintURL(ctx, *mint, fmt.Sprintf("/transactions/%s", id)).String())
+		FullMintURL(ctx,
+			*mint, fmt.Sprintf("/transactions/%s", id), url.Values{}).String())
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -330,7 +336,7 @@ func (c *Client) PropagateBalance(
 ) (*BalanceResource, error) {
 	req, err := http.NewRequest("POST",
 		FullMintURL(ctx, mint,
-			fmt.Sprintf("/balances/%s", id)).String(), nil)
+			fmt.Sprintf("/balances/%s", id), url.Values{}).String(), nil)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -363,7 +369,7 @@ func (c *Client) PropagateOffer(
 ) (*OfferResource, error) {
 	req, err := http.NewRequest("POST",
 		FullMintURL(ctx, mint,
-			fmt.Sprintf("/offers/%s", id)).String(), nil)
+			fmt.Sprintf("/offers/%s", id), url.Values{}).String(), nil)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -396,7 +402,7 @@ func (c *Client) PropagateOperation(
 ) (*OperationResource, error) {
 	req, err := http.NewRequest("POST",
 		FullMintURL(ctx, mint,
-			fmt.Sprintf("/operations/%s", id)).String(), nil)
+			fmt.Sprintf("/operations/%s", id), url.Values{}).String(), nil)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -430,7 +436,7 @@ func (c *Client) PropagateTransaction(
 ) (*TransactionResource, error) {
 	req, err := http.NewRequest("POST",
 		FullMintURL(ctx, mint,
-			fmt.Sprintf("/transactions/%s", id)).String(),
+			fmt.Sprintf("/transactions/%s", id), url.Values{}).String(),
 		strings.NewReader(url.Values{
 			"hop": {fmt.Sprintf("%d", hop)},
 		}.Encode()))
@@ -490,7 +496,7 @@ func (c *Client) SettleTransaction(
 
 	req, err := http.NewRequest("POST",
 		FullMintURL(ctx, *mint,
-			fmt.Sprintf("/transactions/%s/settle", id)).String(),
+			fmt.Sprintf("/transactions/%s/settle", id), url.Values{}).String(),
 		strings.NewReader(body.Encode()))
 	if err != nil {
 		return nil, errors.Trace(err)

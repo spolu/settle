@@ -40,10 +40,11 @@ func MintFromContextCredentials(
 func (m *Mint) Post(
 	ctx context.Context,
 	path string,
+	query url.Values,
 	params url.Values,
 ) (*int, *svc.Resp, error) {
 	req, err := http.NewRequest("POST",
-		mint.FullMintURL(ctx, m.Host, path).String(),
+		mint.FullMintURL(ctx, m.Host, path, query).String(),
 		strings.NewReader(params.Encode()))
 	if err != nil {
 		return nil, nil, errors.Trace(err)
@@ -71,9 +72,10 @@ func (m *Mint) Post(
 func (m *Mint) Get(
 	ctx context.Context,
 	path string,
+	query url.Values,
 ) (*int, *svc.Resp, error) {
 	req, err := http.NewRequest("GET",
-		mint.FullMintURL(ctx, m.Host, path).String(), nil)
+		mint.FullMintURL(ctx, m.Host, path, query).String(), nil)
 	if err != nil {
 		return nil, nil, errors.Trace(err)
 	}

@@ -252,12 +252,11 @@ func (c *List) ExecuteTrustlines(
 		})
 	}
 	if len(cOffers) == 0 {
-		out.Normf("No trustline.")
+		out.Normf("No trustline.\n")
 	} else {
 		c.OutList(ctx, data)
 	}
 
-	out.Normf("\n")
 	out.Boldf("Trustlines to you:\n")
 	data = []map[string]string{}
 	for _, o := range pOffers {
@@ -272,7 +271,7 @@ func (c *List) ExecuteTrustlines(
 		})
 	}
 	if len(pOffers) == 0 {
-		out.Normf("No trustline.")
+		out.Normf("No trustline.\n")
 	} else {
 		c.OutList(ctx, data)
 	}

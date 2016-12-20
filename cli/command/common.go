@@ -34,6 +34,7 @@ func CreateAsset(
 
 	status, raw, err := m.Post(ctx,
 		"/assets",
+		url.Values{},
 		url.Values{
 			"code":  {a.Code},
 			"scale": {fmt.Sprintf("%d", a.Scale)},
@@ -76,7 +77,8 @@ func RetrieveAsset(
 		name)
 
 	status, raw, err := m.Get(ctx,
-		fmt.Sprintf("/assets/%s", name))
+		fmt.Sprintf("/assets/%s", name),
+		url.Values{})
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -121,6 +123,7 @@ func CreateOffer(
 
 	status, raw, err := m.Post(ctx,
 		"/offers",
+		url.Values{},
 		url.Values{
 			"pair":   {pair},
 			"amount": {amount.String()},
@@ -161,7 +164,9 @@ func ListAssets(
 	out.Statf("[Listing assets] user=%s@%s\n",
 		m.Credentials.Username, m.Credentials.Host)
 
-	status, raw, err := m.Get(ctx, "/assets")
+	status, raw, err := m.Get(ctx,
+		"/assets",
+		url.Values{})
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -197,7 +202,9 @@ func ListBalances(
 	out.Statf("[Listing balances] user=%s@%s\n",
 		m.Credentials.Username, m.Credentials.Host)
 
-	status, raw, err := m.Get(ctx, "/balances")
+	status, raw, err := m.Get(ctx,
+		"/balances",
+		url.Values{})
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -234,7 +241,9 @@ func ListAssetBalances(
 	out.Statf("[Listing asset balances] user=%s@%s asset=%s\n",
 		m.Credentials.Username, m.Credentials.Host, asset)
 
-	status, raw, err := m.Get(ctx, fmt.Sprintf("/assets/%s/balances", asset))
+	status, raw, err := m.Get(ctx,
+		fmt.Sprintf("/assets/%s/balances", asset),
+		url.Values{})
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -273,7 +282,10 @@ func ListAssetOffers(
 		m.Credentials.Username, m.Credentials.Host, asset, propagation)
 
 	status, raw, err := m.Get(ctx,
-		fmt.Sprintf("/assets/%s/offers?propagation=%s", asset, propagation))
+		fmt.Sprintf("/assets/%s/offers", asset),
+		url.Values{
+			"propagation": {string(propagation)},
+		})
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
