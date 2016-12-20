@@ -36,7 +36,7 @@ func BackgroundContextFromFlags(
 	if envFlag == "production" || envFlag == "prod" {
 		mintEnv.Environment = env.Production
 	}
-	mintEnv.Config[mint.EnvCfgMintHost] = hstFlag
+	mintEnv.Config[mint.EnvCfgHost] = hstFlag
 	ctx = env.With(ctx, &mintEnv)
 
 	mintDB, err := db.NewDBForDSN(ctx, dsnFlag)

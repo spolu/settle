@@ -106,10 +106,10 @@ func CreateMint(
 		Ctx:     ctx,
 		TmpFile: tmpFile,
 	}
-	m.Env.Config[mint.EnvCfgMintHost] = m.Server.URL[7:]
+	m.Env.Config[mint.EnvCfgHost] = m.Server.URL[7:]
 
 	logging.Logf(ctx, "Creating test mint: minst_host=%s",
-		m.Env.Config[mint.EnvCfgMintHost])
+		m.Env.Config[mint.EnvCfgHost])
 
 	return &m
 }
@@ -145,14 +145,14 @@ func (m *Mint) CreateUser(
 	if err != nil {
 		t.Fatal(err)
 	}
-	m.Env.Config[mint.EnvCfgMintHost] = m.Server.URL[7:]
+	m.Env.Config[mint.EnvCfgHost] = m.Server.URL[7:]
 
 	logging.Logf(m.Ctx, "Creating test mint: minst_host=%s",
-		m.Env.Config[mint.EnvCfgMintHost])
+		m.Env.Config[mint.EnvCfgHost])
 
 	return &MintUser{
 		m, username, password,
-		fmt.Sprintf("%s@%s", username, m.Env.Config[mint.EnvCfgMintHost]),
+		fmt.Sprintf("%s@%s", username, m.Env.Config[mint.EnvCfgHost]),
 	}
 }
 

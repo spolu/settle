@@ -9,15 +9,15 @@ import (
 )
 
 const (
-	// EnvCfgMintHost is the env config key for the mint host.
-	EnvCfgMintHost env.ConfigKey = "mint_host"
+	// EnvCfgHost is the env config key for the mint host.
+	EnvCfgHost env.ConfigKey = "host"
 )
 
 // GetHost retrieves the current mint host from the given contest.
 func GetHost(
 	ctx context.Context,
 ) string {
-	return env.Get(ctx).Config[EnvCfgMintHost]
+	return env.Get(ctx).Config[EnvCfgHost]
 }
 
 // Logf shells out to logging.Logf adding the mint host as prefix.
