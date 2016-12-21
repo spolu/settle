@@ -15,7 +15,6 @@ import (
 	"github.com/spolu/settle/mint"
 	"github.com/spolu/settle/mint/async"
 	"github.com/spolu/settle/mint/lib/authentication"
-	"github.com/spolu/settle/mint/model"
 
 	// force initialization of schemas
 	_ "github.com/spolu/settle/mint/model/schemas"
@@ -47,7 +46,7 @@ func BackgroundContextFromFlags(
 	if err != nil {
 		return nil, err
 	}
-	err = model.CreateMintDBTables(ctx, mintDB)
+	err = db.CreateDBTables(ctx, "mint", mintDB)
 	if err != nil {
 		return nil, err
 	}

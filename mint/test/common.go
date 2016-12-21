@@ -73,7 +73,7 @@ func CreateMint(
 		t.Fatal(err)
 	}
 
-	err = model.CreateMintDBTables(ctx, mintDB)
+	err = db.CreateDBTables(ctx, "mint", mintDB)
 	if err != nil {
 		t.Fatal(err)
 	}
