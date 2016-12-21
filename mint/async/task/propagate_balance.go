@@ -78,7 +78,7 @@ func (t *PropagateBalance) Execute(
 		return errors.Trace(err)
 	}
 
-	ctx = db.Begin(ctx)
+	ctx = db.Begin(ctx, "mint")
 	defer db.LoggedRollback(ctx)
 
 	balance, err := model.LoadCanonicalBalanceByID(ctx, t.id)

@@ -79,7 +79,7 @@ func (e *CreateAsset) Validate(
 func (e *CreateAsset) Execute(
 	ctx context.Context,
 ) (*int, *svc.Resp, error) {
-	ctx = db.Begin(ctx)
+	ctx = db.Begin(ctx, "mint")
 	defer db.LoggedRollback(ctx)
 
 	asset, err := model.CreateCanonicalAsset(ctx,

@@ -71,7 +71,7 @@ func CreateCanonicalBalance(
 		Value:  value,
 	}
 
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO balances
   (owner, token, created, propagation, asset, holder, value)
@@ -115,7 +115,7 @@ func CreatePropagatedBalance(
 		Value:  value,
 	}
 
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO balances
   (owner, token, created, propagation, asset, holder, value)
@@ -147,7 +147,7 @@ func (b *Balance) ID() string {
 func (b *Balance) Save(
 	ctx context.Context,
 ) error {
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	_, err := sqlx.NamedExec(ext, `
 UPDATE balances
 SET value = :value
@@ -174,7 +174,7 @@ func LoadCanonicalBalanceByAssetHolder(
 		Propagation: mint.PgTpCanonical,
 	}
 
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	if rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM balances
@@ -229,7 +229,7 @@ func LoadCanonicalBalanceByOwnerToken(
 		Propagation: mint.PgTpCanonical,
 	}
 
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	if rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM balances
@@ -276,7 +276,7 @@ func LoadPropagatedBalanceByOwnerToken(
 		Propagation: mint.PgTpPropagated,
 	}
 
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	if rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM balances
@@ -310,7 +310,7 @@ func LoadBalanceListByHolder(
 		"limit":          limit,
 	}
 
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM balances
@@ -352,7 +352,7 @@ func LoadBalanceListByAsset(
 		"limit":          limit,
 	}
 
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM balances

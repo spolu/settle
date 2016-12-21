@@ -55,7 +55,7 @@ func (e *ListBalances) Validate(
 func (e *ListBalances) Execute(
 	ctx context.Context,
 ) (*int, *svc.Resp, error) {
-	ctx = db.Begin(ctx)
+	ctx = db.Begin(ctx, "mint")
 	defer db.LoggedRollback(ctx)
 
 	balances, err := model.LoadBalanceListByHolder(ctx,

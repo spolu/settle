@@ -79,7 +79,7 @@ func (t *PropagateOffer) Execute(
 		return errors.Trace(err)
 	}
 
-	ctx = db.Begin(ctx)
+	ctx = db.Begin(ctx, "mint")
 	defer db.LoggedRollback(ctx)
 
 	offer, err := model.LoadCanonicalOfferByID(ctx, t.id)

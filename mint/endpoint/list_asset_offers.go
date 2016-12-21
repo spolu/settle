@@ -68,7 +68,7 @@ func (e *ListAssetOffers) Validate(
 func (e *ListAssetOffers) Execute(
 	ctx context.Context,
 ) (*int, *svc.Resp, error) {
-	ctx = db.Begin(ctx)
+	ctx = db.Begin(ctx, "mint")
 	defer db.LoggedRollback(ctx)
 
 	var offers []model.Offer

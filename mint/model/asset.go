@@ -75,7 +75,7 @@ func CreateCanonicalAsset(
 		Scale: scale,
 	}
 
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO assets
   (owner, token, created, propagation, code, scale)
@@ -113,7 +113,7 @@ func LoadCanonicalAssetByOwnerCodeScale(
 		Propagation: mint.PgTpCanonical,
 	}
 
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	if rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM assets
@@ -162,7 +162,7 @@ func LoadAssetListByOwner(
 		"limit":          limit,
 	}
 
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM assets

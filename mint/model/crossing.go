@@ -76,7 +76,7 @@ func CreateCanonicalCrossing(
 		Hop:         hop,
 	}
 
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO crossings
   (owner, token, created, propagation, offer, amount, status, txn, hop)
@@ -103,7 +103,7 @@ VALUES
 func (c *Crossing) Save(
 	ctx context.Context,
 ) error {
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	_, err := sqlx.NamedExec(ext, `
 UPDATE crossings
 SET status = :status
@@ -130,7 +130,7 @@ func LoadCanonicalCrossingByTransactionHop(
 		Propagation: mint.PgTpCanonical,
 	}
 
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	if rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM crossings
@@ -162,7 +162,7 @@ func LoadCanonicalCrossingsByTransaction(
 		"propagation": mint.PgTpCanonical,
 	}
 
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM crossings

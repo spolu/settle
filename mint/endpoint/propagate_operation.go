@@ -183,7 +183,7 @@ func (e *PropagateOperation) ExecutePropagated(
 		))
 	}
 
-	ctx = db.Begin(ctx)
+	ctx = db.Begin(ctx, "mint")
 	defer db.LoggedRollback(ctx)
 
 	code := http.StatusCreated

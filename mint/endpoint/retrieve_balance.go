@@ -61,7 +61,7 @@ func (e *RetrieveBalance) Validate(
 func (e *RetrieveBalance) Execute(
 	ctx context.Context,
 ) (*int, *svc.Resp, error) {
-	ctx = db.Begin(ctx)
+	ctx = db.Begin(ctx, "mint")
 	defer db.LoggedRollback(ctx)
 
 	balance, err := model.LoadCanonicalBalanceByOwnerToken(ctx,

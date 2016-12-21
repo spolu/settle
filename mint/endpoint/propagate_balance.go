@@ -152,7 +152,7 @@ func (e *PropagateBalance) Execute(
 		))
 	}
 
-	ctx = db.Begin(ctx)
+	ctx = db.Begin(ctx, "mint")
 	defer db.LoggedRollback(ctx)
 
 	code := http.StatusCreated

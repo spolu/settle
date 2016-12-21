@@ -113,7 +113,7 @@ func CreateCanonicalTransaction(
 		Secret: &secret,
 	}
 
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO transactions
   (owner, token, created, propagation, base_asset, quote_asset,
@@ -171,7 +171,7 @@ func CreatePropagatedTransaction(
 		Secret:      nil,
 	}
 
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO transactions
   (owner, token, created, propagation, base_asset, quote_asset,
@@ -201,7 +201,7 @@ func (t *Transaction) Save(
 	ctx context.Context,
 ) error {
 	t.Expiry = t.Expiry.UTC()
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	_, err := sqlx.NamedExec(ext, `
 UPDATE transactions
 SET status = :status, expiry = :expiry
@@ -228,7 +228,7 @@ func LoadCanonicalTransactionByOwnerToken(
 		Propagation: mint.PgTpCanonical,
 	}
 
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	if rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM transactions
@@ -262,7 +262,7 @@ func LoadPropagatedTransactionByOwnerToken(
 		Propagation: mint.PgTpPropagated,
 	}
 
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	if rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM transactions
@@ -299,7 +299,7 @@ func LoadTransactionByID(
 		Token: token,
 	}
 
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	if rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM transactions

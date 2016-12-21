@@ -62,12 +62,12 @@ func ServeListener(mux *goji.Mux, listener net.Listener) {
 	// This allows packages like expvar to continue working as expected.
 	http.Handle("/", mux)
 
-	log.Println("Starting Goji on", listener.Addr())
+	log.Println("Starting on", listener.Addr())
 
 	graceful.HandleSignals()
 	bind.Ready()
-	graceful.PreHook(func() { log.Printf("Goji received signal, gracefully stopping") })
-	graceful.PostHook(func() { log.Printf("Goji stopped") })
+	graceful.PreHook(func() { log.Printf("Received signal, gracefully stopping") })
+	graceful.PostHook(func() { log.Printf("Stopped") })
 
 	err := graceful.Serve(listener, http.DefaultServeMux)
 

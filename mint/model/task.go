@@ -46,7 +46,7 @@ func CreateTask(
 		Retry:   retry,
 	}
 
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO tasks
   (token, created, name, subject, status, retry)
@@ -73,7 +73,7 @@ VALUES
 func (o *Task) Save(
 	ctx context.Context,
 ) error {
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	_, err := sqlx.NamedExec(ext, `
 UPDATE tasks
 SET status = :status, retry = :retry
@@ -94,7 +94,7 @@ func LoadPendingTasks(
 		Status: mint.TkStPending,
 	}
 
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM tasks

@@ -162,7 +162,7 @@ func (e *CreateTransaction) Execute(
 func (e *CreateTransaction) ExecuteCanonical(
 	ctx context.Context,
 ) (*int, *svc.Resp, error) {
-	ctx = db.Begin(ctx)
+	ctx = db.Begin(ctx, "mint")
 	defer db.LoggedRollback(ctx)
 
 	// No need to lock the transaction here as we are the only mint to know its
@@ -317,7 +317,7 @@ func (e *CreateTransaction) ExecutePropagated(
 		e.Path = []string(e.Tx.Path)
 	} else {
 		mustCommit = true
-		ctx = db.Begin(ctx)
+		ctx = db.Begin(ctx, "mint")
 		defer db.LoggedRollback(ctx)
 
 		transaction, err := e.Client.RetrieveTransaction(ctx, e.ID, nil)

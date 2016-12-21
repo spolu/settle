@@ -96,7 +96,7 @@ func CreateCanonicalOperation(
 		Hop:         hop,
 	}
 
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO operations
   (owner, token, created, propagation, asset, source, destination,
@@ -151,7 +151,7 @@ func CreatePropagatedOperation(
 		Hop:         hop,
 	}
 
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO operations
   (owner, token, created, propagation, asset, source, destination,
@@ -185,7 +185,7 @@ func (o *Operation) ID() string {
 func (o *Operation) Save(
 	ctx context.Context,
 ) error {
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	_, err := sqlx.NamedExec(ext, `
 UPDATE operations
 SET status = :status
@@ -212,7 +212,7 @@ func LoadCanonicalOperationByOwnerToken(
 		Propagation: mint.PgTpCanonical,
 	}
 
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	if rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM operations
@@ -259,7 +259,7 @@ func LoadCanonicalOperationByTransactionHop(
 		Propagation: mint.PgTpCanonical,
 	}
 
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	if rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM operations
@@ -290,7 +290,7 @@ func LoadCanonicalOperationsByTransaction(
 		"propagation": mint.PgTpCanonical,
 	}
 
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM operations
@@ -329,7 +329,7 @@ func LoadPropagatedOperationByOwnerToken(
 		Propagation: mint.PgTpPropagated,
 	}
 
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	if rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM operations

@@ -77,7 +77,7 @@ func CreateMint(
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx = db.WithDB(ctx, mintDB)
+	ctx = db.WithDB(ctx, "mint", mintDB)
 
 	a, err := async.NewAsync(ctx)
 	if err != nil {
@@ -88,7 +88,7 @@ func CreateMint(
 	mux := goji.NewMux()
 	mux.Use(requestlogger.Middleware)
 	mux.Use(recoverer.Middleware)
-	mux.Use(db.Middleware(db.GetDB(ctx)))
+	mux.Use(db.Middleware(db.GetDBMap(ctx)))
 	mux.Use(env.Middleware(env.Get(ctx)))
 	mux.Use(async.Middleware(async.Get(ctx)))
 	mux.Use(authentication.Middleware)
