@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/spolu/settle/lib/logging"
@@ -38,20 +39,21 @@ func GetTransaction(
 // Begin returns a new context with a new transaction set.
 func Begin(
 	ctx context.Context,
+	tag string,
 ) context.Context {
-	if ctx.Value(dbKey) == nil || GetDB(ctx) == nil {
-		panic("db: no DB in context")
+	if ctx.Value(mapKey) == nil || GetDB(ctx, tag) == nil {
+		panic(fmt.Sprintf("db: no DB in context for tag %s", tag))
 	}
-	//if ctx.Value(transactionKey) != nil && GetTransaction(ctx).Tx != nil {
-	//	Logging.Logf(ctx,
-	//		"Transaction: already begun %s.", GetTransaction(ctx).Token)
-	//	return ctx
-	//}
+	if ctx.Value(transactionKey) != nil && GetTransaction(ctx).Tx != nil {
+		panic(fmt.Sprintf(
+			"db: re-entrant transaction %s (re-entrant tag: %s)",
+			GetTransaction(ctx).Token, tag))
+	}
 	token := token.New("tx")
 	logging.Logf(ctx,
-		"Transaction: begin %s.", token)
+		"Transaction BEGIN: tag=%s token=%s", tag, token)
 	return WithTransaction(ctx, Transaction{
-		Tx:    GetDB(ctx).MustBegin(),
+		Tx:    GetDB(ctx, tag).MustBegin(),
 		Token: token,
 	})
 }
@@ -61,7 +63,7 @@ func Commit(
 	ctx context.Context,
 ) {
 	logging.Logf(ctx,
-		"Transaction: commit %s.", GetTransaction(ctx).Token)
+		"Transaction COMMIT: token=%s", GetTransaction(ctx).Token)
 	err := GetTransaction(ctx).Tx.Commit()
 	if err != nil {
 		panic(err)
@@ -81,7 +83,7 @@ func LoggedRollback(ctx context.Context) {
 		panic(err)
 	} else if err == nil {
 		logging.Logf(ctx,
-			"Transaction: rollback %s.", GetTransaction(ctx).Token)
+			"Transaction ROLLBACK: token=%s", GetTransaction(ctx).Token)
 	}
 }
 
@@ -89,9 +91,10 @@ func LoggedRollback(ctx context.Context) {
 // otherwise).
 func Ext(
 	ctx context.Context,
+	tag string,
 ) sqlx.Ext {
 	if ctx.Value(transactionKey) != nil && GetTransaction(ctx).Tx != nil {
 		return GetTransaction(ctx).Tx
 	}
-	return GetDB(ctx)
+	return GetDB(ctx, tag)
 }

@@ -74,7 +74,7 @@ func (t *ExpireTransaction) DeadlineForRetry(
 func (t *ExpireTransaction) Execute(
 	ctx context.Context,
 ) error {
-	ctx = db.Begin(ctx)
+	ctx = db.Begin(ctx, "mint")
 	defer db.LoggedRollback(ctx)
 
 	txn, err := model.LoadTransactionByID(ctx, t.id)

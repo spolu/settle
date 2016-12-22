@@ -1,8 +1,35 @@
+# preview
+
+  [ ] finish cli
+    [ ] transfer command
+    [ ] pay command
+    [ ] register command
+    [ ] Mint-Protocol-Version header
+  [ ] finish register
+    [ ] send email on create user
+    [ ] verify user
+    [ ] roll user
+    [ ] site credentials page
+    [ ] setup LetsEncrypt
+    [ ] setup loggly
+  [ ] finish mint
+    [ ] setup LetsEncrypt
+    [ ] Mint-Protocol-Version header
+    [ ] setup loggly
+  [ ] finish site
+    [ ] have the get started guide on github, to generate stars?
+    [ ] credentials page
+    [ ] blog post draft
+    [ ] setup loggly
+  [ ] send r?
+
 # cli
 
+  [ ] Mint-Protocol-Version header
+  [ ] transfer command
   [ ] pay command
   [ ] register command
-  [ ] add confirmations to actions
+  [?] add confirmations to actions
   [x] logout command
   [x] fix get parameter for common
   [x] list balances
@@ -12,55 +39,57 @@
     > pick mint
     > input email
 
-# api
+# register
 
- [ ] signup in a way that scales to an app:
-   [ ] enter email and get credentials over email?
-   [ ] enter email and verify to get credentials
-   [ ] eventually phone number + SMS?
+  [ ] send email on create user
+  [ ] verify user
+  [ ] roll user
+  [ ] site credentials page
+  [ ] setup LetsEncrypt
 
 # mint
 
- [ ] default ACME-based SSL cert provisioning in production
- [~] list endpoint
-   [ ] list asset operations
-   [x] list asset offers (order book)
-   [x] list asset balances
-   [x] list balances
-   [x] list assets
- [x] retrieve asset publicly
- [x] fix offer fixup on transaction expiration
- [x] split endpoints between creation and propagation
- [x] balance propogation
- [x] pass DSN for DB, support Postgres
- [x] check expiry at settlement
- [x] check expiry of transactions at creation
- [x] transaction expiration
- [x] async proceses
- [x] propagation protocol for both operations and offers
- [x] idempotency of propagation (load offer/operation and save if they exist and return 200)
- [x] validate asset is created when creating offer and test
- [x] figure out when to set the offer as consumed (multiple crossings might be reserved)
- [x] remove user from records entirely?
- [x] remove the ability to create an operation directly?
- [x] transaction starting from an asset not owned by owner
- [x] janitorial work on test extractions (assert instead of fatal)
- [x] enforce we handle hops in order (we handle them all)
- [x] enforce the hops belong to the right mint
- [x] secure concurrent transaction settlement
- [x] secure concurrent transaction creation and settlement
- [x] transaction settlement
- [x] transaction locks
- [x] transaction creation
- [x] replace 1000*1000 by protocol constant
- [x] log prefix (mint)
- [x] make user optional for propagated transactions (or other objects)
- [x] move status values to protocol
- [x] move Execute to ctx
- [x] remove nil from creation operation, prevent issuer from owning balance
- [x] rename Normalized something Address to Owner
- [x] split controller into endpoint.CreateXXX object with Execute and Validate
- [x] move mint host to context
+  [ ] Mint-Protocol-Version header
+  [ ] default LetsEncrypt SSL cert provisioning in production
+  [~] list endpoint
+    [ ] list asset operations
+    [x] list asset offers (order book)
+    [x] list asset balances
+    [x] list balances
+    [x] list assets
+  [x] retrieve asset publicly
+  [x] fix offer fixup on transaction expiration
+  [x] split endpoints between creation and propagation
+  [x] balance propogation
+  [x] pass DSN for DB, support Postgres
+  [x] check expiry at settlement
+  [x] check expiry of transactions at creation
+  [x] transaction expiration
+  [x] async proceses
+  [x] propagation protocol for both operations and offers
+  [x] idempotency of propagation (load offer/operation and save if they exist and return 200)
+  [x] validate asset is created when creating offer and test
+  [x] figure out when to set the offer as consumed (multiple crossings might be reserved)
+  [x] remove user from records entirely?
+  [x] remove the ability to create an operation directly?
+  [x] transaction starting from an asset not owned by owner
+  [x] janitorial work on test extractions (assert instead of fatal)
+  [x] enforce we handle hops in order (we handle them all)
+  [x] enforce the hops belong to the right mint
+  [x] secure concurrent transaction settlement
+  [x] secure concurrent transaction creation and settlement
+  [x] transaction settlement
+  [x] transaction locks
+  [x] transaction creation
+  [x] replace 1000*1000 by protocol constant
+  [x] log prefix (mint)
+  [x] make user optional for propagated transactions (or other objects)
+  [x] move status values to protocol
+  [x] move Execute to ctx
+  [x] remove nil from creation operation, prevent issuer from owning balance
+  [x] rename Normalized something Address to Owner
+  [x] split controller into endpoint.CreateXXX object with Execute and Validate
+  [x] move mint host to context
 
   # tests
 
@@ -94,35 +123,16 @@
 # site
 
   [ ] have the get started guide on github, to generate stars?
+  [ ] credentials page
+  [ ] blog post draft
 
-# notes
-
-  # offers and operations
-
-  - the canonical mint has the truth so no need for a 2 step commit or blocking
-    on other mints, just rely on best effort propagation (hence protocol
-    necessarily different from transactions)
-  - mints are eventually consistent on operations and offers
-  - propagation happens asynchronously and can be triggered by clients
-  - POST /operations/:op unauthenticated
-
-  # transactions
-
-  - Transactions reservation have only impact on the balance of the originating
-    mint. They do also consume offer remainders, but are not blocking any
-    funds.
-  - Transaction expiry is a bit racy but that's OK since exploiting it is
-    equivalent to simply not settling your end of the transaction, and equally
-    impacts your trust and the value of your assets.
-
-  # signup
-
-  - username > not a robot > phone > SMS verification
-  - out of cli (cli should be purely mint related)
-
-# contact r?
+# r? preview
 
   dm
   gdb
   rauchg
-  https://blog.filippo.io/giving-up-on-long-term-pgp/
+  gabhubert
+  acavailhez
+  kwi
+  gyril
+  migliris

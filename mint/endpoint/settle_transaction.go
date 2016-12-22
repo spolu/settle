@@ -121,7 +121,7 @@ func (e *SettleTransaction) Execute(
 func (e *SettleTransaction) ExecuteCanonical(
 	ctx context.Context,
 ) (*int, *svc.Resp, error) {
-	ctx = db.Begin(ctx)
+	ctx = db.Begin(ctx, "mint")
 	defer db.LoggedRollback(ctx)
 
 	// No need to lock the transaction here as we are the only mint to know its
@@ -237,7 +237,7 @@ func (e *SettleTransaction) ExecutePropagated(
 		e.Tx = txStore.Get(ctx, e.ID)
 	} else {
 		mustCommit = true
-		ctx = db.Begin(ctx)
+		ctx = db.Begin(ctx, "mint")
 		defer db.LoggedRollback(ctx)
 
 		tx, err := model.LoadPropagatedTransactionByOwnerToken(ctx,

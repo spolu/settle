@@ -111,7 +111,7 @@ func (e *CreateOffer) Validate(
 func (e *CreateOffer) Execute(
 	ctx context.Context,
 ) (*int, *svc.Resp, error) {
-	ctx = db.Begin(ctx)
+	ctx = db.Begin(ctx, "mint")
 	defer db.LoggedRollback(ctx)
 
 	// Validate that the asset exists locally.

@@ -74,10 +74,10 @@ func (c *Login) Execute(
 
 	reader := bufio.NewReader(os.Stdin)
 
-	out.Normf("User address: ")
+	out.Normf("User address []: ")
 	address, _ := reader.ReadString('\n')
 
-	out.Normf("Password: ")
+	out.Normf("    Password []: ")
 	password, _ := reader.ReadString('\n')
 
 	err := cli.Login(ctx,

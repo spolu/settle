@@ -1,6 +1,6 @@
 // OWNER: stan
 
-package model
+package db
 
 import (
 	"context"
@@ -10,26 +10,28 @@ import (
 	"github.com/spolu/settle/lib/logging"
 )
 
-var schemas = map[string]map[string]string{
-	"mint": map[string]string{},
-}
+var schemas = map[string]map[string]string{}
 
 // RegisterSchema lets schemas register themselves.
 func RegisterSchema(
-	db string,
+	tag string,
 	table string,
 	schema string,
 ) {
-	schemas[db][table] = schema
+	if _, ok := schemas[tag]; !ok {
+		schemas[tag] = map[string]string{}
+	}
+	schemas[tag][table] = schema
 }
 
-// CreateMintDBTables creates the Mint DB tables if they don't exist.
-func CreateMintDBTables(
+// CreateDBTables creates the Mint DB tables if they don't exist.
+func CreateDBTables(
 	ctx context.Context,
+	tag string,
 	db *sqlx.DB,
 ) error {
-	for name, sch := range schemas["mint"] {
-		logging.Logf(ctx, "Executing schema: %s\n", name)
+	for name, sch := range schemas[tag] {
+		logging.Logf(ctx, "Executing schema: tag=%s name=%s\n", tag, name)
 		_, err := db.Exec(sch)
 		if err != nil {
 			return errors.Trace(err)

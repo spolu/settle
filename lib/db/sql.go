@@ -2,14 +2,12 @@ package db
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/jmoiron/sqlx"
 	homedir "github.com/mitchellh/go-homedir"
-	"github.com/spolu/settle/lib/env"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/logging"
 )
@@ -21,13 +19,14 @@ import (
 //  sqlite3://:memory:
 //  postgres://foo:password@localhost/mydb?sslmode=verify-full
 // ```
+// If no DSN is specified, the default DSN is used instead.
 func NewDBForDSN(
 	ctx context.Context,
 	dsn string,
+	defaultDSN string,
 ) (*sqlx.DB, error) {
 	if dsn == "" {
-		dsn = fmt.Sprintf("sqlite3://~/.mint/mint-%s.db",
-			env.Get(ctx).Environment)
+		dsn = defaultDSN
 	}
 
 	c := strings.Split(dsn, "://")

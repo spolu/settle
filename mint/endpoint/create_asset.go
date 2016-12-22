@@ -79,7 +79,7 @@ func (e *CreateAsset) Validate(
 func (e *CreateAsset) Execute(
 	ctx context.Context,
 ) (*int, *svc.Resp, error) {
-	ctx = db.Begin(ctx)
+	ctx = db.Begin(ctx, "mint")
 	defer db.LoggedRollback(ctx)
 
 	asset, err := model.CreateCanonicalAsset(ctx,
@@ -93,7 +93,7 @@ func (e *CreateAsset) Execute(
 			return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 				400, "asset_already_exists",
 				"You already created an asset with the same code and "+
-					"scale: %s.%d",
+					"scale: %s.%d.",
 				e.Code, e.Scale,
 			))
 		default:

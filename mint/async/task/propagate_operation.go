@@ -79,7 +79,7 @@ func (t *PropagateOperation) Execute(
 		return errors.Trace(err)
 	}
 
-	ctx = db.Begin(ctx)
+	ctx = db.Begin(ctx, "mint")
 	defer db.LoggedRollback(ctx)
 
 	operation, err := model.LoadCanonicalOperationByID(ctx, t.id)

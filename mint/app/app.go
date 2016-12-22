@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 
 	"goji.io"
 
@@ -14,7 +15,6 @@ import (
 	"github.com/spolu/settle/mint"
 	"github.com/spolu/settle/mint/async"
 	"github.com/spolu/settle/mint/lib/authentication"
-	"github.com/spolu/settle/mint/model"
 
 	// force initialization of schemas
 	_ "github.com/spolu/settle/mint/model/schemas"
@@ -39,15 +39,18 @@ func BackgroundContextFromFlags(
 	mintEnv.Config[mint.EnvCfgHost] = hstFlag
 	ctx = env.With(ctx, &mintEnv)
 
-	mintDB, err := db.NewDBForDSN(ctx, dsnFlag)
+	mintDB, err := db.NewDBForDSN(ctx,
+		fmt.Sprintf("sqlite3://~/.mint/mint-%s.db",
+			env.Get(ctx).Environment),
+		dsnFlag)
 	if err != nil {
 		return nil, err
 	}
-	err = model.CreateMintDBTables(ctx, mintDB)
+	err = db.CreateDBTables(ctx, "mint", mintDB)
 	if err != nil {
 		return nil, err
 	}
-	ctx = db.WithDB(ctx, mintDB)
+	ctx = db.WithDB(ctx, "mint", mintDB)
 
 	a, err := async.NewAsync(ctx)
 	if err != nil {
@@ -76,7 +79,7 @@ func Build(
 	mux := goji.NewMux()
 	mux.Use(requestlogger.Middleware)
 	mux.Use(recoverer.Middleware)
-	mux.Use(db.Middleware(db.GetDB(ctx)))
+	mux.Use(db.Middleware(db.GetDBMap(ctx)))
 	mux.Use(env.Middleware(env.Get(ctx)))
 	mux.Use(async.Middleware(async.Get(ctx)))
 	mux.Use(authentication.Middleware)

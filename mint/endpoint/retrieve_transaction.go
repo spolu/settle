@@ -60,7 +60,7 @@ func (e *RetrieveTransaction) Validate(
 func (e *RetrieveTransaction) Execute(
 	ctx context.Context,
 ) (*int, *svc.Resp, error) {
-	ctx = db.Begin(ctx)
+	ctx = db.Begin(ctx, "mint")
 	defer db.LoggedRollback(ctx)
 
 	transaction := txStore.Get(ctx, e.ID)

@@ -93,7 +93,7 @@ func NewAsync(
 		mutex:     &sync.Mutex{},
 	}
 
-	ctx = db.Begin(ctx)
+	ctx = db.Begin(ctx, "mint")
 	defer db.LoggedRollback(ctx)
 
 	tasks, err := model.LoadPendingTasks(ctx)
@@ -205,7 +205,7 @@ func (a *Async) RunOne(
 
 	err := d.Task.Execute(With(a.Ctx, a))
 
-	ctx := db.Begin(a.Ctx)
+	ctx := db.Begin(a.Ctx, "mint")
 	defer db.LoggedRollback(ctx)
 
 	if err != nil {

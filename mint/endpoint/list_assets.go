@@ -55,7 +55,7 @@ func (e *ListAssets) Validate(
 func (e *ListAssets) Execute(
 	ctx context.Context,
 ) (*int, *svc.Resp, error) {
-	ctx = db.Begin(ctx)
+	ctx = db.Begin(ctx, "mint")
 	defer db.LoggedRollback(ctx)
 
 	assets, err := model.LoadAssetListByOwner(ctx,

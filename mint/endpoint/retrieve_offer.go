@@ -61,7 +61,7 @@ func (e *RetrieveOffer) Validate(
 func (e *RetrieveOffer) Execute(
 	ctx context.Context,
 ) (*int, *svc.Resp, error) {
-	ctx = db.Begin(ctx)
+	ctx = db.Begin(ctx, "mint")
 	defer db.LoggedRollback(ctx)
 
 	offer, err := model.LoadCanonicalOfferByOwnerToken(ctx, e.Owner, e.Token)

@@ -7,8 +7,8 @@ import (
 )
 
 type middleware struct {
-	http.Handler
-	*sqlx.DB
+	Handler http.Handler
+	M       map[string]*sqlx.DB
 }
 
 // ServeHTTPC handles incoming HTTP requests and injects the current db.
@@ -17,15 +17,15 @@ func (m middleware) ServeHTTP(
 	r *http.Request,
 ) {
 	ctx := r.Context()
-	withDB := WithDB(ctx, m.DB)
-	m.Handler.ServeHTTP(w, r.WithContext(withDB))
+	withMapDB := WithDBMap(ctx, m.M)
+	m.Handler.ServeHTTP(w, r.WithContext(withMapDB))
 }
 
 // Middleware returns a middleware that injects the specified DB in requests.
 func Middleware(
-	db *sqlx.DB,
+	m map[string]*sqlx.DB,
 ) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
-		return middleware{h, db}
+		return middleware{h, m}
 	}
 }

@@ -47,7 +47,7 @@ func CreateUser(
 
 	user.PasswordHash = base64.StdEncoding.EncodeToString(h)
 
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO users
   (token, created, username, password_hash)
@@ -74,7 +74,7 @@ VALUES
 func (u *User) Save(
 	ctx context.Context,
 ) error {
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	_, err := sqlx.NamedExec(ext, `
 UPDATE users
 SET username = :username, password_hash = :password_hash
@@ -96,7 +96,7 @@ func LoadUserByToken(
 		Token: token,
 	}
 
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	if rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM users
@@ -124,7 +124,7 @@ func LoadUserByUsername(
 		Username: username,
 	}
 
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	if rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM users

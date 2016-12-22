@@ -91,7 +91,7 @@ func CreateCanonicalOffer(
 		Remainder: remainder,
 	}
 
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO offers
   (owner, token, created, propagation, base_asset, quote_asset,
@@ -146,7 +146,7 @@ func CreatePropagatedOffer(
 		Remainder: remainder,
 	}
 
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO offers
   (owner, token, created, propagation, base_asset, quote_asset,
@@ -180,7 +180,7 @@ func (o *Offer) ID() string {
 func (o *Offer) Save(
 	ctx context.Context,
 ) error {
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	_, err := sqlx.NamedExec(ext, `
 UPDATE offers
 SET status = :status, remainder = :remainder
@@ -207,7 +207,7 @@ func LoadCanonicalOfferByOwnerToken(
 		Propagation: mint.PgTpCanonical,
 	}
 
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	if rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM offers
@@ -254,7 +254,7 @@ func LoadPropagatedOfferByOwnerToken(
 		Propagation: mint.PgTpPropagated,
 	}
 
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	if rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM offers
@@ -301,7 +301,7 @@ func LoadOfferListByBaseAsset(
 		"limit":          limit,
 	}
 
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM offers
@@ -343,7 +343,7 @@ func LoadOfferListByQuoteAsset(
 		"limit":          limit,
 	}
 
-	ext := db.Ext(ctx)
+	ext := db.Ext(ctx, "mint")
 	rows, err := sqlx.NamedQuery(ext, `
 SELECT *
 FROM offers
