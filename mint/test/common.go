@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -35,6 +36,22 @@ const (
 	// stamp of an object we created within a test.
 	PostLatency time.Duration = 500 * time.Millisecond
 )
+
+var defaultHTTPClient = (*http.Client)(nil)
+
+// getDefaultHTTPClient returns the default HTTP client to use (to avoid
+// re-instantiating one for each request)
+func getDefaultHTTPClient() *http.Client {
+	if defaultHTTPClient == nil {
+		// In tests (QA) we don't check TLS certificates for ease of setup (see
+		// GetSelfSignedQACertificate).
+		tr := &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
+		defaultHTTPClient = &http.Client{Transport: tr}
+	}
+	return defaultHTTPClient
+}
 
 var userIdx int
 
@@ -99,16 +116,16 @@ func CreateMint(
 	// tasks when needed instead.
 
 	m := Mint{
-		Server:  httptest.NewServer(mux),
+		Server:  httptest.NewTLSServer(mux),
 		Mux:     mux,
 		Env:     &mintEnv,
 		DB:      mintDB,
 		Ctx:     ctx,
 		TmpFile: tmpFile,
 	}
-	m.Env.Config[mint.EnvCfgHost] = m.Server.URL[7:]
+	m.Env.Config[mint.EnvCfgHost] = m.Server.URL[8:]
 
-	logging.Logf(ctx, "Creating test mint: minst_host=%s",
+	logging.Logf(ctx, "Creating test mint: mint_host=%s",
 		m.Env.Config[mint.EnvCfgHost])
 
 	return &m
@@ -145,7 +162,7 @@ func (m *Mint) CreateUser(
 	if err != nil {
 		t.Fatal(err)
 	}
-	m.Env.Config[mint.EnvCfgHost] = m.Server.URL[7:]
+	m.Env.Config[mint.EnvCfgHost] = m.Server.URL[8:]
 
 	logging.Logf(m.Ctx, "Creating test mint: minst_host=%s",
 		m.Env.Config[mint.EnvCfgHost])
@@ -174,7 +191,7 @@ func (m *Mint) Post(
 		req.SetBasicAuth(user.Username, user.Password)
 	}
 
-	r, err := http.DefaultClient.Do(req)
+	r, err := getDefaultHTTPClient().Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -212,7 +229,7 @@ func (m *Mint) Get(
 		req.SetBasicAuth(user.Username, user.Password)
 	}
 
-	r, err := http.DefaultClient.Do(req)
+	r, err := getDefaultHTTPClient().Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}
