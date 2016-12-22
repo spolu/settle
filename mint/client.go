@@ -207,9 +207,14 @@ func (c *Client) RetrieveBalance(
 		return nil, errors.Trace(err)
 	}
 
-	r, err := c.httpClient.Get(
+	req, err := http.NewRequest("GET",
 		FullMintURL(ctx,
-			host, fmt.Sprintf("/balances/%s", id), url.Values{}).String())
+			host, fmt.Sprintf("/balances/%s", id), url.Values{}).String(), nil)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	req.Header.Add("Mint-Protocol-Version", ProtocolVersion)
+	r, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -243,9 +248,14 @@ func (c *Client) RetrieveOffer(
 		return nil, errors.Trace(err)
 	}
 
-	r, err := c.httpClient.Get(
+	req, err := http.NewRequest("GET",
 		FullMintURL(ctx,
-			host, fmt.Sprintf("/offers/%s", id), url.Values{}).String())
+			host, fmt.Sprintf("/offers/%s", id), url.Values{}).String(), nil)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	req.Header.Add("Mint-Protocol-Version", ProtocolVersion)
+	r, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -279,9 +289,14 @@ func (c *Client) RetrieveOperation(
 		return nil, errors.Trace(err)
 	}
 
-	r, err := c.httpClient.Get(
+	req, err := http.NewRequest("GET",
 		FullMintURL(ctx,
-			host, fmt.Sprintf("/operations/%s", id), url.Values{}).String())
+			host, fmt.Sprintf("/operations/%s", id), url.Values{}).String(), nil)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	req.Header.Add("Mint-Protocol-Version", ProtocolVersion)
+	r, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -320,9 +335,14 @@ func (c *Client) RetrieveTransaction(
 		mint = &host
 	}
 
-	r, err := c.httpClient.Get(
+	req, err := http.NewRequest("GET",
 		FullMintURL(ctx,
-			*mint, fmt.Sprintf("/transactions/%s", id), url.Values{}).String())
+			*mint, fmt.Sprintf("/transactions/%s", id), url.Values{}).String(), nil)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	req.Header.Add("Mint-Protocol-Version", ProtocolVersion)
+	r, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -354,7 +374,7 @@ func (c *Client) PropagateBalance(
 		return nil, errors.Trace(err)
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
+	req.Header.Add("Mint-Protocol-Version", ProtocolVersion)
 	r, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, errors.Trace(err)
@@ -387,7 +407,7 @@ func (c *Client) PropagateOffer(
 		return nil, errors.Trace(err)
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
+	req.Header.Add("Mint-Protocol-Version", ProtocolVersion)
 	r, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, errors.Trace(err)
@@ -420,7 +440,7 @@ func (c *Client) PropagateOperation(
 		return nil, errors.Trace(err)
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
+	req.Header.Add("Mint-Protocol-Version", ProtocolVersion)
 	r, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, errors.Trace(err)
@@ -457,7 +477,7 @@ func (c *Client) PropagateTransaction(
 		return nil, errors.Trace(err)
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
+	req.Header.Add("Mint-Protocol-Version", ProtocolVersion)
 	r, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, errors.Trace(err)
@@ -515,7 +535,7 @@ func (c *Client) SettleTransaction(
 		return nil, errors.Trace(err)
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
+	req.Header.Add("Mint-Protocol-Version", ProtocolVersion)
 	r, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, errors.Trace(err)

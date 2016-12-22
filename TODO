@@ -5,7 +5,7 @@
     [ ] transfer command
     [ ] pay command
     [ ] register command
-    [ ] Mint-Protocol-Version header
+    [x] Mint-Protocol-Version header
   [ ] finish register
     [ ] send email on create user
     [ ] verify user
@@ -15,7 +15,7 @@
     [ ] setup loggly
   [ ] finish mint
     [x] setup LetsEncrypt
-    [ ] Mint-Protocol-Version header
+    [x] Mint-Protocol-Version header
     [ ] setup loggly
   [ ] finish site
     [ ] have the get started guide on github, to generate stars?
@@ -26,11 +26,11 @@
 
 # cli
 
-  [ ] Mint-Protocol-Version header
   [ ] transfer command
   [ ] pay command
   [ ] register command
   [?] add confirmations to actions
+  [x] Mint-Protocol-Version header
   [x] logout command
   [x] fix get parameter for common
   [x] list balances
@@ -50,15 +50,15 @@
 
 # mint
 
-  [ ] Mint-Protocol-Version header
-  [x] default LetsEncrypt SSL cert provisioning in production
-  [x] default self-signed cert provisioning in QA
   [~] list endpoint
     [ ] list asset operations
     [x] list asset offers (order book)
     [x] list asset balances
     [x] list balances
     [x] list assets
+  [x] Mint-Protocol-Version header
+  [x] default LetsEncrypt SSL cert provisioning in production
+  [x] default self-signed cert provisioning in QA
   [x] retrieve asset publicly
   [x] fix offer fixup on transaction expiration
   [x] split endpoints between creation and propagation

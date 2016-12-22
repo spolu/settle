@@ -74,6 +74,8 @@ func (m *Mint) Post(
 	if err != nil {
 		return nil, nil, errors.Trace(err)
 	}
+
+	req.Header.Add("Mint-Protocol-Version", mint.ProtocolVersion)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	if m.Credentials != nil {
 		req.SetBasicAuth(m.Credentials.Username, m.Credentials.Password)
@@ -104,6 +106,8 @@ func (m *Mint) Get(
 	if err != nil {
 		return nil, nil, errors.Trace(err)
 	}
+
+	req.Header.Add("Mint-Protocol-Version", mint.ProtocolVersion)
 	if m.Credentials != nil {
 		req.SetBasicAuth(m.Credentials.Username, m.Credentials.Password)
 	}
