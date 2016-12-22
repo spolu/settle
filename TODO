@@ -1,6 +1,7 @@
 # preview
 
   [ ] finish cli
+    [ ] cli install
     [ ] transfer command
     [ ] pay command
     [ ] register command

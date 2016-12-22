@@ -2,6 +2,7 @@ package mint
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -19,9 +20,21 @@ var defaultHTTPClient = (*http.Client)(nil)
 
 // getDefaultHTTPClient returns the default HTTP client to use (to avoid
 // re-instantiating one for each request)
-func getDefaultHTTPClient() *http.Client {
+func getDefaultHTTPClient(
+	ctx context.Context,
+) *http.Client {
 	if defaultHTTPClient == nil {
-		defaultHTTPClient = &http.Client{}
+		switch env.Get(ctx).Environment {
+		case env.Production:
+			defaultHTTPClient = &http.Client{}
+		case env.QA:
+			// In QA we don't check TLS certificates for ease of setup (see
+			// GetSelfSignedQACertificate).
+			tr := &http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			}
+			defaultHTTPClient = &http.Client{Transport: tr}
+		}
 	}
 	return defaultHTTPClient
 }
@@ -35,7 +48,7 @@ type Client struct {
 func (c *Client) Init(
 	ctx context.Context,
 ) error {
-	c.httpClient = getDefaultHTTPClient()
+	c.httpClient = getDefaultHTTPClient(ctx)
 	return nil
 }
 
@@ -48,7 +61,7 @@ var DefaultPort = map[env.Environment]int64{
 // DefaultScheme is the mint default scheme by environment.
 var DefaultScheme = map[env.Environment]string{
 	env.Production: "https",
-	env.QA:         "http",
+	env.QA:         "https",
 }
 
 // Possible address: von.neumann@ias.edu:8989
