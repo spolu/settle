@@ -3,8 +3,8 @@ package mint
 import "math/big"
 
 const (
-	// Version is the current protocol version.
-	Version string = "0"
+	// ProtocolVersion is the current protocol version.
+	ProtocolVersion string = "0"
 	// TimeResolutionNs is the resolution of our time variables in nanoseconds
 	// (aka resolution in milliseconds).
 	TimeResolutionNs int64 = 1000 * 1000
