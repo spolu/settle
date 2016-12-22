@@ -128,7 +128,7 @@ func Serve(
 		WriteTimeout: 5 * time.Second,
 		TLSConfig: &tls.Config{
 			GetCertificate: cert.GetGetCertificate(
-				ctx, register.GetHost(ctx)),
+				ctx, register.GetHost(ctx), register.GetPort(ctx)),
 			PreferServerCipherSuites: true,
 			// Only use curves which have assembly implementations
 			CurvePreferences: []tls.CurveID{

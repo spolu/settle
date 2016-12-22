@@ -24,6 +24,7 @@ import (
 func GetGetCertificate(
 	ctx context.Context,
 	host string,
+	port string,
 ) func(*tls.ClientHelloInfo) (*tls.Certificate, error) {
 	var getCertificate func(*tls.ClientHelloInfo) (*tls.Certificate, error)
 	switch env.Get(ctx).Environment {
@@ -31,7 +32,7 @@ func GetGetCertificate(
 		// In Production use LetsEncrypt certificates.
 		m := autocert.Manager{
 			Prompt:     autocert.AcceptTOS,
-			HostPolicy: autocert.HostWhitelist(host),
+			HostPolicy: autocert.HostWhitelist(host + ":" + port),
 		}
 		getCertificate = m.GetCertificate
 	case env.QA:
