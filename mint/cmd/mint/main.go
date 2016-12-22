@@ -4,18 +4,12 @@ import (
 	"context"
 	"flag"
 	"log"
-	"net"
-	"net/http"
 	"strings"
-	"time"
 
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/logging"
 	"github.com/spolu/settle/mint/app"
 	"github.com/spolu/settle/mint/model"
-	"github.com/zenazn/goji/bind"
-	"github.com/zenazn/goji/graceful"
-	"goji.io"
 )
 
 var actFlag string
@@ -23,13 +17,14 @@ var actFlag string
 var envFlag string
 var dsnFlag string
 var hstFlag string
+var prtFlag string
 
 var usrFlag string
 var pasFlag string
 
 func init() {
 	flag.StringVar(&actFlag, "action",
-		"run", "The action to perform")
+		"run", "The action to perform (run, create_user), default: run")
 
 	flag.StringVar(&envFlag, "env",
 		"qa", "The environment to run in (qa, production), default: qa")
@@ -37,45 +32,17 @@ func init() {
 		"", "The DSN of the database to use, default: sqlite3://~/.mint/mint-$env.db")
 	flag.StringVar(&hstFlag, "host",
 		"", "The externally accessible host name of this mint, default: none (required for production)")
+	flag.StringVar(&prtFlag, "port",
+		"", "The port on which the mint will listen, default: 2406 in qa and 2407 in production")
 
 	flag.StringVar(&usrFlag, "username",
-		"foo", "The user name of the user to upsert")
+		"foo", "The user name of the user for the create_user action")
 	flag.StringVar(&pasFlag, "password",
-		"bar", "The password of the user to upsert")
+		"bar", "The password of the user for the create_user action")
 
-	bind.WithFlag()
 	if fl := log.Flags(); fl&log.Ltime != 0 {
 		log.SetFlags(fl | log.Lmicroseconds)
 	}
-	graceful.DoubleKickWindow(2 * time.Second)
-}
-
-// Serve starts the given mux using reasonable defaults.
-func Serve(mux *goji.Mux) {
-	ServeListener(mux, bind.Default())
-}
-
-// ServeListener is like Serve, but runs `mux` on top of an arbitrary
-// net.Listener.
-func ServeListener(mux *goji.Mux, listener net.Listener) {
-	// Install our handler at the root of the standard net/http default mux.
-	// This allows packages like expvar to continue working as expected.
-	http.Handle("/", mux)
-
-	log.Println("Starting on", listener.Addr())
-
-	graceful.HandleSignals()
-	bind.Ready()
-	graceful.PreHook(func() { log.Printf("Received signal, gracefully stopping") })
-	graceful.PostHook(func() { log.Printf("Stopped") })
-
-	err := graceful.Serve(listener, http.DefaultServeMux)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	graceful.Wait()
 }
 
 func main() {
@@ -84,7 +51,7 @@ func main() {
 	}
 
 	ctx, err := app.BackgroundContextFromFlags(
-		envFlag, dsnFlag, hstFlag,
+		envFlag, dsnFlag, hstFlag, prtFlag,
 	)
 	if err != nil {
 		log.Fatal(errors.Details(err))
@@ -97,16 +64,20 @@ func main() {
 		if err != nil {
 			log.Fatal(errors.Details(err))
 		}
-		Serve(mux)
+		err = app.Serve(ctx, mux)
+		if err != nil {
+			log.Fatal(errors.Details(err))
+		}
 	case "create_user":
-		createUser(ctx, usrFlag, pasFlag)
+		CreateUser(ctx, usrFlag, pasFlag)
 	default:
 		log.Fatalf("Invalid action `%s`, valid actions are: %s",
 			actFlag, strings.Join(validActions, ", "))
 	}
 }
 
-func createUser(
+// CreateUser is a convenience function exposed on the command line
+func CreateUser(
 	ctx context.Context,
 	username string,
 	password string,

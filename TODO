@@ -1,6 +1,7 @@
 # preview
 
   [ ] finish cli
+    [ ] cli install
     [ ] transfer command
     [ ] pay command
     [ ] register command
@@ -10,10 +11,10 @@
     [ ] verify user
     [ ] roll user
     [ ] site credentials page
-    [ ] setup LetsEncrypt
+    [x] setup LetsEncrypt
     [ ] setup loggly
   [ ] finish mint
-    [ ] setup LetsEncrypt
+    [x] setup LetsEncrypt
     [ ] Mint-Protocol-Version header
     [ ] setup loggly
   [ ] finish site
@@ -45,12 +46,13 @@
   [ ] verify user
   [ ] roll user
   [ ] site credentials page
-  [ ] setup LetsEncrypt
+  [x] setup LetsEncrypt
 
 # mint
 
   [ ] Mint-Protocol-Version header
-  [ ] default LetsEncrypt SSL cert provisioning in production
+  [x] default LetsEncrypt SSL cert provisioning in production
+  [x] default self-signed cert provisioning in QA
   [~] list endpoint
     [ ] list asset operations
     [x] list asset offers (order book)

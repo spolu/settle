@@ -8,6 +8,10 @@ import (
 )
 
 const (
+	// EnvCfgHost is the env config key for the register host.
+	EnvCfgHost env.ConfigKey = "host"
+	// EnvCfgPort is the port on which to run the register.
+	EnvCfgPort env.ConfigKey = "port"
 	// EnvCfgCredsURL is the URL that is sent to the user over email to
 	// retrieve their credentials.
 	EnvCfgCredsURL env.ConfigKey = "credentials_url"
@@ -27,6 +31,20 @@ const (
 	// use to verify users.
 	EnvCfgReCAPTCHASecret env.ConfigKey = "recaptcha_secret"
 )
+
+// GetHost retrieves the current register host from the given contest.
+func GetHost(
+	ctx context.Context,
+) string {
+	return env.Get(ctx).Config[EnvCfgHost]
+}
+
+// GetPort retrieves the current register port from the given contest.
+func GetPort(
+	ctx context.Context,
+) string {
+	return env.Get(ctx).Config[EnvCfgPort]
+}
 
 // GetMint retrieves the current mint host from the given contest.
 func GetMint(
