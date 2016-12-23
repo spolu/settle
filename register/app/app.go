@@ -18,6 +18,9 @@ import (
 	"github.com/spolu/settle/lib/requestlogger"
 	"github.com/spolu/settle/mint"
 	"github.com/spolu/settle/register"
+
+	// force initialization of schemas
+	_ "github.com/spolu/settle/register/model/schemas"
 )
 
 // BackgroundContextFromFlags initializes a background context fully loaded
