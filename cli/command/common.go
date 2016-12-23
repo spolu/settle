@@ -2,16 +2,92 @@ package command
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"net/http"
 	"net/url"
 
 	"github.com/spolu/settle/cli"
+	"github.com/spolu/settle/lib/client"
+	"github.com/spolu/settle/lib/env"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/out"
+	"github.com/spolu/settle/lib/svc"
 	"github.com/spolu/settle/mint"
+	"github.com/spolu/settle/register"
 )
+
+// MintRegister contains all the required information to register to a mint
+// from the cli.
+type MintRegister struct {
+	Name        string
+	Host        string
+	Description string
+	RegisterURL map[env.Environment]string
+}
+
+// PublicMints is a list of proposed public mints that offer registration
+// form the cli.
+var PublicMints = []MintRegister{
+	MintRegister{
+		Name:        "Settle",
+		Host:        "settle.network",
+		Description: "Mint maintained by the Settle developers.",
+		RegisterURL: map[env.Environment]string{
+			env.Production: "https://register.settle.network/users",
+			env.QA:         "https://qa-register.settle.network/users",
+		},
+	},
+}
+
+// RegisterUser registers a user on the provded mint register service.
+func RegisterUser(
+	ctx context.Context,
+	reg MintRegister,
+	username string,
+	email string,
+) (*register.UserResource, error) {
+	body := url.Values{}
+	body["username"] = []string{username}
+	body["email"] = []string{email}
+
+	req, err := http.NewRequest("POST",
+		reg.RegisterURL[env.Get(ctx).Environment], nil)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	r, err := client.Default(ctx).Do(req)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	defer r.Body.Close()
+
+	var raw svc.Resp
+	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	if r.StatusCode != http.StatusCreated {
+		var e errors.ConcreteUserError
+		err = raw.Extract("error", &e)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		return nil, errors.Trace(
+			errors.Newf("(%s) %s", e.ErrCode, e.ErrMessage))
+	}
+
+	var user register.UserResource
+	err = raw.Extract("user", &user)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &user, nil
+}
 
 // CreateAsset creates an asset for the currently authenticated user.
 func CreateAsset(

@@ -4,40 +4,16 @@ package cli
 
 import (
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"net/http"
 	"net/url"
 	"strings"
 
-	"github.com/spolu/settle/lib/env"
+	"github.com/spolu/settle/lib/client"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/svc"
 	"github.com/spolu/settle/mint"
 )
-
-var defaultHTTPClient = (*http.Client)(nil)
-
-// getDefaultHTTPClient returns the default HTTP client to use (to avoid
-// re-instantiating one for each request)
-func getDefaultHTTPClient(
-	ctx context.Context,
-) *http.Client {
-	if defaultHTTPClient == nil {
-		switch env.Get(ctx).Environment {
-		case env.Production:
-			defaultHTTPClient = &http.Client{}
-		case env.QA:
-			// In QA we don't check TLS certificates for ease of setup (see
-			// GetSelfSignedQACertificate).
-			tr := &http.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-			}
-			defaultHTTPClient = &http.Client{Transport: tr}
-		}
-	}
-	return defaultHTTPClient
-}
 
 // Mint represents a mint
 type Mint struct {
@@ -81,7 +57,7 @@ func (m *Mint) Post(
 		req.SetBasicAuth(m.Credentials.Username, m.Credentials.Password)
 	}
 
-	r, err := getDefaultHTTPClient(ctx).Do(req)
+	r, err := client.Default(ctx).Do(req)
 	if err != nil {
 		return nil, nil, errors.Trace(err)
 	}
@@ -112,7 +88,7 @@ func (m *Mint) Get(
 		req.SetBasicAuth(m.Credentials.Username, m.Credentials.Password)
 	}
 
-	r, err := getDefaultHTTPClient(ctx).Do(req)
+	r, err := client.Default(ctx).Do(req)
 	if err != nil {
 		return nil, nil, errors.Trace(err)
 	}

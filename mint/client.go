@@ -2,7 +2,6 @@ package mint
 
 import (
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -11,33 +10,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/spolu/settle/lib/client"
 	"github.com/spolu/settle/lib/env"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/svc"
 )
-
-var defaultHTTPClient = (*http.Client)(nil)
-
-// getDefaultHTTPClient returns the default HTTP client to use (to avoid
-// re-instantiating one for each request)
-func getDefaultHTTPClient(
-	ctx context.Context,
-) *http.Client {
-	if defaultHTTPClient == nil {
-		switch env.Get(ctx).Environment {
-		case env.Production:
-			defaultHTTPClient = &http.Client{}
-		case env.QA:
-			// In QA we don't check TLS certificates for ease of setup (see
-			// GetSelfSignedQACertificate).
-			tr := &http.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-			}
-			defaultHTTPClient = &http.Client{Transport: tr}
-		}
-	}
-	return defaultHTTPClient
-}
 
 // Client expose an interface to perform queries on remote mints.
 type Client struct {
@@ -48,7 +25,7 @@ type Client struct {
 func (c *Client) Init(
 	ctx context.Context,
 ) error {
-	c.httpClient = getDefaultHTTPClient(ctx)
+	c.httpClient = client.Default(ctx)
 	return nil
 }
 

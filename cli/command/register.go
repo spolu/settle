@@ -10,33 +10,9 @@ import (
 	"strings"
 
 	"github.com/spolu/settle/cli"
-	"github.com/spolu/settle/lib/env"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/out"
 )
-
-// MintRegister contains all the required information to register to a mint
-// from the cli.
-type MintRegister struct {
-	Name        string
-	Host        string
-	Description string
-	RegisterURL map[env.Environment]string
-}
-
-// PublicMints is a list of proposed public mints that offer registration
-// form the cli.
-var PublicMints = []MintRegister{
-	MintRegister{
-		Name:        "Settle",
-		Host:        "settle.network",
-		Description: "Mint maintained by the Settle developers.",
-		RegisterURL: map[env.Environment]string{
-			env.Production: "https://register.settle.network/users",
-			env.QA:         "https://qa-register.settle.network/users",
-		},
-	},
-}
 
 const (
 	// CmdNmRegister is the command name.
@@ -129,9 +105,19 @@ func (c *Register) Execute(
 	out.Normf("          Email []: ")
 	email, _ := reader.ReadString('\n')
 
-	_ = register
-	_ = username
-	_ = email
+	// Register the user.
+	_, err := RegisterUser(ctx,
+		register,
+		strings.TrimSpace(username),
+		strings.TrimSpace(email),
+	)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	out.Normf("  Check your inbox (%s) for en email containing instructions to retrieve your\n")
+	out.Normf("  credentials. Once you've retrieved them, run: ")
+	out.Boldf("settle login\n")
 
 	return nil
 }
