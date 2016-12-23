@@ -52,7 +52,7 @@ func BackgroundContextFromFlags(
 	}
 	mintEnv.Config[mint.EnvCfgPort] = port
 	mintEnv.Config[register.EnvCfgKeyFile] = keyFlag
-	mintEnv.Config[register.EnvCfgCertFile] = crtFlag
+	mintEnv.Config[register.EnvCfgCrtFile] = crtFlag
 
 	ctx = env.With(ctx, &mintEnv)
 
@@ -127,7 +127,7 @@ func Serve(
 		TLSConfig: &tls.Config{
 			GetCertificate: cert.GetGetCertificate(ctx,
 				mint.GetHost(ctx),
-				mint.GetCertFile(ctx), mint.GetKeyFile(ctx)),
+				mint.GetCrtFile(ctx), mint.GetKeyFile(ctx)),
 			PreferServerCipherSuites: true,
 			// Only use curves which have assembly implementations
 			CurvePreferences: []tls.CurveID{

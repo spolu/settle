@@ -39,7 +39,7 @@ func init() {
 		"", "The port on which the mint will listen, default: 2406 in qa and 2407 in production")
 	flag.StringVar(&keyFlag, "key_file",
 		"", "The production certificate key file for host")
-	flag.StringVar(&crtFlag, "cert_file",
+	flag.StringVar(&crtFlag, "crt_file",
 		"", "The production certificate cert file for host")
 
 	flag.StringVar(&usrFlag, "username",

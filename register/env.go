@@ -14,8 +14,8 @@ const (
 	EnvCfgPort env.ConfigKey = "port"
 	// EnvCfgKeyFile is the production certificate key file.
 	EnvCfgKeyFile env.ConfigKey = "key_file"
-	// EnvCfgCertFile is the production certificate file.
-	EnvCfgCertFile env.ConfigKey = "cert_file"
+	// EnvCfgCrtFile is the production certificate file.
+	EnvCfgCrtFile env.ConfigKey = "crt_file"
 	// EnvCfgCredsURL is the URL that is sent to the user over email to
 	// retrieve their credentials.
 	EnvCfgCredsURL env.ConfigKey = "credentials_url"
@@ -57,11 +57,11 @@ func GetKeyFile(
 	return env.Get(ctx).Config[EnvCfgKeyFile]
 }
 
-// GetCertFile retrieves the production certificate key file.
-func GetCertFile(
+// GetCrtFile retrieves the production certificate key file.
+func GetCrtFile(
 	ctx context.Context,
 ) string {
-	return env.Get(ctx).Config[EnvCfgCertFile]
+	return env.Get(ctx).Config[EnvCfgCrtFile]
 }
 
 // GetMint retrieves the current mint host from the given contest.

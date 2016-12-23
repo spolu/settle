@@ -59,7 +59,7 @@ func GetCertificateFromFiles(
 	}
 
 	logging.Logf(ctx,
-		"Loading certificate: cert_file=%s, key_file=%s", certFile, keyFile)
+		"Loading certificate: crt_file=%s, key_file=%s", certFile, keyFile)
 
 	return &cert, nil
 }

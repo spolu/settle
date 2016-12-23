@@ -1,10 +1,10 @@
 # preview
 
   [ ] finish cli
-    [ ] cli install
+    [ ] register command
     [ ] transfer command
     [ ] pay command
-    [ ] register command
+    [ ] cli install
     [x] Mint-Protocol-Version header
   [ ] finish register
     [ ] send email on create user
@@ -139,8 +139,9 @@
   gyril
   migliris
 
-# notes
+# admin
 
-  # renew production certificates
-
+  renew production certificates
     cd /home/mint && sudo ../spolu/go/bin/lego --email="polu.stanislas@gmail.com" --domains="m.settle.network" renew
+  allow 443 to register
+    sudo setcap CAP_NET_BIND_SERVICE=+eip /home/mint/go/bin/register

@@ -37,7 +37,7 @@ func init() {
 		"", "The port on which the register service is running")
 	flag.StringVar(&keyFlag, "key_file",
 		"", "The production certificate key file for host")
-	flag.StringVar(&crtFlag, "cert_file",
+	flag.StringVar(&crtFlag, "crt_file",
 		"", "The production certificate cert file for host")
 
 	flag.StringVar(&dsnFlag, "db_dsn",
