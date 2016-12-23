@@ -36,7 +36,7 @@ var PublicMints = []MintRegister{
 		Description: "Mint maintained by the Settle developers.",
 		RegisterURL: map[env.Environment]string{
 			env.Production: "https://register.settle.network/users",
-			env.QA:         "https://qa-register.settle.network/users",
+			env.QA:         "https://register.settle.network:444/users",
 		},
 	},
 }
