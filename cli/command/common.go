@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/spolu/settle/cli"
 	"github.com/spolu/settle/lib/client"
@@ -48,12 +49,16 @@ func RegisterUser(
 	username string,
 	email string,
 ) (*register.UserResource, error) {
-	body := url.Values{}
-	body["username"] = []string{username}
-	body["email"] = []string{email}
+	out.Statf("[Registering user] username=%s email=%s mint=%s\n",
+		username, email, reg.Host)
+
+	params := url.Values{}
+	params["username"] = []string{username}
+	params["email"] = []string{email}
 
 	req, err := http.NewRequest("POST",
-		reg.RegisterURL[env.Get(ctx).Environment], nil)
+		reg.RegisterURL[env.Get(ctx).Environment],
+		strings.NewReader(params.Encode()))
 	if err != nil {
 		return nil, errors.Trace(err)
 	}

@@ -79,7 +79,7 @@ func (e *CreateUser) Execute(
 		case model.ErrUniqueConstraintViolation:
 			return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 				400, "username_taken",
-				"A user already exists with the same username: %s.",
+				"A user already exists with username: %s.",
 				e.Username,
 			))
 		default:
