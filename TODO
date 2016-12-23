@@ -7,16 +7,16 @@
     [ ] cli install
     [x] Mint-Protocol-Version header
   [ ] finish register
-    [ ] send email on create user
     [ ] verify user
     [ ] roll user
     [ ] site credentials page
-    [x] setup LetsEncrypt
     [ ] setup loggly
+    [x] setup LetsEncrypt
+    [x] send email on create user
   [ ] finish mint
+    [ ] setup loggly
     [x] setup LetsEncrypt
     [x] Mint-Protocol-Version header
-    [ ] setup loggly
   [ ] finish site
     [ ] have the get started guide on github, to generate stars?
     [ ] credentials page

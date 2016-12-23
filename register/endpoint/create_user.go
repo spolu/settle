@@ -3,13 +3,12 @@
 package endpoint
 
 import (
+	"bytes"
 	"context"
-	"fmt"
 	"net/http"
 	"net/smtp"
 
 	"github.com/spolu/settle/lib/db"
-	"github.com/spolu/settle/lib/env"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/format"
 	"github.com/spolu/settle/lib/logging"
@@ -89,16 +88,26 @@ func (e *CreateUser) Execute(
 	}
 
 	if auth, host := register.GetSMTP(ctx); auth != nil {
-		from := fmt.Sprintf("register-%s@%s",
-			env.Get(ctx).Environment, register.GetMint(ctx))
-
 		logging.Logf(ctx,
-			"Sending email: username=%s email=%s",
-			user.Username, user.Email)
+			"Sending email: from=%s username=%s email=%s",
+			register.GetFrom(ctx), user.Username, user.Email)
 
-		err := smtp.SendMail(
-			host, *auth, from, []string{user.Email},
-			[]byte("foo"))
+		buf := new(bytes.Buffer)
+		err := emailTemplate.Execute(buf, EmailData{
+			From:     register.GetFrom(ctx),
+			Username: user.Username,
+			Email:    user.Email,
+			Mint:     register.GetMint(ctx),
+			CredsURL: register.GetCredsURL(ctx),
+			Secret:   user.Secret,
+		})
+		if err != nil {
+			return nil, nil, errors.Trace(err) // 500
+		}
+
+		err = smtp.SendMail(
+			host, *auth,
+			register.GetFrom(ctx), []string{user.Email}, buf.Bytes())
 		if err != nil {
 			return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 				400, "email_failed",

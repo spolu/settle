@@ -3,6 +3,7 @@ package register
 import (
 	"context"
 	"net/smtp"
+	"strings"
 
 	"github.com/spolu/settle/lib/env"
 )
@@ -31,6 +32,8 @@ const (
 	// EnvCfgSMTPHost is the env config key for the SMTP host to use to send
 	// verification emails.
 	EnvCfgSMTPHost env.ConfigKey = "smtp_host"
+	// EnvCfgFrom is the email address to send registration emails from.
+	EnvCfgFrom env.ConfigKey = "from"
 	// EnvCfgReCAPTCHASecret is the env config key for the reCAPTCHA secret to
 	// use to verify users.
 	EnvCfgReCAPTCHASecret env.ConfigKey = "recaptcha_secret"
@@ -71,6 +74,14 @@ func GetMint(
 	return env.Get(ctx).Config[EnvCfgMint]
 }
 
+// GetCredsURL retrieves the credentials URL for users to retrieve their
+// credentials.
+func GetCredsURL(
+	ctx context.Context,
+) string {
+	return env.Get(ctx).Config[EnvCfgCredsURL]
+}
+
 // GetSMTP retrieves the SMTP credentials.
 func GetSMTP(
 	ctx context.Context,
@@ -83,9 +94,17 @@ func GetSMTP(
 	if smtpLogin == "" || smtpHost == "" {
 		return nil, smtpHost
 	}
-	a := smtp.PlainAuth("", smtpLogin, smtpPassword, smtpHost)
+	a := smtp.PlainAuth("",
+		smtpLogin, smtpPassword, strings.Split(smtpHost, ":")[0])
 
 	return &a, smtpHost
+}
+
+// GetFrom retrieves the current address to send registration emails from
+func GetFrom(
+	ctx context.Context,
+) string {
+	return env.Get(ctx).Config[EnvCfgFrom]
 }
 
 // GetReCAPTCHASecret retrieves the reCAPTCHA secret.
