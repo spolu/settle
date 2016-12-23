@@ -138,3 +138,9 @@
   kwi
   gyril
   migliris
+
+# notes
+
+  # renew production certificates
+
+    cd /home/mint && sudo ../spolu/go/bin/lego --email="polu.stanislas@gmail.com" --domains="m.settle.network" renew

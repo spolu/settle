@@ -16,6 +16,7 @@ import (
 	"github.com/spolu/settle/lib/logging"
 	"github.com/spolu/settle/lib/recoverer"
 	"github.com/spolu/settle/lib/requestlogger"
+	"github.com/spolu/settle/mint"
 	"github.com/spolu/settle/register"
 )
 
@@ -25,6 +26,8 @@ func BackgroundContextFromFlags(
 	envFlag string, // environment
 	hstFlag string, // register host
 	prtFlag string, // register port
+	keyFlag string, // production certificate key file
+	crtFlag string, // production certificate crt file
 	dsnFlag string, // register DSN
 	crdFlag string, // credentials URL
 	mntFlag string, // mint host
@@ -46,6 +49,8 @@ func BackgroundContextFromFlags(
 
 	registerEnv.Config[register.EnvCfgHost] = hstFlag
 	registerEnv.Config[register.EnvCfgPort] = prtFlag
+	registerEnv.Config[register.EnvCfgKeyFile] = keyFlag
+	registerEnv.Config[register.EnvCfgCertFile] = crtFlag
 
 	registerEnv.Config[register.EnvCfgCredsURL] = crdFlag
 	registerEnv.Config[register.EnvCfgMint] = mntFlag
@@ -127,8 +132,9 @@ func Serve(
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 5 * time.Second,
 		TLSConfig: &tls.Config{
-			GetCertificate: cert.GetGetCertificate(
-				ctx, register.GetHost(ctx), register.GetPort(ctx)),
+			GetCertificate: cert.GetGetCertificate(ctx,
+				mint.GetHost(ctx), mint.GetPort(ctx),
+				mint.GetCertFile(ctx), mint.GetKeyFile(ctx)),
 			PreferServerCipherSuites: true,
 			// Only use curves which have assembly implementations
 			CurvePreferences: []tls.CurveID{

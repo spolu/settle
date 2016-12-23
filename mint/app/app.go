@@ -19,6 +19,7 @@ import (
 	"github.com/spolu/settle/mint"
 	"github.com/spolu/settle/mint/async"
 	"github.com/spolu/settle/mint/lib/authentication"
+	"github.com/spolu/settle/register"
 
 	// force initialization of schemas
 	_ "github.com/spolu/settle/mint/model/schemas"
@@ -31,6 +32,8 @@ func BackgroundContextFromFlags(
 	dsnFlag string,
 	hstFlag string,
 	prtFlag string,
+	keyFlag string,
+	crtFlag string,
 ) (context.Context, error) {
 	ctx := context.Background()
 
@@ -48,6 +51,8 @@ func BackgroundContextFromFlags(
 		port = prtFlag
 	}
 	mintEnv.Config[mint.EnvCfgPort] = port
+	mintEnv.Config[register.EnvCfgKeyFile] = keyFlag
+	mintEnv.Config[register.EnvCfgCertFile] = crtFlag
 
 	ctx = env.With(ctx, &mintEnv)
 
@@ -120,8 +125,9 @@ func Serve(
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 5 * time.Second,
 		TLSConfig: &tls.Config{
-			GetCertificate: cert.GetGetCertificate(
-				ctx, mint.GetHost(ctx), mint.GetPort(ctx)),
+			GetCertificate: cert.GetGetCertificate(ctx,
+				mint.GetHost(ctx), mint.GetPort(ctx),
+				mint.GetCertFile(ctx), mint.GetKeyFile(ctx)),
 			PreferServerCipherSuites: true,
 			// Only use curves which have assembly implementations
 			CurvePreferences: []tls.CurveID{

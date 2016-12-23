@@ -12,6 +12,8 @@ var envFlag string
 
 var hstFlag string
 var prtFlag string
+var keyFlag string
+var crtFlag string
 
 var dsnFlag string
 var crdFlag string
@@ -33,6 +35,10 @@ func init() {
 		"", "The host on which the register service is running")
 	flag.StringVar(&prtFlag, "port",
 		"", "The port on which the register service is running")
+	flag.StringVar(&keyFlag, "key_file",
+		"", "The production certificate key file for host")
+	flag.StringVar(&crtFlag, "cert_file",
+		"", "The production certificate cert file for host")
 
 	flag.StringVar(&dsnFlag, "db_dsn",
 		"", "The DSN of the database to use, default: sqlite3://~/.mint/register-$env.db")
@@ -66,7 +72,7 @@ func main() {
 
 	ctx, err := app.BackgroundContextFromFlags(
 		envFlag,
-		hstFlag, prtFlag,
+		hstFlag, prtFlag, keyFlag, crtFlag,
 		dsnFlag, crdFlag,
 		mntFlag, mdsFlag,
 		smlFlag, smpFlag, smhFlag,

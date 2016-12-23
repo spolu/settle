@@ -15,7 +15,6 @@ import (
 
 	"github.com/spolu/settle/lib/env"
 	"github.com/spolu/settle/lib/logging"
-	"golang.org/x/crypto/acme/autocert"
 )
 
 // GetGetCertificate computes the GetCertificate function to serve TLS securily
@@ -24,29 +23,45 @@ import (
 func GetGetCertificate(
 	ctx context.Context,
 	host string,
-	port string,
+	certFile string,
+	keyFile string,
 ) func(*tls.ClientHelloInfo) (*tls.Certificate, error) {
-	var getCertificate func(*tls.ClientHelloInfo) (*tls.Certificate, error)
+	var cert *tls.Certificate
+	var err error
+
 	switch env.Get(ctx).Environment {
 	case env.Production:
-		// In Production use LetsEncrypt certificates.
-		m := autocert.Manager{
-			Prompt:     autocert.AcceptTOS,
-			HostPolicy: autocert.HostWhitelist(host + ":" + port),
-		}
-		getCertificate = m.GetCertificate
+		// In Production use specified certificates
+		cert, err = GetCertificateFromFiles(ctx, certFile, keyFile)
 	case env.QA:
-		cert, err := GetSelfSignedQACertificate(ctx, host)
-		getCertificate = func(
-			*tls.ClientHelloInfo,
-		) (*tls.Certificate, error) {
-			if err != nil {
-				return nil, err
-			}
-			return cert, nil
-		}
+		cert, err = GetSelfSignedQACertificate(ctx, host)
 	}
-	return getCertificate
+
+	return func(
+		*tls.ClientHelloInfo,
+	) (*tls.Certificate, error) {
+		if err != nil {
+			return nil, err
+		}
+		return cert, nil
+	}
+}
+
+// GetCertificateFromFiles retrieves the certificate from the specified files.
+func GetCertificateFromFiles(
+	ctx context.Context,
+	certFile string,
+	keyFile string,
+) (*tls.Certificate, error) {
+	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	if err != nil {
+		return nil, err
+	}
+
+	logging.Logf(ctx,
+		"Loading certificate: cert_file=%s, key_file=%s", certFile, keyFile)
+
+	return &cert, nil
 }
 
 // GetSelfSignedQACertificate returns a self signed certificate for the host
