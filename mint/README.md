@@ -9,12 +9,11 @@ The Settle network address `stan@foo.bar` points to user `stan` on the mint
 running at `foo.bar` on port `2406`.
 
 Usernames must comply to the folollowing regular expression:
-`[A-Za-z0-9\-_.]{1,256}`. The `+` is admissible in Settle network addresses and
-will be ignored similarly to email addresses.
+`[A-Za-z0-9\-_.]{1,256}`.
 
 ## Assets
 
-Assets are issued by users. They are represented by the following pattern:
+Assets are issued by users. They are represented by the following expression:
 `{ISSUER}[{CODE}.{SCALE}]`. `{ISSUER}` should be a valid Settle
 address, `{CODE}` is an alphanumeric string matching the following regular
 expression `[A-Z0-9\-]{1,64}`. If the asset represents a IOU for an existing
@@ -26,29 +25,26 @@ integer.
 A few examples of valid assets are:
 - **stan@foobar.com[USD.2] 320** represents **$3.20** issued by Stan.
 - **info@sightglasscofee.com:AU-LAIT.0 2**: represents **2 au laits** issued by
-  Sightglass Coffee. "Au laits" are not fungible.
+  Sightglass Coffee. "Au laits" are not fungible and therefore have scale of 0.
 
-## API
+## Mint API
 
-### User API
+### Authentication and registration
 
-#### Onboarding and authentication
-
-User onboarding for the User API is left to the discretion of the mint
+User onboarding for the Mint API is left to the discretion of the mint
 implementor or administrator.
 
 Authentication relies on the HTTP Authorization header, using "Basic"
 authentication. The proposed implementation in this repository rely on the SQL
-storage to lookup users and current password (onboarding happening outside of
-the mint and resulting in records getting created/updated in the SQL database
-used by the mint).
+data store to lookup users and current password, registration happening outside
+of the mint and resulting in records getting created/updated in the SQL
+database used by the mint (see [register](/register) for the registration
+service used by the mint maintained by the Settle developers).
 
-#### Create an offer
+### Create an offer
 
-An offer on a given asset pair, can be either a bid or an ask:
-- a bid on pair **bob@corewars.org[USD.2]/alice@rocket.science[USD.2]**
-  represents an offer to buy **bob@corewars.org[USD.2]** for a certain amount of
-  **alice@rocket.science[USD.2]** at a given price.
+Trust in the network is expressed by offers. Offers are always represented as
+asks:
 - an ask on pair **bob@corewars.org[USD.2]/stan@foo.bar[USD.2]** represents an
   offer to sell **bob@corewars.org[USD.2]** for a certain amount of
   **stan@foo.bar[USD.2]** at a given price.
@@ -56,34 +52,23 @@ An offer on a given asset pair, can be either a bid or an ask:
 The asset on the left of the pair is called the base asset while the asset of
 the right end of the pair is called the quote asset.
 
-Since there is no "central" or "shared" currency, it's important to note that a
-bid on **bob@corewars.org[USD.2]/stan@foo.bar[USD.2]** is strictly equivalent to
-an ask on **stan@foo.bar[USD.2]/bob@corewars.org[USD.2]**.
-
 Because the decimal length may differ from one asset to another, offers price
 are expressed as a quotient of 128-bit signed integers (always positive). The
-price of a bid on **stan@foobar.com[USD.2]/info@sightglasscofee.com:AU-LAIT.0**
-can be expressed as **320/1**. Which is equivalent to an ask on
-**info@sightglasscofee.com:AU-LAIT.0/stan@foobar.com[USD.2]** at price **1/320**.
+price of ask **stan@foobar.com[USD.2]/info@sightglasscofee.com:AU-LAIT.0**
+can be expressed as **320/1**.
 
 Offers amount are always expressed in the unit of the quote asset (the asset on
 the right).
 
-Each mint maintains a list of bids and asks for the assets their users issue.
-The bids on **stan@foo.bar[USD.2]** are all the bids on asset pairs of the form
-**stan@foo.bar[USD.2]/...**. The asks on **stan@foo.bar[USD.2]** are all the asks
-on asset pairs of the form **stan@foo.bar[USD.2]/...**.
-
 Offers to exchange assets can be created and publicized on the network. Users
-create offers on asset pairs from their own mint and it is the responsibility
-of each mint to correctly propagate these offers to the relevant mints (one
-other mint if one of the asset in the pair is issued by one of the mint's user,
-two other mints otherwise).
+create offers from their own mint and it is the responsibility of each mint to
+correctly propagate these offers to the relevant mints (one other mint if one
+of the asset in the pair is issued by one of the mint's user, two other mints
+otherwise).
 
 ```
 curl -XPOST https://foo.bar:2406/offers \
   -u username:password \
-  -d type=bid \
   -d pair=stan@foo.bar[USD.2]/info@sightglasscofee.com:AU-LAIT.0 \
   -d price=320/1 \
   -d amount=3
@@ -91,12 +76,10 @@ curl -XPOST https://foo.bar:2406/offers \
 {
   id: "stan@foo.bar[offer_7t3sk24sdvz0a]",
   pair: "stan@foo.bar:USD.2/info@sightglasscoffee.com:AU-LAIT.0",
-  type: "bid",
   price: "320/1",
   amount: 3,
   remaining_amount: 3,
-  status: "active",
-  transactions: []
+  status: "active"
 }
 ```
 
@@ -107,19 +90,34 @@ curl -XGET https://sightglasscofee.com:2406/offers/stan@foo.bar[offer_7t3sk24sdv
 
 {
   id: "stan@foo.bar[offer_7t3sk24sdvz0a]",
-  pair: "info@sightglasscoffee.com:AU-LAIT.0/stan@foo.bar[USD.2]",
-  type: "ask",
-  price: "1/320",
-  amount: 960,
-  remaining_amount: 960,
-  status: "active",
-  transactions: []
+  pair: "stan@foo.bar:USD.2/info@sightglasscoffee.com:AU-LAIT.0",
+  price: "320/1",
+  amount: 3,
+  remaining_amount: 3,
+  status: "active"
 }
 ```
 
-#### Create a transaction
+#### Semantics of offers
 
-Creating a simple transaction let you credit a user account with a given asset.
+Users can only create asks for which they own the base asset and mints
+automatically issue base assets to satisfy an offer. 
+
+As such an ask **bob@corewars.org[USD.2]/stan@foo.bar[USD.2]** created by
+**bob@corewars.org** represents a commitment from him to issue
+**bob@corewars.org[USD.2]** in exchange for **stan@foo.bar[USD.2]** at the
+exchange price specified by the offer (as an example, **1/1**). As such it
+expresses a trust (or credit) line from **bob@corewars.org** to
+**stan@foo.bar**.
+
+Chain of offers can therefore be leveraged to transact between users of the
+settle network. The network provides a primitive to do so safely and
+atomically: transactions.
+
+### Create a transaction
+
+Creating a simple transaction can let you credit a user account with a given
+asset you own:
 
 ```
 curl -XPOST https://foo.bar:2406/transactions \
@@ -137,337 +135,101 @@ curl -XPOST https://foo.bar:2406/transactions \
     source: "stan@foo.bar",
     destination: "bob@corewars.com",
     amount: 500,
-    status: "settled"
+    status: "reserved"
   }]
 }
 ```
 
-A transaction can define a path to cross an offer. If the destination
-(`destination` parameter) is ommitted, the initiator of the transaction is
-assumed:
-
-Only asks can be crossed by transactions (but given a bid, it is easy to find
-the equivalent ask on the network).
+To leverage chains of offers, a transaction can define a path of offers to
+cross.
 
 Assuming we have the following active offer on the network:
 - **bob@corewars.org[offer_s8ka7812djnmk]**: ask
-  **bob@corewars.org[USD.2]/stan@foo.bar[USD.2]** at **100/100** for **500** for
-  **stan@foo.bar[USD.2]**
-(this offer can be found as a an ask on **corewars.org** and as a bid on
-**foo.bar**).
+  **bob@corewars.org[USD.2]/stan@foo.bar[USD.2]** at **1/1** for
+  **stan@foo.bar[USD.2] 500**
 
 ```
 curl -XPOST https://foo.bar:2406/transactions \
   -u username:password \
   -d pair=stan@foo.bar[USD.2]/bob@corewars.org[USD.2] \
-  -d price=100/100 \
-  -d amount=500 \
+  -d price=1/1 \
+  -d amount=200 \
   -d path[]=bob@corewars.org[offer_s8ka7812djnmk]
 
 {
   id: "stan@foo.bar[transaction_8yhs2op9sckD2]",
   lock: "ae7b2a3ffd9c43a...",
   pair: "stan@foo.bar[USD.2]/bob@corewars.org[USD.2]",
+  price: "1/1",
+  amount: "200",
   operations: [{
     offer: null,
     asset: "stan@foo.bar[USD.2]",
     source: "stan@foo.bar",
     destination: "bob@corewars.org",
-    amount: 500,
-    status: "reserved"
-  }, {
-    offer: "bob@corewars.org[offer_s8ka7812djnmk]",
-    asset: "bob@corewars.org[USD.2]",
-    source: "bob@corewars.org",
-    destination: "stan@foo.bar",
-    amount: 500,
+    amount: 200,
     status: "reserved"
   }]
 }
 ```
 
-Crossing an offer involves two operations, one to credit the base asset of the
-offer to the seller and one to credit the quote asset to the initiator of the
-transaction.
+Commiting this transaction to the network requires te mint **corewars.org** and
+**foo.bar** to syncrhonize their state. They do so using the algorithm
+described in the next subsections.
 
-A transaction can specify a longer path to send money by crossing a path of
-offers.
-
-Let's assume we have the following two active offers on the network:
-- **bob@corewars.org[offer_s8ka7812djnmk]**: ask
-  **bob@corewars.org[USD.2]/stan@foo.bar[USD.2]** at **100/100** for **500**.
-- **alice@rocket.science[offer_9iop2182cm73s]**: ask
-  **alice@rocket.science[USD.2]/bob@corewars.org[USD.2]** at **100/100** for
-  **3500**.
-
-Creating the following transaction will cross these two offers for **500**,
-effectively crediting **500 alice@rocket.science[USD.2]** to stan in exchange
-for **500 stan@foo.bar[USD.2]**.
+#### Transaction creation and reservation
 
 ```
-curl -XPOST https://foo.bar:2406/transactions \
-  -u username:password \
-  -d pair=stan@foo.bar[USD.2]/alice@rocket.science[USD.2]
-  -d price=100/100 \
-  -d amount=500 \
-  -d path[]=bob@corewars.org[offer_s8ka7812djnmk] \
-  -d path[]=alice@rocket.science[offer_9iop2182cm73s]
+endpoint: POST /transactions
 
-{
-  id: "stan@foo.bar[transaction_9iop2182cm73s]",
-  lock: "ae7b2a3ffd9c43a...",
-  pair: "stan@foo.bar[USD.2]/alice@rocket.science[USD.2]",
-  operations: [{
-    offer: null,
-    asset: "stan@foo.bar[USD.2]",
-    source: "stan@foo.bar",
-    destination: "bob@corewars.org",
-    amount: 500,
-    status: "reserved"
-  }, {
-    offer: "bob@corewars.org[offer_s8ka7812djnmk]",
-    asset: "bob@corewars.org[USD.2]",
-    source: "bob@corewars.org",
-    destination: "alice@rocket.science",
-    amount: 500,
-    status: "reserved"
-  }, {
-    offer: "alice@rocket.science[offer_9iop2182cm73s]",
-    asset: "alice@rocket.science[USD.2]",
-    source: "alice@rocket.science",
-    destination: "stan@foo.bar",
-    amount: 500,
-    status: "reserved"
-  }]
-}
+CREATE_TRANSACTION [canonical]
+  Compute transaction plan
+  Generate lock=scrypt(secret)
+  Create transaction tx in pending state
+  RESERVE_TRANSACTION(tx, -1) with retries
+  IF success
+    RETURN success
+  ELSE
+    RETRUN success
 ```
 
-### Public API
-
-#### Retrieve order books
-
-Offers can be retrieved publicly from the following endpoints. Retrieving both
-legs lets your reconstruct the full order book for an asset pair:
-
 ```
-curl -XGET https://foo.bar:2406/offers?
-  pair=stan@foo.bar[USD.2]/bob@corewars.org[USD.2]
-  type=ask \
+endpoint: POST /transactions/:transaction/reserve
 
-[{
-  id: "stan@foo.bar[offer_7t3sk24sdvz0a]",
-  pair: "stan@foo.bar[USD.2]/bob@corewars.org[USD.2]",
-  type: "ask",
-  price: "100/100",
-  amount: 5000,
-  remaining_amount: 5000,
-  status: "active",
-  transactions: []
-}]
-
-curl -XGET https://foo.bar:2406/offers?
-  pair=stan@foo.bar[USD.2]/bob@corewars.org[USD.2]
-  type=bid \
-
-[{
-  ...
- }, {
-  ...
-}]
+RESERVE_TRANSACTION(tx, node)
+  IF transaction unknown:
+    retrieve transaction from canonical node
+    create transaction in pending state
+  Compute transaction plan 
+  IF node == 0 [canonical]
+    create reserved operation [idempotent]
+    RETURN success with reserved operation
+  RESERVE_TRANSACTION(tx, node-1)
+  IF failed
+    RETURN failure
+  ELSE
+    check returned reserved operation
+    create reserved offer crossing [idempotent]
+    create reserved operation [idempotent]
+    RETURN success with reseved operation and crossing
 ```
 
-#### Propagate transactions
+#### Transaction settlement
 
-To ensure funds are reserved along the path of a transaction, mints communicate
-with one another to create the underlying operations.
-
-Taking the example above, as transaction **transaction_9iop2182cm73s** is being
-created on **foo.bar**, the mint checks the validity of the path and creates
-the list of operations required to fulfill the transaction, marking the first
-operation (not attached to any offer) as reserved. Funds associated with a
-reserved operations are reserved for that operation until it is either
-**settled** or **canceled**.
-
-The created transaction object is made available on **foo.bar** with the
-following state:
 
 ```
-curl -XGET https://foo.bar:2406/transactions[transaction_9iop2182cm73s] \
+endpoint: POST /transactions/:transaction/settle
 
-{
-  id: "stan@foo.bar[transaction_9iop2182cm73s]",
-  lock: "ae7b2a3ffd9c43a...",
-  pair: "stan@foo.bar[USD.2]/alice@rocket.science[USD.2]",
-  operations: [{
-    offer: null,
-    asset: "stan@foo.bar[USD.2]",
-    source: "stan@foo.bar",
-    destination: "bob@corewars.org",
-    amount: 500,
-    status: "reserved"
-  }, {
-    offer: "bob@corewars.org[offer_s8ka7812djnmk]",
-    asset: "bob@corewars.org[USD.2]",
-    source: "bob@corewars.org",
-    destination: "alice@rocket.science",
-    amount: 500,
-    status: "pending"
-  }, {
-    offer: "alice@rocket.science[offer_9iop2182cm73s]",
-    asset: "alice@rocket.science[USD.2]",
-    source: "alice@rocket.science",
-    destination: "stan@foo.bar",
-    amount: 500,
-    status: "pending"
-  }]
-}
+SETTLE_TRANSACTION(tx) [canonical]
+  Retrieve secret
+  SETTLE_TRANSACTION(tx, -1, secret)
+
+SETTLE_TRANSACTION(tx, node, secret)
+  IF lock=scrypt(lock)
+    settle operations and crossings that are reserved for the transaction
+    mark the transaction as settled
+    SETTLE_TRANSACTION(tx, node-1, secret)
+    RETURN success
+  ELSE
+    RETURN failure
 ```
-
-Despite making the transaction available on its API, it does not reply to the
-transaction creation call yet and instead propagates synchronously the
-transaction to the next mint in the transaction path by specifying the `id` of
-the newly generated transaction:
-
-```
-curl -XPOST https://corewars.org:2406/transactions \
-  -d id=stan@foo.bar[transaction_9iop2182cm73s]
-```
-
-By receiving this request **corewars.org** retrieves the transaction from
-**foo.bar** effectively checking that **foo.bar** has reserved the funds and
-that the operations are valid (offers are still active with sufficient
-remaining amounts). It then reserves the funds for the second operation and
-copy the transaction object and makes it available at the following URL:
-
-```
-curl -XGET https://corewars.org:2406/transactions[transaction_9iop2182cm73s] \
-
-{
-  id: "stan@foo.bar[transaction_9iop2182cm73s]",
-  lock: "ae7b2a3ffd9c43a...",
-  pair: "stan@foo.bar[USD.2]/alice@rocket.science[USD.2]",
-  operations: [{
-    offer: null,
-    asset: "stan@foo.bar[USD.2]",
-    source: "stan@foo.bar",
-    destination: "bob@corewars.org",
-    amount: 500,
-    status: "reserved"
-  }, {
-    offer: "bob@corewars.org[offer_s8ka7812djnmk]",
-    asset: "bob@corewars.org[USD.2]",
-    source: "bob@corewars.org",
-    destination: "alice@rocket.science",
-    amount: 500,
-    status: "reserved"
-  }, {
-    offer: "alice@rocket.science[offer_9iop2182cm73s]",
-    asset: "alice@rocket.science[USD.2]",
-    source: "alice@rocket.science",
-    destination: "stan@foo.bar",
-    amount: 500,
-    status: "pending"
-  }]
-}
-```
-
-Similarly to **foo.bar**, it does not reply to the original requests but
-instead fowards it to **rocket.science**.
-
-By receiving that request, **rocket.science** undergoes the same process,
-checking both **foo.bar** and **corewars.org** transaction objects. It reserves
-the funds for the tranaction and replies with the final state of the
-transaction (since it is the last mint on the path of the transaction):
-
-```
-curl -XPOST https://rocket.science:2406/transactions \
-  -d id=stan@foo.bar[transaction_9iop2182cm73s]
-
-{
-  id: "stan@foo.bar[transaction_9iop2182cm73s]",
-  lock: "ae7b2a3ffd9c43a...",
-  pair: "stan@foo.bar[USD.2]/alice@rocket.science[USD.2]",
-  operations: [{
-    offer: null,
-    asset: "stan@foo.bar[USD.2]",
-    source: "stan@foo.bar",
-    destination: "bob@corewars.org",
-    amount: 500,
-    status: "reserved"
-  }, {
-    offer: "bob@corewars.org[offer_s8ka7812djnmk]",
-    asset: "bob@corewars.org[USD.2]",
-    source: "bob@corewars.org",
-    destination: "alice@rocket.science",
-    amount: 500,
-    status: "reserved"
-  }, {
-    offer: "alice@rocket.science[offer_9iop2182cm73s]",
-    asset: "alice@rocket.science[USD.2]",
-    source: "alice@rocket.science",
-    destination: "stan@foo.bar",
-    amount: 500,
-    status: "reserved"
-  }]
-}
-```
-
-In turn **corewars.org** updates its state with the latest state of the
-transaction and replies to **foo.bar**. Finally **foo.bar** updates the state
-of the transaction (eventually checking with **rocket.science** directly) and
-replies to the initial creation request. At this stage, the transaction is
-fully reserved and considered valid.
-
-#### Settle an operation
-
-Settling a transaction is a similar process with calls going the opposite
-direction. To settle an operation, a mint must have the secret that permitted
-the generation of the hash lock under the `lock` attribute of the
-`transaction`; with `secret` and `lock` such that:
-
-```
-lock = hex(scrypt(secret, transaction_id, 8, 1, 64))
-```
-
-Relying on an hashlock (generated by the initiator of a transaction) prevents
-**rocket.science** from settling with **corewars.org** without giving a chance
-to **foo.bar** to cancel the transaction if an error happenned along its
-creation.
-
-To settle the transction above, **foo.bar** comunicates the secret to
-**rocket.science** and recursively, **rocket.science** calls **corewars.org**
-and finally **foo.bar** itself.
-
-```
-curl -XPOST https://rocket.science:2406/transactions/stan@foo.bar[transaction_9iop2182cm73s]/settle \
-  -d secret=a2bd3ef2249add...
-
-{
-  id: "stan@foo.bar[transaction_9iop2182cm73s]",
-  lock: "ae7b2a3ffd9c43a...",
-  pair: "stan@foo.bar[USD.2]/alice@rocket.science[USD.2]",
-  operations: [{
-    offer: null,
-    asset: "stan@foo.bar[USD.2]",
-    source: "stan@foo.bar",
-    destination: "bob@corewars.org",
-    amount: 500,
-    status: "settled"
-  }, {
-    offer: "bob@corewars.org[offer_s8ka7812djnmk]",
-    asset: "bob@corewars.org[USD.2]",
-    source: "bob@corewars.org",
-    destination: "alice@rocket.science",
-    amount: 500,
-    status: "settled"
-  }, {
-    offer: "alice@rocket.science[offer_9iop2182cm73s]",
-    asset: "alice@rocket.science[USD.2]",
-    source: "alice@rocket.science",
-    destination: "stan@foo.bar",
-    amount: 500,
-    status: "settled"
-  }]
-}
-```
-

@@ -14,6 +14,7 @@
     [x] setup LetsEncrypt
     [x] send email on create user
   [ ] finish mint
+    [ ] mint transaction creation refactor
     [ ] setup loggly
     [x] setup LetsEncrypt
     [x] Mint-Protocol-Version header
@@ -50,6 +51,7 @@
 
 # mint
 
+  [ ] refactor transaction creation/settlement
   [~] list endpoint
     [ ] list asset operations
     [x] list asset offers (order book)
@@ -95,9 +97,12 @@
 
   # tests
 
+    [ ] test failing nodes (A,B,C)
+      [ ] B gives different offer price to A and C
+      [ ] B fails reservation entirely
+      [ ] B pass reservation through but fails responding to C
     [ ] offer closing + attempt transaction on it
     [ ] offer closing of an offer not owned by caller
-    [ ] test canonical transaction expiry calculation (min of all propagated)
     [ ] test that consumes an offer entirely (check status)
     [~] transaction tests with misbehaving mint
     [x] test asset retrieval
