@@ -183,10 +183,10 @@ described in the next subsections.
 endpoint: POST /transactions
 
 CREATE_TRANSACTION [canonical]
-  Compute transaction plan
-  Generate lock=scrypt(secret)
-  Create transaction tx in pending state
-  RESERVE_TRANSACTION(tx, -1) with retries
+  compute transaction plan
+  generate lock=scrypt(secret)
+  create transaction tx in pending state
+  RESERVE_TRANSACTION(tx, -1) [with retry]
   IF success
     RETURN success
   ELSE
