@@ -1,9 +1,8 @@
 # preview
 
   [ ] finish cli
-    [ ] transfer command
     [ ] pay command
-    [ ] cli install
+    [x] cli install
     [x] register command
     [x] Mint-Protocol-Version header
   [ ] finish register
@@ -27,15 +26,14 @@
 
 # cli
 
-  [ ] transfer command
   [ ] pay command
   [?] add confirmations to actions
+  [x] cli install
   [x] register command
   [x] Mint-Protocol-Version header
   [x] logout command
   [x] fix get parameter for common
   [x] list balances
-  [x] remove mint (automatically mint)
 
 # register
 
