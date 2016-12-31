@@ -84,7 +84,7 @@ func (c *List) Parse(
 	creds := cli.GetCredentials(ctx)
 	if creds == nil {
 		return errors.Trace(
-			errors.Newf("You need to be logged in (try `settle help login`."))
+			errors.Newf("You need to be logged in (try `settle help login`)."))
 	}
 
 	if len(args) == 0 {
