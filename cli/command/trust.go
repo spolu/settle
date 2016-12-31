@@ -60,7 +60,7 @@ func (c *Trust) Help(
 	out.Normf("  all of the specified amount in one or many transactions).\n")
 	out.Normf("\n")
 	out.Normf("  The last two arguments can be ommitted in which case: the same asset code and\n")
-	out.Normf("  scale will be used for your asset (which may trigger the creation of this\n")
+	out.Normf("  scale will be used for your asset (which requires that you have minted that\n")
 	out.Normf("  asset); the price 1/1 will be used by default (exchange at parity).\n")
 	out.Normf("\n")
 	out.Normf("Arguments:\n")
@@ -111,7 +111,7 @@ func (c *Trust) Parse(
 	creds := cli.GetCredentials(ctx)
 	if creds == nil {
 		return errors.Trace(
-			errors.Newf("You need to be logged in (try `settle help login`."))
+			errors.Newf("You need to be logged in (try `settle help login`)."))
 	}
 
 	if len(args) == 0 {
@@ -201,10 +201,14 @@ func (c *Trust) Execute(
 	if err != nil {
 		return errors.Trace(err)
 	} else if asset == nil {
-		asset, err = CreateAsset(ctx, c.BaseAsset)
+		bA, err := mint.AssetResourceFromName(ctx, c.BaseAsset)
 		if err != nil {
 			return errors.Trace(err)
 		}
+		return errors.Trace(
+			errors.Newf("You need to mint %s.%d first "+
+				"(see `settle help mint`).",
+				bA.Code, bA.Scale))
 	}
 
 	// Create offer.
