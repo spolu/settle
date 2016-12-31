@@ -1,10 +1,10 @@
 # preview
 
   [ ] finish cli
-    [ ] register command
     [ ] transfer command
     [ ] pay command
     [ ] cli install
+    [x] register command
     [x] Mint-Protocol-Version header
   [ ] finish register
     [ ] verify user
@@ -29,25 +29,21 @@
 
   [ ] transfer command
   [ ] pay command
-  [ ] register command
   [?] add confirmations to actions
+  [x] register command
   [x] Mint-Protocol-Version header
   [x] logout command
   [x] fix get parameter for common
   [x] list balances
   [x] remove mint (automatically mint)
 
-  settle register
-    > pick mint
-    > input email
-
 # register
 
-  [ ] send email on create user
   [ ] verify user
   [ ] roll user
   [ ] site credentials page
   [x] setup LetsEncrypt
+  [x] send email on create user
 
 # mint
 

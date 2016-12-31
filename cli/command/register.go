@@ -116,7 +116,7 @@ func (c *Register) Execute(
 	}
 
 	out.Normf("\n")
-	out.Normf("Success! Check your inbox for en email containing instructions to retrieve your\n")
+	out.Normf("Success! Check your inbox for an email containing instructions to retrieve your\n")
 	out.Normf("credentials. Then, run: ")
 	out.Boldf("settle login\n")
 

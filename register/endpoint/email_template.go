@@ -19,7 +19,7 @@ func init() {
 	emailTemplate.Parse(
 		"From: Mint Registration <{{.From}}>\r\n" +
 			"To: {{.Email}}\r\n" +
-			"Subject: Credentials for mint at {{.Mint}}\r\n" +
+			"Subject: Credentials for {{.Username}}@{{.Mint}}\r\n" +
 			"\r\n" +
 			"Hi {{.Username}}!\n" +
 			"\n" +
