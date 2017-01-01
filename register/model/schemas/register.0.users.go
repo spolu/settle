@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS users(
   token VARCHAR(256) NOT NULL,
   created TIMESTAMP NOT NULL,
 
-  status VARCHAR(32) NOT NULL,      -- status (unverified, verified)
+  status VARCHAR(32) NOT NULL,    -- status (unverified, verified)
   username VARCHAR(256) NOT NULL,
   email VARCHAR(256) NOT NULL,
 

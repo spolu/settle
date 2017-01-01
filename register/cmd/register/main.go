@@ -26,8 +26,6 @@ var smpFlag string
 var smhFlag string
 var frmFlag string
 
-var rcpFlag string
-
 func init() {
 	flag.StringVar(&envFlag, "env",
 		"qa", "The environment to run in (qa, production), default: qa")
@@ -60,9 +58,6 @@ func init() {
 	flag.StringVar(&frmFlag, "from",
 		"", "The address the registration email are sent from")
 
-	flag.StringVar(&rcpFlag, "recaptcha_secret",
-		"", "The reCAPTCHA secret to use to verify users")
-
 	if fl := log.Flags(); fl&log.Ltime != 0 {
 		log.SetFlags(fl | log.Lmicroseconds)
 	}
@@ -79,7 +74,6 @@ func main() {
 		dsnFlag, crdFlag,
 		mntFlag, mdsFlag,
 		smlFlag, smpFlag, smhFlag, frmFlag,
-		rcpFlag,
 	)
 	if err != nil {
 		log.Fatal(errors.Details(err))

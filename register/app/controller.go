@@ -15,8 +15,7 @@ func (c *Controller) Bind(
 ) {
 	// Public.
 	mux.HandleFunc(pat.Post("/users"), endpoint.HandlerFor(endpoint.EndPtCreateUser))
-	mux.HandleFunc(pat.Post("/users/:username/verify"), endpoint.HandlerFor(endpoint.EndPtVerifyUser))
+	mux.HandleFunc(pat.Get("/users/:username"), endpoint.HandlerFor(endpoint.EndPtRetrieveUser))
 	//mux.HandleFunc(pat.Post("/users/:username/roll"), endpoint.HandlerFor(endpoint.EndPtRollUser))
 
-	//mux.HandleFunc(pat.Get("/users/:username"), endpoint.HandlerFor(endpoint.EndPtRetrieveUser))
 }

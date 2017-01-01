@@ -39,7 +39,6 @@ func BackgroundContextFromFlags(
 	smpFlag string, // SMTP password
 	smhFlag string, // SMTP host
 	frmFlag string, // from address
-	rcpFlag string, // reCAPTCHA secret
 ) (context.Context, error) {
 	ctx := context.Background()
 
@@ -63,8 +62,6 @@ func BackgroundContextFromFlags(
 	registerEnv.Config[register.EnvCfgSMTPPassword] = smpFlag
 	registerEnv.Config[register.EnvCfgSMTPHost] = smhFlag
 	registerEnv.Config[register.EnvCfgFrom] = frmFlag
-
-	registerEnv.Config[register.EnvCfgReCAPTCHASecret] = rcpFlag
 
 	ctx = env.With(ctx, &registerEnv)
 
