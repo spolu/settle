@@ -8,6 +8,8 @@ import (
 	"log"
 	"net/http"
 
+	"goji.io/pat"
+
 	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/format"
@@ -48,7 +50,7 @@ func (e *RetrieveUser) Validate(
 	ctx := r.Context()
 
 	// Validate username.
-	username, err := ValidateUsername(ctx, r.PostFormValue("username"))
+	username, err := ValidateUsername(ctx, pat.Param(r, "username"))
 	if err != nil {
 		return errors.Trace(err) // 400
 	}
