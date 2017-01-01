@@ -6,10 +6,10 @@
     [x] register command
     [x] Mint-Protocol-Version header
   [ ] finish register
-    [ ] verify user
     [ ] roll user
     [ ] site credentials page
     [ ] setup loggly
+    [x] retrieve user
     [x] setup LetsEncrypt
     [x] send email on create user
   [ ] finish mint
@@ -37,9 +37,9 @@
 
 # register
 
-  [ ] verify user
   [ ] roll user
   [ ] site credentials page
+  [x] retrieve user
   [x] setup LetsEncrypt
   [x] send email on create user
 
