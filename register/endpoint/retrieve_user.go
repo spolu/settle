@@ -131,7 +131,7 @@ func (e *RetrieveUser) Execute(
 		defer db.LoggedRollback(ctx)
 
 		user.MintToken = &u.Token
-		err := user.Save(ctx)
+		err = user.Save(ctx)
 		if err != nil {
 			return nil, nil, errors.Trace(err) // 500
 		}
