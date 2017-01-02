@@ -9,6 +9,7 @@ import (
 
 	goji "goji.io"
 
+	"github.com/facebookgo/grace/gracehttp"
 	"github.com/spolu/settle/lib/cert"
 	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/env"
@@ -158,7 +159,7 @@ func Serve(
 
 	logging.Logf(ctx, "Listening: port=%s", register.GetPort(ctx))
 
-	err := s.ListenAndServeTLS("", "")
+	err := gracehttp.Serve(s)
 	if err != nil {
 		return errors.Trace(err)
 	}

@@ -9,6 +9,7 @@ import (
 
 	"goji.io"
 
+	"github.com/facebookgo/grace/gracehttp"
 	"github.com/spolu/settle/lib/cert"
 	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/env"
@@ -149,14 +150,10 @@ func Serve(
 
 	logging.Logf(ctx, "Listening: port=%s", mint.GetPort(ctx))
 
-	err := s.ListenAndServeTLS("", "")
+	err := gracehttp.Serve(s)
 	if err != nil {
 		return errors.Trace(err)
 	}
-
-	// Install our handler at the root of the standard net/http default mux.
-	// This allows packages like expvar to continue working as expected.
-	// http.Handle("/", mux)
 
 	return nil
 }
