@@ -69,6 +69,10 @@ func (e *RetrieveUser) Execute(
 	ctx = db.Begin(ctx, "register")
 	defer db.LoggedRollback(ctx)
 
+	logging.Logf(ctx,
+		"Retrieval attempt: username=%s secret=%s",
+		e.Username, e.Secret)
+
 	user, err := model.LoadUserByUsername(ctx, e.Username)
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
