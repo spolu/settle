@@ -66,14 +66,14 @@ func (e *RetrieveUser) Validate(
 func (e *RetrieveUser) Execute(
 	ctx context.Context,
 ) (*int, *svc.Resp, error) {
-	ctx = db.Begin(ctx, "register")
-	defer db.LoggedRollback(ctx)
+	regCtx := db.Begin(ctx, "register")
+	defer db.LoggedRollback(regCtx)
 
-	logging.Logf(ctx,
+	logging.Logf(regCtx,
 		"Retrieval attempt: username=%s secret=%s",
 		e.Username, e.Secret)
 
-	user, err := model.LoadUserByUsername(ctx, e.Username)
+	user, err := model.LoadUserByUsername(regCtx, e.Username)
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
 	} else if user == nil || user.Secret != e.Secret {
@@ -86,63 +86,63 @@ func (e *RetrieveUser) Execute(
 
 	if user.Status != register.UsrStVerified {
 		user.Status = register.UsrStVerified
-		err := user.Save(ctx)
+		err := user.Save(regCtx)
 		if err != nil {
 			return nil, nil, errors.Trace(err) // 500
 		}
 	}
 
-	db.Commit(ctx)
+	db.Commit(regCtx)
 
 	// If the user was not yet created on the mint, do so with two successive
 	// transactions, one to create or update (in case there was an issue) the
 	// user on the mint and the other to update the register user
 	// representation.
 	if user.MintToken == nil {
-		ctx = db.Begin(ctx, "mint")
-		defer db.LoggedRollback(ctx)
+		mintCtx := db.Begin(ctx, "mint")
+		defer db.LoggedRollback(mintCtx)
 
-		u, err := mintmodel.LoadUserByUsername(ctx, user.Username)
+		u, err := mintmodel.LoadUserByUsername(mintCtx, user.Username)
 		if err != nil {
 			return nil, nil, errors.Trace(err) // 500
 		}
 
 		if u != nil {
-			err := u.UpdatePassword(ctx, user.Password)
+			err := u.UpdatePassword(mintCtx, user.Password)
 			if err != nil {
 				return nil, nil, errors.Trace(err) // 500
 			}
-			err = u.Save(ctx)
+			err = u.Save(mintCtx)
 			if err != nil {
 				return nil, nil, errors.Trace(err) // 500
 			}
 
-			logging.Logf(ctx,
+			logging.Logf(mintCtx,
 				"Updated mint user: id=%s created=%q username=%s",
 				u.Token, u.Created, u.Username)
 		} else {
-			u, err = mintmodel.CreateUser(ctx, user.Username, user.Password)
+			u, err = mintmodel.CreateUser(mintCtx, user.Username, user.Password)
 			if err != nil {
 				log.Fatal(errors.Details(err))
 			}
 
-			logging.Logf(ctx,
+			logging.Logf(mintCtx,
 				"Created mint user: id=%s created=%q username=%s",
 				u.Token, u.Created, u.Username)
 		}
 
-		db.Commit(ctx)
+		db.Commit(mintCtx)
 
-		ctx = db.Begin(ctx, "register")
-		defer db.LoggedRollback(ctx)
+		regCtx = db.Begin(ctx, "register")
+		defer db.LoggedRollback(regCtx)
 
 		user.MintToken = &u.Token
-		err = user.Save(ctx)
+		err = user.Save(regCtx)
 		if err != nil {
 			return nil, nil, errors.Trace(err) // 500
 		}
 
-		db.Commit(ctx)
+		db.Commit(regCtx)
 	}
 
 	return ptr.Int(http.StatusCreated), &svc.Resp{
