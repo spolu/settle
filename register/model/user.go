@@ -63,7 +63,7 @@ func CreateUser(
 		Email:    email,
 	}
 
-	h, err := scrypt.Key([]byte(token.RandStr()), []byte(user.Token), 16384, 8, 1, 32)
+	h, err := scrypt.Key([]byte(token.RandStr()), []byte(user.Token), 16384, 8, 1, 64)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
