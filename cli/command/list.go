@@ -179,7 +179,7 @@ func (c *List) ExecuteAssets(
 		})
 	}
 	if len(assets) == 0 {
-		out.Normf("  No asset.")
+		out.Normf("  No asset.\n")
 	} else {
 		c.OutList(ctx, data)
 	}
@@ -217,7 +217,7 @@ func (c *List) ExecuteBalances(
 		})
 	}
 	if len(balances) == 0 {
-		out.Normf("  No balance.")
+		out.Normf("  No balance.\n")
 	} else {
 		c.OutList(ctx, data)
 	}

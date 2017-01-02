@@ -147,7 +147,8 @@ func (e *CreateOffer) Execute(
 			"base_asset=%s quote_asset=%s base_price=%s quote_price=%s "+
 			"amount=%s status=%s remainder=%s",
 		of.Owner, of.Token, of.Created, of.Propagation, of.BaseAsset,
-		of.QuoteAsset, of.BasePrice, of.QuotePrice,
+		of.QuoteAsset,
+		(*big.Int)(&of.BasePrice).String(), (*big.Int)(&of.QuotePrice),
 		(*big.Int)(&of.Amount).String(), of.Status,
 		(*big.Int)(&of.Remainder).String())
 
