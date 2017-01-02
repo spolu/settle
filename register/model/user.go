@@ -63,17 +63,17 @@ func CreateUser(
 		Email:    email,
 	}
 
-	h, err := scrypt.Key([]byte(token.RandStr()), []byte(user.Token), 16384, 8, 1, 64)
+	h, err := scrypt.Key([]byte(token.RandStr()), []byte(user.Token), 16384, 8, 1, 32)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
-	user.Secret = base64.URLEncoding.EncodeToString(h)
+	user.Secret = base64.RawURLEncoding.EncodeToString(h)
 
-	h, err = scrypt.Key([]byte(token.RandStr()), []byte(user.Token), 16384, 8, 1, 64)
+	h, err = scrypt.Key([]byte(token.RandStr()), []byte(user.Token), 16384, 8, 1, 32)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
-	user.Password = base64.URLEncoding.EncodeToString(h)
+	user.Password = base64.RawURLEncoding.EncodeToString(h)
 
 	ext := db.Ext(ctx, "register")
 	if _, err := sqlx.NamedExec(ext, `
