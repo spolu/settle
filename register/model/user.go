@@ -63,13 +63,15 @@ func CreateUser(
 		Email:    email,
 	}
 
-	h, err := scrypt.Key([]byte(token.RandStr()), []byte(user.Token), 16384, 8, 1, 64)
+	h, err := scrypt.Key(
+		[]byte(token.RandStr()), []byte(user.Token), 16384, 8, 1, 64)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
 	user.Secret = base64.RawURLEncoding.EncodeToString(h)
 
-	h, err = scrypt.Key([]byte(token.RandStr()), []byte(user.Token), 16384, 8, 1, 32)
+	h, err = scrypt.Key(
+		[]byte(token.RandStr()), []byte(user.Token), 16384, 8, 1, 32)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -96,6 +98,20 @@ VALUES
 	}
 
 	return &user, nil
+}
+
+// RollPassword generates a new password for the user.
+func (u *User) RollPassword(
+	ctx context.Context,
+) error {
+	h, err := scrypt.Key(
+		[]byte(token.RandStr()), []byte(u.Token), 16384, 8, 1, 32)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	u.Password = base64.RawURLEncoding.EncodeToString(h)
+
+	return nil
 }
 
 // Save updates the object database representation with the in-memory values.

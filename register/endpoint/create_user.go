@@ -120,9 +120,8 @@ func (e *CreateUser) Execute(
 	db.Commit(ctx)
 
 	logging.Logf(ctx,
-		"Created user: id=%s created=%q status=%s "+
-			"username=%s email=%s",
-		user.Token, user.Created, user.Status, user.Username, user.Email)
+		"Created user: id=%s created=%q username=%s status=%s email=%s",
+		user.Token, user.Created, user.Username, user.Status, user.Email)
 
 	return ptr.Int(http.StatusCreated), &svc.Resp{
 		"user": format.JSONPtr(model.NewUserResource(ctx, user)),
