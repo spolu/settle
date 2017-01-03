@@ -33,20 +33,6 @@ func GetPort(
 	return env.Get(ctx).Config[EnvCfgPort]
 }
 
-// GetKeyFile retrieves the production certificate key file.
-func GetKeyFile(
-	ctx context.Context,
-) string {
-	return env.Get(ctx).Config[EnvCfgKeyFile]
-}
-
-// GetCrtFile retrieves the production certificate key file.
-func GetCrtFile(
-	ctx context.Context,
-) string {
-	return env.Get(ctx).Config[EnvCfgCrtFile]
-}
-
 // Logf shells out to logging.Logf adding the mint host as prefix.
 func Logf(
 	ctx context.Context,

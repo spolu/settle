@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"net/http"
 	"time"
@@ -10,7 +9,6 @@ import (
 	"goji.io"
 
 	"github.com/facebookgo/grace/gracehttp"
-	"github.com/spolu/settle/lib/cert"
 	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/env"
 	"github.com/spolu/settle/lib/errors"
@@ -20,7 +18,6 @@ import (
 	"github.com/spolu/settle/mint"
 	"github.com/spolu/settle/mint/async"
 	"github.com/spolu/settle/mint/lib/authentication"
-	"github.com/spolu/settle/register"
 
 	// force initialization of schemas
 	_ "github.com/spolu/settle/mint/model/schemas"
@@ -33,8 +30,6 @@ func BackgroundContextFromFlags(
 	dsnFlag string,
 	hstFlag string,
 	prtFlag string,
-	keyFlag string,
-	crtFlag string,
 ) (context.Context, error) {
 	ctx := context.Background()
 
@@ -52,8 +47,6 @@ func BackgroundContextFromFlags(
 		port = prtFlag
 	}
 	mintEnv.Config[mint.EnvCfgPort] = port
-	mintEnv.Config[register.EnvCfgKeyFile] = keyFlag
-	mintEnv.Config[register.EnvCfgCrtFile] = crtFlag
 
 	ctx = env.With(ctx, &mintEnv)
 
@@ -86,7 +79,7 @@ func Build(
 	if mint.GetHost(ctx) == "" {
 		if env.Get(ctx).Environment == env.Production {
 			return nil, errors.Trace(errors.Newf(
-				"You must set the `-host` flag to an publicly accessible hostname that other mints can use to contact this mint over HTTPS (SSL certificates will be automatically generated from `Let's Encrypt` in production). If you're just testing and don't have a public domain name pointing to this machine, please run with `-env=qa` and `-host=127.0.0.1`",
+				"You must set the `-host` flag to a publicly accessible hostname that other mints can use to contact this mint over HTTPS (placing the mint behind a HAProxy, NGINX or similar for SSL termination in production). If you're just testing and don't have a public domain name pointing to this machine, please run with `-env=qa` and `-host=127.0.0.1`",
 			))
 		}
 		return nil, errors.Trace(errors.Newf(
@@ -125,27 +118,7 @@ func Serve(
 		Addr:         fmt.Sprintf(":%s", mint.GetPort(ctx)),
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 5 * time.Second,
-		TLSConfig: &tls.Config{
-			GetCertificate: cert.GetGetCertificate(ctx,
-				mint.GetHost(ctx),
-				mint.GetCrtFile(ctx), mint.GetKeyFile(ctx)),
-			PreferServerCipherSuites: true,
-			// Only use curves which have assembly implementations
-			CurvePreferences: []tls.CurveID{
-				tls.CurveP256,
-				// tls.X25519, // Go 1.8 only
-			},
-			MinVersion: tls.VersionTLS12,
-			CipherSuites: []uint16{
-				tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-				tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-				// tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305, // Go 1.8 only
-				// tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,   // Go 1.8 only
-				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-			},
-		},
-		Handler: mux,
+		Handler:      mux,
 	}
 
 	logging.Logf(ctx, "Listening: port=%s", mint.GetPort(ctx))

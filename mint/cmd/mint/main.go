@@ -19,8 +19,6 @@ var dsnFlag string
 
 var hstFlag string
 var prtFlag string
-var keyFlag string
-var crtFlag string
 
 var usrFlag string
 var pasFlag string
@@ -37,10 +35,6 @@ func init() {
 		"", "The externally accessible host name of this mint, default: none (required for production)")
 	flag.StringVar(&prtFlag, "port",
 		"", "The port on which the mint will listen, default: 2406 in qa and 2407 in production")
-	flag.StringVar(&keyFlag, "key_file",
-		"", "The production certificate key file for host")
-	flag.StringVar(&crtFlag, "crt_file",
-		"", "The production certificate cert file for host")
 
 	flag.StringVar(&usrFlag, "username",
 		"foo", "The user name of the user for the create_user action")
@@ -60,7 +54,7 @@ func main() {
 	ctx, err := app.BackgroundContextFromFlags(
 		envFlag,
 		dsnFlag,
-		hstFlag, prtFlag, keyFlag, crtFlag,
+		hstFlag, prtFlag,
 	)
 	if err != nil {
 		log.Fatal(errors.Details(err))

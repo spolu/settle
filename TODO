@@ -1,5 +1,10 @@
 # preview
 
+  [ ] finish mint
+    [ ] mint transaction creation refactor
+    [x] setup loggly
+    [x] setup LetsEncrypt
+    [x] Mint-Protocol-Version header
   [ ] finish cli
     [ ] pay command
     [x] cli install
@@ -7,16 +12,11 @@
     [x] Mint-Protocol-Version header
   [ ] finish register
     [ ] site credentials page
-    [ ] setup loggly
+    [x] setup loggly
     [x] roll user
     [x] retrieve user
     [x] setup LetsEncrypt
     [x] send email on create user
-  [ ] finish mint
-    [ ] mint transaction creation refactor
-    [ ] setup loggly
-    [x] setup LetsEncrypt
-    [x] Mint-Protocol-Version header
   [ ] finish site
     [ ] have the get started guide on github, to generate stars?
     [ ] credentials page

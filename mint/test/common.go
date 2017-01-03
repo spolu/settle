@@ -2,7 +2,6 @@ package test
 
 import (
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -43,12 +42,7 @@ var defaultHTTPClient = (*http.Client)(nil)
 // re-instantiating one for each request)
 func getDefaultHTTPClient() *http.Client {
 	if defaultHTTPClient == nil {
-		// In tests (QA) we don't check TLS certificates for ease of setup (see
-		// GetSelfSignedQACertificate).
-		tr := &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		}
-		defaultHTTPClient = &http.Client{Transport: tr}
+		defaultHTTPClient = &http.Client{}
 	}
 	return defaultHTTPClient
 }
@@ -116,14 +110,14 @@ func CreateMint(
 	// tasks when needed instead.
 
 	m := Mint{
-		Server:  httptest.NewTLSServer(mux),
+		Server:  httptest.NewServer(mux),
 		Mux:     mux,
 		Env:     &mintEnv,
 		DB:      mintDB,
 		Ctx:     ctx,
 		TmpFile: tmpFile,
 	}
-	m.Env.Config[mint.EnvCfgHost] = m.Server.URL[8:]
+	m.Env.Config[mint.EnvCfgHost] = m.Server.URL[7:]
 
 	logging.Logf(ctx, "Creating test mint: mint_host=%s",
 		m.Env.Config[mint.EnvCfgHost])
@@ -162,7 +156,7 @@ func (m *Mint) CreateUser(
 	if err != nil {
 		t.Fatal(err)
 	}
-	m.Env.Config[mint.EnvCfgHost] = m.Server.URL[8:]
+	m.Env.Config[mint.EnvCfgHost] = m.Server.URL[7:]
 
 	logging.Logf(m.Ctx, "Creating test mint: minst_host=%s",
 		m.Env.Config[mint.EnvCfgHost])

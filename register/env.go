@@ -13,10 +13,6 @@ const (
 	EnvCfgHost env.ConfigKey = "host"
 	// EnvCfgPort is the port on which to run the register.
 	EnvCfgPort env.ConfigKey = "port"
-	// EnvCfgKeyFile is the production certificate key file.
-	EnvCfgKeyFile env.ConfigKey = "key_file"
-	// EnvCfgCrtFile is the production certificate file.
-	EnvCfgCrtFile env.ConfigKey = "crt_file"
 	// EnvCfgCredsURL is the URL that is sent to the user over email to
 	// retrieve their credentials.
 	EnvCfgCredsURL env.ConfigKey = "credentials_url"
@@ -34,9 +30,6 @@ const (
 	EnvCfgSMTPHost env.ConfigKey = "smtp_host"
 	// EnvCfgFrom is the email address to send registration emails from.
 	EnvCfgFrom env.ConfigKey = "from"
-	// EnvCfgReCAPTCHASecret is the env config key for the reCAPTCHA secret to
-	// use to verify users.
-	EnvCfgReCAPTCHASecret env.ConfigKey = "recaptcha_secret"
 )
 
 // GetHost retrieves the current register host from the given contest.
@@ -51,20 +44,6 @@ func GetPort(
 	ctx context.Context,
 ) string {
 	return env.Get(ctx).Config[EnvCfgPort]
-}
-
-// GetKeyFile retrieves the production certificate key file.
-func GetKeyFile(
-	ctx context.Context,
-) string {
-	return env.Get(ctx).Config[EnvCfgKeyFile]
-}
-
-// GetCrtFile retrieves the production certificate key file.
-func GetCrtFile(
-	ctx context.Context,
-) string {
-	return env.Get(ctx).Config[EnvCfgCrtFile]
 }
 
 // GetMint retrieves the current mint host from the given contest.
@@ -105,11 +84,4 @@ func GetFrom(
 	ctx context.Context,
 ) string {
 	return env.Get(ctx).Config[EnvCfgFrom]
-}
-
-// GetReCAPTCHASecret retrieves the reCAPTCHA secret.
-func GetReCAPTCHASecret(
-	ctx context.Context,
-) string {
-	return env.Get(ctx).Config[EnvCfgReCAPTCHASecret]
 }

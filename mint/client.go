@@ -38,7 +38,7 @@ var DefaultPort = map[env.Environment]int64{
 // DefaultScheme is the mint default scheme by environment.
 var DefaultScheme = map[env.Environment]string{
 	env.Production: "https",
-	env.QA:         "https",
+	env.QA:         "http",
 }
 
 // Possible address: von.neumann@ias.edu:8989
