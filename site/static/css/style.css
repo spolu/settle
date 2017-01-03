@@ -148,7 +148,7 @@ nav.main-nav a {
 	top: 8px;
 	right: 6px;
 	padding: 8px 12px;
-	color: #5badf0;
+	color: #aaa;
 	font-size: 13px;
 	/*font-weight: bold;*/
 	line-height: 1.35;
@@ -182,22 +182,10 @@ a,
 #post-list li:hover .dates,
 #title:hover {
 	text-decoration: none;
-	color: #5badf0;
-	color: #5694f1;
+    color: #999;
 }
 
 p a { color: #5694f1; }
-
-/*Transitions*/
-a,
-#post-nav a,
-#post-list a	{
-	-webkit-transition: all 0.15s ease;
-	-moz-transition: all 0.15s ease;
-	-ms-transition: all 0.15s ease;
-	-o-transition: all 0.15s ease;
-	transition: all 0.15s ease;
-}
 
 /* Line Height */
 #post-body, p { line-height:1.7; }
@@ -222,24 +210,15 @@ a,
 
 }
 
-.post h1 {
+.post .title {
 	margin-bottom: 20px;
 	color: #222;
     font-size: 1.4em;
-    font-weight: 300;
+    font-weight: bold;
 }
-
-.post h2 {
-	margin-bottom: 40px;
-    color: #111;
-    font-size: 1.5em;
-    font-weight: 300;
-}
-
 
 .post h2.headline {
-	/*font: italic 22px/1.3em Georgia,serif;*/
-    font-size: 1.5em;
+    font-weight: normal;
 	margin: -5px 0 40px 0;
     color: #b2b9be;
     font-size: 13px;
@@ -249,11 +228,8 @@ a,
     display: inline-block;
 }
 
-#post-list h2 {
-    font-size: 1.5em;
-	color: #aaa;
-	max-width: 400px;
-	margin-top: 2px;
+.post h2.headline:before {
+  content: "";
 }
 
 blockquote {
@@ -352,12 +328,8 @@ img {
 /*=========================================
 Post List
 =========================================== */
-#post-list,#archive-list {
-	margin-top: 100px;
-}
-
-#post-list li,#archive-list li {
-	list-style-type: none;
+#post-list {
+    margin-bottom: 100px;
 }
 
 #post-list li:last-child {
@@ -366,22 +338,33 @@ Post List
 
 #post-list li+li {
 	padding-top: 20px;
-	border-top: 1px solid #eee;
 }
 
 #post-list a {
 	color: #333;
 	display: block;
-	font: bold 19px/1.7 Menlo, "DejaVu Sans Mono", "Lucida Console", monospace;
-    font-size: 1.7em;
+    font-weight: bold;
+    font-size: 1.4em;
 }
+
+#post-list .post-description {
+    font-size: 0.8em;
+	color: #aaa;
+    font-weight: normal;
+	max-width: 400px;
+	margin-top: 2px;
+}
+
 
 #post-list .dates {
 	float: right;
 	position: relative;
-	top: 1px;
-	font: 300 17px/1.8 Menlo, "DejaVu Sans Mono", "Lucida Console", monospace;
-	color: #bbb;
+	top: 5px;
+    font-weight: normal;
+    font-size: 13px;
+    color: #b2b9be;
+    text-transform: uppercase;
+    letter-spacing: 2px;
 }
 
 #post-list-footer {
@@ -390,31 +373,10 @@ Post List
 	padding-top: 100px;
 }
 
-#archive-link {
-	display: inline-block;
-	font-size: 13px;
-	font-weight: bold;
-	border-radius: 4px;
-	padding: 3px 10px 6px;
-	box-shadow: 0 0 0 1px hsla(207,83%,80%,1);
-}
-
-#archive-link:hover {
-	background: #5694f1;
-	color: #fff;
-	box-shadow: 0 0 0 1px #5694f1;
-}
-
-#archive-link span {
-	position: relative;
-	top: 0;
-	font-size: 17px;
-}
-
 #footer {
 	box-shadow: inset 0 1px 0 #eee;
 	padding: 10px 0 0 0;
-	margin-top: 100px;
+	margin-top: 70px;
 }
 
 /* Post Page */
@@ -430,13 +392,9 @@ Post List
 	font-size: 13px;
 	font-weight: bold;
 	line-height: 1.4;
-	border-top: 1px solid #eee;
 	padding-top: 40px;
-	margin-bottom: 40px;
-	padding-bottom: 40px;
 	margin-top: 40px;
 	color:#444;
-	border-bottom: 1px solid #eee;
 }
 
 #post-meta div span {
@@ -475,91 +433,6 @@ Post List
 	opacity: 0.8;
 }
 
-/* Post Navigation */
-#post-nav {
-	border-top:1px solid #eee;
-	text-align:center;
-	padding-top:20px;
-	font-size:13px;
-	font-weight:500;
-	margin-top: 40px;
-}
-
-#post-nav span {
-	-webkit-transition: all 0.1s linear;
-	-moz-transition: all 0.1s linear;
-	-ms-transition: all 0.1s linear;
-	-o-transition: all 0.1s linear;
-	transition: all 0.1s linear;
-	position: relative;
-}
-
-#post-nav span.prev {
-	float: left;
-}
-
-#post-nav span.next {
-	float: right;
-}
-
-#post-nav span .arrow {
-	position: relative;
-	padding: 1px;
-}
-
-#post-nav span.prev:hover .arrow {
-	left: -4px;
-}
-
-#post-nav span.next:hover .arrow {
-	right: -4px;
-}
-
-#post-nav span.prev:hover {
-	left: -3px;
-}
-
-#post-nav span.next:hover {
-	right: -3px;
-}
-
-/* Archive */
-h1.archive {
-	margin-bottom: 0px;
-}
-
-h2.month {
-	width: 100%;
-	font: bold 13px/1 Menlo, "DejaVu Sans Mono", "Lucida Console", monospace;
-	text-transform: uppercase;
-	margin-top: 40px;
-	margin-bottom: 10px;
-	padding-bottom: 10px;
-	border-bottom: 1px solid #eee;
-}
-
-#archive-list li:last-child {
-	margin-bottom: 0;
-}
-
-#archive-list a {
-	display: block;
-	font: bold 17px/1.7 Menlo, "DejaVu Sans Mono", "Lucida Console", monospace;
-	color: #333;
-}
-
-#archive-list .dates {
-	float: right;
-	position: relative;
-	top: 1px;
-	font: 300 17px/1.7 Menlo, "DejaVu Sans Mono", "Lucida Console", monospace;
-	color: #bbb;
-}
-
-#archive-list li a:hover,#archive-list li:hover .dates {
-	color: #5694f1;
-}
-
 #post-meta img.avatar {
   height: 36px;
   width: 36px;
@@ -570,24 +443,6 @@ h2.month {
   box-shadow: 0 0 0 3px #fff, 0 0 0 4px #eee;
 }
 
-#post-list.archive.readmore h3{
-
-	  font: 400 20px Menlo, "DejaVu Sans Mono", "Lucida Console", monospace;
-	  margin-bottom: 30px;
-}
-
-#post-list.archive.readmore a{
-	font: 400 16px/1.6 Menlo, "DejaVu Sans Mono", "Lucida Console", monospace;
-	color: #5694f1;
-}
-
-#post-list.archive.readmore a:hover{
-	opacity: 0.8;
-}
-
-#post-list.archive.readmore .dates{
-	font: 300 16px/1.6 Menlo, "DejaVu Sans Mono", "Lucida Console", monospace;
-}
 #sharing a.facebook {
   background: #4361b3;
 }
@@ -612,24 +467,20 @@ h2.month {
 	.post { margin: 40px 0; }
 	#footer { margin-top: 60px; }
 
-	#post-list, #archive-list { margin-top: 0; }
+	#post-list { margin-top: 0; }
 	#post-meta { margin-top: 60px; }
 
 	#title { font-size: 17px; }
 	#post-list .dates { display: none; }
 
 	#post-list-footer { margin-top: 20px; padding-top: 40px; }
-
-	.post h2.headline { font-size: 13px; }
-	.post h1 { font-size:24px; }
-	.post h2 { font-size:20px; }
 }
 
 
 /* CUSTOM ADDITIONS */
 
 #social {
-    float: left;
+    float: right;
     display: flex;
     flex-direction: row;
     justify-content: center;

@@ -6,7 +6,7 @@
     <section id="wrapper">
       <article class="post">
         <header>
-          <h1>{{ .Title }}</h1>
+          <div class="title">{{ .Title }}</div>
           <h2 class="headline">
           {{ .Date.Format "January 2, 2006" }}
           <br>
@@ -28,9 +28,6 @@
           {{ partial "share.html" . }}
         </section>
       </footer>
-
-      {{ template "_internal/disqus.html" . }}
-      {{ partial "latest-posts.html" . }}
       {{ partial "footer.html" . }}
     </section>
   {{ end }}
