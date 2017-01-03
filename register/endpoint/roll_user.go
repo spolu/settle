@@ -5,7 +5,6 @@ package endpoint
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 
 	"goji.io/pat"
@@ -22,29 +21,29 @@ import (
 )
 
 const (
-	// EndPtRetrieveUser creates a new offer.
-	EndPtRetrieveUser EndPtName = "RetrieveUser"
+	// EndPtRollUser rolls a user password.
+	EndPtRollUser EndPtName = "RollUser"
 )
 
 func init() {
-	registrar[EndPtRetrieveUser] = NewRetrieveUser
+	registrar[EndPtRollUser] = NewRollUser
 }
 
-// RetrieveUser a new user by username and email and send its secret over eail.
-type RetrieveUser struct {
+// RollUser a new user by username and email and send its secret over eail.
+type RollUser struct {
 	Username string
 	Secret   string
 }
 
-// NewRetrieveUser constructs and initialiezes the endpoint.
-func NewRetrieveUser(
+// NewRollUser constructs and initialiezes the endpoint.
+func NewRollUser(
 	r *http.Request,
 ) (Endpoint, error) {
-	return &RetrieveUser{}, nil
+	return &RollUser{}, nil
 }
 
 // Validate validates the input parameters.
-func (e *RetrieveUser) Validate(
+func (e *RollUser) Validate(
 	r *http.Request,
 ) error {
 	ctx := r.Context()
@@ -57,20 +56,17 @@ func (e *RetrieveUser) Validate(
 	e.Username = *username
 
 	// Validate secret.
-	e.Secret = r.URL.Query().Get("secret")
+	e.Secret = r.PostFormValue("secret")
 
 	return nil
 }
 
 // Execute executes the endpoint.
-func (e *RetrieveUser) Execute(
+func (e *RollUser) Execute(
 	ctx context.Context,
 ) (*int, *svc.Resp, error) {
 	regCtx := db.Begin(ctx, "register")
 	defer db.LoggedRollback(regCtx)
-
-	logging.Logf(regCtx,
-		"User retrieval: username=%s", e.Username)
 
 	user, err := model.LoadUserByUsername(regCtx, e.Username)
 	if err != nil {
@@ -83,62 +79,46 @@ func (e *RetrieveUser) Execute(
 		))
 	}
 
-	if user.Status != register.UsrStVerified {
-		user.Status = register.UsrStVerified
-		err := user.Save(regCtx)
-		if err != nil {
-			return nil, nil, errors.Trace(err) // 500
-		}
-		logging.Logf(regCtx,
-			"Updated user: id=%s created=%q username=%s status=%s",
-			user.Token, user.Created, user.Username, user.Status)
+	err = user.RollPassword(ctx)
+	if err != nil {
+		return nil, nil, errors.Trace(err) // 500
+	}
+	err = user.Save(regCtx)
+	if err != nil {
+		return nil, nil, errors.Trace(err) // 500
 	}
 
-	// If the user was not yet created on the mint, do so with two successive
-	// transactions, one to create or update (in case there was an issue) the
-	// user on the mint and the other to update the register user
-	// representation.
-	if user.MintToken == nil {
+	if user.MintToken != nil {
 		mintCtx := db.Begin(ctx, "mint")
 		defer db.LoggedRollback(mintCtx)
 
 		u, err := mintmodel.LoadUserByUsername(mintCtx, user.Username)
 		if err != nil {
 			return nil, nil, errors.Trace(err) // 500
+		} else if u == nil {
+			return nil, nil, errors.Trace(
+				errors.Newf("Mint user not found: %s", user.Username)) // 500
 		}
 
-		if u != nil {
-			err := u.UpdatePassword(mintCtx, user.Password)
-			if err != nil {
-				return nil, nil, errors.Trace(err) // 500
-			}
-			err = u.Save(mintCtx)
-			if err != nil {
-				return nil, nil, errors.Trace(err) // 500
-			}
-
-			logging.Logf(mintCtx,
-				"Updated mint user: id=%s created=%q username=%s",
-				u.Token, u.Created, u.Username)
-		} else {
-			u, err = mintmodel.CreateUser(mintCtx, user.Username, user.Password)
-			if err != nil {
-				log.Fatal(errors.Details(err))
-			}
-
-			logging.Logf(mintCtx,
-				"Created mint user: id=%s created=%q username=%s",
-				u.Token, u.Created, u.Username)
+		err = u.UpdatePassword(mintCtx, user.Password)
+		if err != nil {
+			return nil, nil, errors.Trace(err) // 500
 		}
-
-		user.MintToken = &u.Token
-		err = user.Save(regCtx)
+		err = u.Save(mintCtx)
 		if err != nil {
 			return nil, nil, errors.Trace(err) // 500
 		}
 
+		logging.Logf(mintCtx,
+			"Updated mint user: id=%s created=%q username=%s",
+			u.Token, u.Created, u.Username)
+
 		db.Commit(mintCtx)
 	}
+
+	logging.Logf(regCtx,
+		"Rolled user: id=%s created=%q username=%s status=%s",
+		user.Token, user.Created, user.Username, user.Status)
 
 	db.Commit(regCtx)
 

@@ -6,9 +6,9 @@
     [x] register command
     [x] Mint-Protocol-Version header
   [ ] finish register
-    [ ] roll user
     [ ] site credentials page
     [ ] setup loggly
+    [x] roll user
     [x] retrieve user
     [x] setup LetsEncrypt
     [x] send email on create user
@@ -37,8 +37,8 @@
 
 # register
 
-  [ ] roll user
   [ ] site credentials page
+  [x] roll user
   [x] retrieve user
   [x] setup LetsEncrypt
   [x] send email on create user
@@ -141,6 +141,6 @@
 # admin
 
   renew production certificates
-    cd /home/mint && sudo ../spolu/go/bin/lego --email="polu.stanislas@gmail.com" --domains="m.settle.network" renew
+    sudo /home/spolu/go/bin/lego --email="polu.stanislas@gmail.com" --domains="m.settle.network" renew
   allow 443 to register
     sudo setcap CAP_NET_BIND_SERVICE=+eip /home/mint/go/bin/register
