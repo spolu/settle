@@ -121,7 +121,7 @@ func (u *User) Save(
 	ext := db.Ext(ctx, "register")
 	_, err := sqlx.NamedExec(ext, `
 UPDATE users
-SET status = :status, password = :password
+SET status = :status, password = :password, mint_token = :mint_token
 WHERE token = :token
 `, u)
 	if err != nil {
