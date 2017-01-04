@@ -55,15 +55,14 @@ func HandlerFor(
 			return
 		}
 
+		// Make register accept cross origin request.
+		w.Header().Add("Access-Control-Allow-Origin", "*")
+
 		status, resp, err := endpt.Execute(r.Context())
 		if err != nil {
 			respond.Error(ctx, w, errors.Trace(err))
 			return
 		}
-		// Allow cross-origin requests
-		hdr := http.Header{
-			"Access-Control-Allow-Origin": []string{"*"},
-		}
-		respond.Respond(ctx, w, *status, hdr, *resp)
+		respond.Respond(ctx, w, *status, nil, *resp)
 	}
 }
