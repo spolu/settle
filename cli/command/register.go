@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/spolu/settle/cli"
+	"github.com/spolu/settle/lib/env"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/out"
 )
@@ -118,7 +119,11 @@ func (c *Register) Execute(
 	out.Normf("\n")
 	out.Normf("Success! Check your inbox for an email containing instructions to retrieve your\n")
 	out.Normf("credentials. Then, run: ")
-	out.Boldf("settle login\n")
+	if env.Get(ctx).Environment == env.QA {
+		out.Boldf("settle -env=qa login\n")
+	} else {
+		out.Boldf("settle login\n")
+	}
 
 	return nil
 }

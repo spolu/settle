@@ -19,12 +19,48 @@ var getBangParameter = function getBangParameter(sParam) {
   }
 };
 
+function rollUser() {
+  var protocol = (env == "qa") ? "http" : "https";
+  var fqn = (env == "qa") ? "qa-register" : "register";
+  var url =
+    protocol + "://" + fqn + ".settle.network/users/" + username +"/roll";
+
+  confirm("You are about to roll your password, your old password won't be usable aymore. Continue?")
+
+  $.ajax({
+    url: url,
+    type: 'POST',
+    dataType: "json",
+    data: { secret: secret },
+    success: function(data) {
+      $("#credentials #address .value").text(data.credentials.address)
+      $("#credentials #password .value").text(data.credentials.password)
+    },
+    error: function(xhr, status, error) {
+      var err = "Unexpected Error: please contact register@settle.network with the URL of the page.";
+      try {
+        var body = JSON.parse(xhr.responseText)
+        if (body['error']) {
+          err = "Error: " + body['error']['message']
+        }
+      }
+      finally {
+        $("#credentials .error").text(err)
+      }
+    }
+  });
+}
+
+
+var secret = "";
+var username = "";
+var env = ""
 
 $(document).ready(function() {
-  var secret = getBangParameter("secret")
-  var username = getBangParameter("username")
+  secret = getBangParameter("secret")
+  username = getBangParameter("username")
 
-  var env = getBangParameter("env")
+  env = getBangParameter("env")
   if (env != "qa") {
     env = "prod"
   } else {
@@ -38,8 +74,8 @@ $(document).ready(function() {
   var protocol = (env == "qa") ? "http" : "https";
   var fqn = (env == "qa") ? "qa-register" : "register";
   var url =
-    protocol + "://" + fqn + ".settle.network/users/" +
-    username + "?secret=" + secret
+    protocol + "://" + fqn + ".settle.network/users/" + username +
+    "?secret=" + secret;
 
   $.ajax({
     url: url,
