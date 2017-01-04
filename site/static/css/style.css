@@ -493,6 +493,11 @@ Post List
   cursor: pointer;
 }
 
+#credentials .error {
+  font-weight: bold;
+  color: red;
+}
+
 /* CUSTOM ADDITIONS */
 #social {
   float: right;

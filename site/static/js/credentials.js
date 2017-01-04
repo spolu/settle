@@ -37,14 +37,28 @@ $(document).ready(function() {
 
   var protocol = (env == "qa") ? "http" : "https";
   var fqn = (env == "qa") ? "qa-register" : "register";
-  var url = protocol + "://" + fqn + ".settle.network/users/" + username
-  console.log(url)
+  var url =
+    protocol + "://" + fqn + ".settle.network/users/" +
+    username + "?secret=" + secret
 
   $.ajax({
     url: url,
     dataType: "json",
     success: function(data) {
-      console.log(data)
+      $("#credentials #address .value").text(data.credentials.address)
+      $("#credentials #password .value").text(data.credentials.password)
+    },
+    error: function(xhr, status, error) {
+      var err = "Unexpected Error: please contact register@settle.network with the URL of the page.";
+      try {
+        var body = JSON.parse(xhr.responseText)
+        if (body['error']) {
+          err = "Error: " + body['error']['message']
+        }
+      }
+      finally {
+        $("#credentials .error").text(err)
+      }
     }
   });
 })
