@@ -18,6 +18,13 @@ import (
 	"github.com/spolu/settle/register"
 )
 
+const (
+	// SecretByteLen is the length in byte of the secret.
+	SecretByteLen int = 64
+	// PasswordByteLen is the length in byte of the secret.
+	PasswordByteLen int = 16
+)
+
 // User represents a user object. Users are not tied to a mint user until they
 // are verified.
 type User struct {
@@ -64,14 +71,16 @@ func CreateUser(
 	}
 
 	h, err := scrypt.Key(
-		[]byte(token.RandStr()), []byte(user.Token), 16384, 8, 1, 64)
+		[]byte(token.RandStr()), []byte(user.Token),
+		16384, 8, 1, SecretByteLen)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
 	user.Secret = base64.RawURLEncoding.EncodeToString(h)
 
 	h, err = scrypt.Key(
-		[]byte(token.RandStr()), []byte(user.Token), 16384, 8, 1, 32)
+		[]byte(token.RandStr()), []byte(user.Token),
+		16384, 8, 1, PasswordByteLen)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -105,7 +114,8 @@ func (u *User) RollPassword(
 	ctx context.Context,
 ) error {
 	h, err := scrypt.Key(
-		[]byte(token.RandStr()), []byte(u.Token), 16384, 8, 1, 32)
+		[]byte(token.RandStr()), []byte(u.Token),
+		16384, 8, 1, PasswordByteLen)
 	if err != nil {
 		return errors.Trace(err)
 	}

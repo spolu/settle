@@ -26,7 +26,7 @@ func init() {
 			"\n" +
 			"Please click on the link below to verify your address and retrieve your credentials to access the mint at {{.Mint}}[0]:\n" +
 			"\n" +
-			"{{.CredsURL}}#?qa={{.Env}}&secret={{.Secret}}\n" +
+			"{{.CredsURL}}#?env={{.Env}}&username={{.Username}}&secret={{.Secret}}\n" +
 			"\n" +
 			"Keep this link safe and secure as this your only way to retrieve or roll your credentials.\n" +
 			"\n" +
