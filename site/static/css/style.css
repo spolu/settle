@@ -330,6 +330,7 @@ Post List
 =========================================== */
 #post-list {
   margin-bottom: 100px;
+  list-style-type:none;
 }
 
 #post-list li:last-child {
