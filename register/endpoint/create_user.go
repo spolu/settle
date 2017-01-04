@@ -9,6 +9,7 @@ import (
 	"net/smtp"
 
 	"github.com/spolu/settle/lib/db"
+	"github.com/spolu/settle/lib/env"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/lib/format"
 	"github.com/spolu/settle/lib/logging"
@@ -94,6 +95,7 @@ func (e *CreateUser) Execute(
 
 		buf := new(bytes.Buffer)
 		err := emailTemplate.Execute(buf, EmailData{
+			Env:      env.Get(ctx).Environment,
 			From:     register.GetFrom(ctx),
 			Username: user.Username,
 			Email:    user.Email,

@@ -4,6 +4,7 @@ import "text/template"
 
 // EmailData is the data required to execute the email template.
 type EmailData struct {
+	Env      string
 	From     string
 	Username string
 	Email    string
@@ -25,7 +26,7 @@ func init() {
 			"\n" +
 			"Please click on the link below to verify your address and retrieve your credentials to access the mint at {{.Mint}}[0]:\n" +
 			"\n" +
-			"{{.CredsURL}}#?secret={{.Secret}}\n" +
+			"{{.CredsURL}}#?qa={{.Env}}&secret={{.Secret}}\n" +
 			"\n" +
 			"Keep this link safe and secure as this your only way to retrieve or roll your credentials.\n" +
 			"\n" +
