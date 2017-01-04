@@ -60,6 +60,10 @@ func HandlerFor(
 			respond.Error(ctx, w, errors.Trace(err))
 			return
 		}
-		respond.Respond(ctx, w, *status, nil, *resp)
+		// Allow cross-origin requests
+		hdr := http.Header{
+			"Access-Control-Allow-Origin": []string{"*"},
+		}
+		respond.Respond(ctx, w, *status, hdr, *resp)
 	}
 }

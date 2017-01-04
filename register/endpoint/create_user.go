@@ -95,7 +95,7 @@ func (e *CreateUser) Execute(
 
 		buf := new(bytes.Buffer)
 		err := emailTemplate.Execute(buf, EmailData{
-			Env:      env.Get(ctx).Environment,
+			Env:      string(env.Get(ctx).Environment),
 			From:     register.GetFrom(ctx),
 			Username: user.Username,
 			Email:    user.Email,
