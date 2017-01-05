@@ -23,7 +23,10 @@ function rollUser() {
   var fqn = (env == "qa") ? "qa-register" : "register";
   var url = "https://" + fqn + ".settle.network/users/" + username +"/roll";
 
-  confirm("You are about to roll your password, your old password won't be usable aymore. Continue?")
+  var c = confirm("You are about to roll your password, your old password won't be usable aymore. Continue?")
+  if (!c) {
+    return
+  }
 
   $.ajax({
     url: url,
