@@ -20,10 +20,8 @@ var getBangParameter = function getBangParameter(sParam) {
 };
 
 function rollUser() {
-  var protocol = (env == "qa") ? "http" : "https";
   var fqn = (env == "qa") ? "qa-register" : "register";
-  var url =
-    protocol + "://" + fqn + ".settle.network/users/" + username +"/roll";
+  var url = "https://" + fqn + ".settle.network/users/" + username +"/roll";
 
   confirm("You are about to roll your password, your old password won't be usable aymore. Continue?")
 
@@ -71,10 +69,8 @@ $(document).ready(function() {
   console.log("Retrieving credentials:"+
               " env="+env+" username="+username+" secret="+ secret)
 
-  var protocol = (env == "qa") ? "http" : "https";
   var fqn = (env == "qa") ? "qa-register" : "register";
-  var url =
-    protocol + "://" + fqn + ".settle.network/users/" + username +
+  var url = "https://" + fqn + ".settle.network/users/" + username +
     "?secret=" + secret;
 
   $.ajax({
