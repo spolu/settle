@@ -7,12 +7,9 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
-	"sync"
 	"time"
 
 	"goji.io/pat"
-
-	"golang.org/x/sync/errgroup"
 
 	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/errors"
@@ -178,8 +175,6 @@ func (e *CreateTransaction) ExecuteCanonical(
 		e.Destination,
 		model.OfPath(e.Path),
 		mint.TxStReserved,
-		time.Now().Add(
-			time.Duration(mint.TransactionExpiryMs)*time.Millisecond),
 	)
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
@@ -205,16 +200,10 @@ func (e *CreateTransaction) ExecuteCanonical(
 		e.Plan = plan
 	}
 
-	err = e.ExecutePlan(ctx)
-	if err != nil {
-		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
-			402, "transaction_failed",
-			"The plan execution failed at hop %d for transaction: %s",
-			e.Hop, e.ID,
-		))
-	}
-
-	_, err = e.Propagate(ctx)
+	// At the canonical mint the initial propagation starts from a virtual Hop
+	// which is the length of the plan hops plus one.
+	e.Hop = len(e.Plan.Hops)
+	txn, err = e.Propagate(ctx)
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 			402, "transaction_failed",
@@ -223,44 +212,15 @@ func (e *CreateTransaction) ExecuteCanonical(
 		))
 	}
 
-	// Check all the hops in the transaction in parallel before committing (as
-	// we are the canonical mint for it).
-	g, ctx := errgroup.WithContext(ctx)
-	expiry := e.Tx.Expiry.UnixNano() / mint.TimeResolutionNs
-	l := &sync.Mutex{}
-
-	for hop := 1; hop < len(e.Plan.Actions); hop++ {
-		hop := hop
-		g.Go(func() error {
-			txn, err := e.Plan.Check(ctx, e.Client, int8(hop))
-			if err != nil {
-				return errors.Trace(err)
-			}
-			l.Lock()
-			defer l.Unlock()
-			if txn.Expiry < expiry {
-				expiry = txn.Expiry
-			}
-			return nil
-		})
-	}
-	if err := g.Wait(); err != nil {
+	// We just need to check that the resource we received from the last hop
+	// matches our transaction plan.
+	err := e.Plan.Check(ctx, txn, int8(e.Hop-1))
+	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 			402, "transaction_failed",
 			"Failed to check plan for transaction %s",
 			e.ID,
 		))
-	}
-
-	e.Tx.Expiry = time.Unix(0, expiry*mint.TimeResolutionNs)
-	err = e.Tx.Save(ctx)
-	if err != nil {
-		return nil, nil, errors.Trace(err) // 500
-	}
-
-	err = async.Queue(ctx, task.NewExpireTransaction(ctx, time.Now(), e.ID))
-	if err != nil {
-		return nil, nil, errors.Trace(err) // 500
 	}
 
 	db.Commit(ctx)
@@ -451,15 +411,14 @@ func (e *CreateTransaction) ExecutePropagated(
 func (e *CreateTransaction) Propagate(
 	ctx context.Context,
 ) (*mint.TransactionResource, error) {
-	if int(e.Hop)+1 < len(e.Plan.Actions) {
-
-		m := e.Plan.Actions[e.Hop+1].Mint
+	if int(e.Hop)-1 > 0 {
+		m := e.Plan.Hops[e.Hop-1].Mint
 
 		mint.Logf(ctx,
 			"Propagating transaction: transaction=%s hop=%d mint=%s",
-			e.ID, e.Hop, m)
+			e.ID, e.Hop-1, m)
 
-		txn, err := e.Client.PropagateTransaction(ctx, e.ID, e.Hop+1, m)
+		txn, err := e.Client.PropagateTransaction(ctx, e.ID, e.Hop-1, m)
 		if err != nil {
 			return nil, errors.Trace(err)
 		}

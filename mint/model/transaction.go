@@ -84,7 +84,6 @@ func CreateCanonicalTransaction(
 	destination string,
 	path []string,
 	status mint.TxStatus,
-	expiry time.Time,
 ) (*Transaction, error) {
 	tok := token.New("transaction")
 
@@ -108,7 +107,6 @@ func CreateCanonicalTransaction(
 		Path:        OfPath(path),
 		Status:      status,
 
-		Expiry: expiry.UTC(),
 		Lock:   lock,
 		Secret: &secret,
 	}
@@ -117,10 +115,10 @@ func CreateCanonicalTransaction(
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO transactions
   (owner, token, created, propagation, base_asset, quote_asset,
-   amount, destination, path, status, expiry, lock, secret)
+   amount, destination, path, status, lock, secret)
 VALUES
   (:owner, :token, :created, :propagation, :base_asset, :quote_asset,
-   :amount, :destination, :path, :status, :expiry, :lock, :secret)
+   :amount, :destination, :path, :status,  :lock, :secret)
 `, transaction); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:
@@ -151,7 +149,6 @@ func CreatePropagatedTransaction(
 	destination string,
 	path []string,
 	status mint.TxStatus,
-	expiry time.Time,
 	lock string,
 ) (*Transaction, error) {
 	transaction := Transaction{
@@ -166,7 +163,6 @@ func CreatePropagatedTransaction(
 		Destination: destination,
 		Path:        OfPath(path),
 		Status:      status,
-		Expiry:      expiry.UTC(),
 		Lock:        lock,
 		Secret:      nil,
 	}
@@ -175,10 +171,10 @@ func CreatePropagatedTransaction(
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO transactions
   (owner, token, created, propagation, base_asset, quote_asset,
-   amount, destination, path, status, expiry, lock, secret)
+   amount, destination, path, status, lock, secret)
 VALUES
   (:owner, :token, :created, :propagation, :base_asset, :quote_asset,
-   :amount, :destination, :path, :status, :expiry, :lock, :secret)
+   :amount, :destination, :path, :status, :lock, :secret)
 `, transaction); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:
@@ -204,7 +200,7 @@ func (t *Transaction) Save(
 	ext := db.Ext(ctx, "mint")
 	_, err := sqlx.NamedExec(ext, `
 UPDATE transactions
-SET status = :status, expiry = :expiry
+SET status = :status
 WHERE owner = :owner
   AND token = :token
 `, t)

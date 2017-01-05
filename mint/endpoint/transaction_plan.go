@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	"math/big"
-	"time"
 
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/mint"
@@ -22,14 +21,11 @@ const (
 	TxActTpOperation TxActionType = "operation"
 	// TxActTpCrossing is the action type for a crossing creation.
 	TxActTpCrossing TxActionType = "crossing"
-	// TxActTpNoop is the action type for a no-op.
-	TxActTpNoop TxActionType = "noop"
 )
 
-// TxAction represents the action on each mint that makes up a transaction
-// plan.
+// TxAction represents an action to be performed by a mint. Either an operation
+// or crossing creation.
 type TxAction struct {
-	Mint   string
 	Owner  string
 	Type   TxActionType
 	Amount *big.Int
@@ -43,10 +39,20 @@ type TxAction struct {
 	IsExecuted bool
 }
 
+// TxHop is a list of action to be performed by the mint at the associated hop.
+// hop 0 is the mint creating the transaction, hop (i) is the mint on the offer
+// path at index (i-1).
+type TxHop struct {
+	Mint     string
+	OpAction *TxAction
+	CrAction *TxAction
+}
+
 // TxPlan is the plan associated with the transaction. It is constructed by
-// each mint involved in the transaction.
+// each mint involved in the transaction. Each hop represents a mint along the
+// offer path starting with the mint initiating the transaction.
 type TxPlan struct {
-	Actions     []*TxAction
+	Hops        []*TxHop
 	Transaction string
 }
 
@@ -69,7 +75,7 @@ func ComputePlan(
 			}
 
 			// Validate that the offer owner owns the base asset (enforced by
-			// offer creation but not bad to validate here).
+			// offer creation but good defense in depth to validate here).
 			pair, err := mint.AssetResourcesFromPair(ctx, offer.Pair)
 			if offer.Owner != pair[0].Owner {
 				return errors.Newf(
@@ -92,97 +98,59 @@ func ComputePlan(
 	// D/C
 
 	plan := TxPlan{
-		Actions:     []*TxAction{},
+		Hops:        []*TxHop{},
 		Transaction: fmt.Sprintf("%s[%s]", tx.Owner, tx.Token),
 	}
 
-	// FIRST PASS: consists in computing the actions for all operations,
-	// leaving the amounts empty.
+	// FIRST PASS: consists in computing the actions for all hops, leaving the
+	// amounts empty.
 
 	bAsset, err := mint.AssetResourceFromName(ctx, tx.BaseAsset)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
-	offset := 0
+	hop := 0
 
-	// Generate first action.
-	if bAsset.Owner == tx.Owner {
-		// If the base asset is owned by the transaction owner, the first
-		// action is an operation.
-		_, host, err := mint.UsernameAndMintHostFromAddress(ctx, tx.Owner)
-		if err != nil {
-			return nil, errors.Trace(err)
-		}
+	// Generate first hop which has one operation on the mint of the base
+	// asset.
+	_, host, err := mint.UsernameAndMintHostFromAddress(ctx, bAsset.Owner)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
 
-		plan.Actions = append(plan.Actions, &TxAction{
-			Mint:                 host,
-			Owner:                tx.Owner,
+	plan.Hops = append(plan.Hops, &TxHop{
+		Mint: host,
+		OpAction: &TxAction{
+			Owner:                bAsset.Owner,
 			Type:                 TxActTpOperation,
-			OperationAsset:       &tx.BaseAsset,
+			OperationAsset:       &bAsset.Name,
 			Amount:               nil, // computed on second pass
 			OperationDestination: nil, // computed by next offer
 			OperationSource:      &tx.Owner,
 			IsExecuted:           false,
-		})
-	} else {
-		offset = 1
-		// Otherwise, it's a no-op action locally and a first opeation action
-		// on the required mint.
-		_, local, err := mint.UsernameAndMintHostFromAddress(ctx, tx.Owner)
-		if err != nil {
-			return nil, errors.Trace(err)
-		}
-		_, remote, err := mint.UsernameAndMintHostFromAddress(ctx, bAsset.Owner)
-		if err != nil {
-			return nil, errors.Trace(err)
-		}
-		plan.Actions = append(plan.Actions, &TxAction{
-			Mint:  local,
-			Owner: tx.Owner,
-			Type:  TxActTpNoop,
-		})
-		plan.Actions = append(plan.Actions, &TxAction{
-			Mint:                 remote,
-			Owner:                bAsset.Owner,
-			Type:                 TxActTpOperation,
-			OperationAsset:       &bAsset.Name,
-			Amount:               nil,       // computed on second pass
-			OperationDestination: nil,       // computed by next offer
-			OperationSource:      &tx.Owner, // transfer operation
-			IsExecuted:           false,
-		})
-	}
+		},
+	})
 
 	// Generate actions from path of offers.
 	for i, offer := range offers {
+		hop := i + 1
 		offer := offer
 		pair, err := mint.AssetResourcesFromPair(ctx, offer.Pair)
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
 		// Compare the previous operation asset with the offer quote asset.
-		if pair[1].Name != *plan.Actions[2*i+offset].OperationAsset {
+		if pair[1].Name != *plan.Hops[hop-1].OpAction.OperationAsset {
 			return nil, errors.Trace(errors.Newf(
 				"Operation/Offer asset mismatch at offer %s: %s expected %s.",
-				offer.ID, pair[0].Name, *plan.Actions[2*i+offset].OperationAsset))
+				offer.ID, pair[1].Name,
+				*plan.Hops[hop-1].OpAction.OperationAsset))
 		}
 		// Fill the previous operation destination.
-		plan.Actions[2*i+offset].OperationDestination = &offer.Owner
-		// Add the crossing action.
+		plan.Actions[hop-1].OpAction.OperationDestination = &offer.Owner
+
+		// Compute the hop for the current offer
 		_, host, err := mint.UsernameAndMintHostFromAddress(ctx, offer.Owner)
-		if err != nil {
-			return nil, errors.Trace(err)
-		}
-		plan.Actions = append(plan.Actions, &TxAction{
-			Mint:          host,
-			Owner:         offer.Owner,
-			Type:          TxActTpCrossing,
-			CrossingOffer: &offer.ID,
-			Amount:        nil, // computed on second pass
-			IsExecuted:    false,
-		})
-		// Add the next operation action.
-		_, host, err = mint.UsernameAndMintHostFromAddress(ctx, pair[0].Owner)
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
@@ -191,40 +159,51 @@ func ComputePlan(
 				"Offer owner (%s) is not the offer base asset owner (%s).",
 				offer.Owner, pair[0].Owner))
 		}
-		plan.Actions = append(plan.Actions, &TxAction{
-			Mint:                 host,
-			Owner:                pair[0].Owner,
-			Type:                 TxActTpOperation,
-			OperationAsset:       &pair[0].Name,
-			Amount:               nil,            // computed on second pass
-			OperationDestination: nil,            // computed by next offer
-			OperationSource:      &pair[0].Owner, // issuing operation
-			IsExecuted:           false,
+		plan.Hops = append(plan.Hops, &TxHop{
+			Mint: host,
+			CrAction: &TxAction{
+				Owner:         offer.Owner,
+				Type:          TxActTpCrossing,
+				CrossingOffer: &offer.ID,
+				Amount:        nil, // computed on second pass
+				IsExecuted:    false,
+			},
+			OpAction: &TxAction{
+				Owner:                pair[0].Owner,
+				Type:                 TxActTpOperation,
+				OperationAsset:       &pair[0].Name,
+				Amount:               nil,            // computed on second pass
+				OperationDestination: nil,            // computed by next offer
+				OperationSource:      &pair[0].Owner, // issuing operation
+				IsExecuted:           false,
+			},
 		})
 	}
 	// Compare the last operation asset to the transaction quote asset.
-	if tx.QuoteAsset != *plan.Actions[len(plan.Actions)-1].OperationAsset {
+	if tx.QuoteAsset != *plan.Hops[len(plan.Hops)-1].OpAction.OperationAsset {
 		return nil, errors.Trace(errors.Newf(
 			"Operation/Transaction asset mismatchs: %s expected %s.",
-			tx.QuoteAsset, *plan.Actions[len(plan.Actions)-1].OperationAsset))
+			tx.QuoteAsset,
+			*plan.Hops[len(plan.Hops)-1].OpAction.OperationAsset))
 	}
 	// Compute the last operation destination.
-	plan.Actions[len(plan.Actions)-1].OperationDestination = &tx.Destination
+	plan.Hops[len(plan.Hops)-1].OpAction.OperationDestination = &tx.Destination
 
 	// SECOND PASS: consists in computing the amounts for each operations.
 
-	// Compute the last amount, this is the transaction amount.
-	plan.Actions[len(plan.Actions)-1].Amount = (*big.Int)(&tx.Amount)
+	// Compute the amount of the last hop operationw as the transaction amount.
+	plan.Hops[len(plan.Hops)-1].OpAction.Amount = (*big.Int)(&tx.Amount)
 
 	// Compute amounts for each action.
 	for i := len(offers) - 1; i >= 0; i-- {
+		hop := i + 1
 		// Offer amounts are expressed in quote asset
 		basePrice, quotePrice, err := ValidatePrice(ctx, offers[i].Price)
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
 		amount := new(big.Int).Mul(
-			plan.Actions[2*(i+1)+offset].Amount,
+			plan.Hops[hop].OpAction.Amount,
 			basePrice)
 		amount, remainder := new(big.Int).QuoRem(
 			amount, quotePrice, new(big.Int))
@@ -237,32 +216,25 @@ func ComputePlan(
 			amount = new(big.Int).Add(amount, big.NewInt(1))
 		}
 
-		plan.Actions[2*i+offset].Amount = amount
-		plan.Actions[2*i+1+offset].Amount = amount
-
-		// We don't check that the remainder is sufficient on the offer here as
-		// ComputePlan is used at settlement (where crossings have already been
-		// reserved)
+		plan.Actions[hop].CrAction.Amount = amount
+		plan.Actions[hop-1].OpAction.Amount = amount
 	}
 
 	logLine := fmt.Sprintf("Transaction plan for %s:", plan.Transaction)
-	for i, a := range plan.Actions {
-		switch a.Type {
-		case TxActTpNoop:
-			logLine += fmt.Sprintf("\n  [%d:%s     ] mint=%s",
-				i, a.Type, a.Mint)
-		case TxActTpOperation:
+	for i, h := range plan.Hops {
+		logLine += fmt.Sprintf("\n  [%d] mint=%s", i, h.Mint)
+		if h.OpAction != nil {
+			a := h.OpAction
+			logLine += fmt.Sprintf("\n    [%s     ] amount=%s asset=%s "+
+				"source=%s destination=%s ",
+				a.Type, a.Amount.String(), *a.OperationAsset,
+				*a.OperationSource, *a.OperationDestination)
+		}
+		if h.CrAction != nil {
+			a := h.CrAction
 			logLine += fmt.Sprintf(
-				"\n  [%d:%s] mint=%s amount=%s "+
-					"asset=%s source=%s destination=%s ",
-				i, a.Type, a.Mint, a.Amount.String(),
-				*a.OperationAsset, *a.OperationSource, *a.OperationDestination)
-		case TxActTpCrossing:
-			logLine += fmt.Sprintf(
-				"\n  [%d:%s ] mint=%s amount=%s "+
-					"offer=%s pair=%s price=%s",
-				i, a.Type, a.Mint, a.Amount.String(),
-				*a.CrossingOffer,
+				"\n    [%s ] amount=%s offer=%s pair=%s price=%s",
+				a.Type, a.Amount.String(), *a.CrossingOffer,
 				offers[(i-offset)/2].Pair, offers[(i-offset)/2].Price)
 		}
 	}
@@ -272,31 +244,17 @@ func ComputePlan(
 }
 
 // Check checks that the plan was properly executed at the specified hop by
-// retrieving the transaction ont that mint and checking the action against the
-// advertised operations and crossings.
+// retrieving the transaction ont that mint and checking the actions against
+// the advertised operations and crossings.
 func (p *TxPlan) Check(
 	ctx context.Context,
+	transaction *mint.TransactionResource,
 	client *mint.Client,
 	hop int8,
-) (*mint.TransactionResource, error) {
-	action := p.Actions[hop]
-	transaction, err := client.RetrieveTransaction(ctx,
-		p.Transaction, &action.Mint)
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
+) error {
+	h := p.Hops[hop]
 
-	if time.Now().Add(
-		time.Duration(mint.TransactionExpiryBufferMs) * time.Millisecond).After(
-		time.Unix(0, transaction.Expiry*mint.TimeResolutionNs)) {
-		return nil, errors.Newf(
-			"Expiry of transaction at hop %d is too short: %d",
-			hop, transaction.Expiry)
-	}
-
-	switch action.Type {
-	case TxActTpOperation:
-
+	if h.OpAction != nil {
 		operation := (*mint.OperationResource)(nil)
 		for _, op := range transaction.Operations {
 			op := op
@@ -332,9 +290,9 @@ func (p *TxPlan) Check(
 				"%s expected %s",
 				hop, operation.Destination, *action.OperationDestination)
 		}
+	}
 
-	case TxActTpCrossing:
-
+	if h.CrAction != nil {
 		crossing := (*mint.CrossingResource)(nil)
 		for _, cr := range transaction.Crossings {
 			cr := cr
