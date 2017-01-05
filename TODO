@@ -10,18 +10,17 @@
     [x] cli install
     [x] register command
     [x] Mint-Protocol-Version header
-  [ ] finish register
-    [ ] site credentials page
+  [x] finish register
+    [x] site credentials page
     [x] setup loggly
     [x] roll user
     [x] retrieve user
     [x] setup LetsEncrypt
     [x] send email on create user
   [ ] finish site
-    [ ] have the get started guide on github, to generate stars?
-    [ ] credentials page
     [ ] blog post draft
-    [ ] setup loggly
+    [ ] how transactions work draft
+    [x] setup loggly
   [ ] send r?
 
 # cli
@@ -37,7 +36,7 @@
 
 # register
 
-  [ ] site credentials page
+  [x] site credentials page
   [x] roll user
   [x] retrieve user
   [x] setup LetsEncrypt
@@ -124,8 +123,8 @@
 # site
 
   [ ] have the get started guide on github, to generate stars?
-  [ ] credentials page
   [ ] blog post draft
+  [ ] how transactions work draft
 
 # r? preview
 
@@ -137,10 +136,3 @@
   kwi
   gyril
   migliris
-
-# admin
-
-  renew production certificates
-    sudo /home/spolu/go/bin/lego --email="polu.stanislas@gmail.com" --domains="m.settle.network" renew
-  allow 443 to register
-    sudo setcap CAP_NET_BIND_SERVICE=+eip /home/mint/go/bin/register
