@@ -10,16 +10,13 @@ import (
 
 	"goji.io/pat"
 
-	"github.com/spolu/settle/lib/format"
-	"github.com/spolu/settle/lib/respond"
-	"github.com/spolu/settle/lib/svc"
 	"github.com/spolu/settle/mint"
 	"github.com/spolu/settle/mint/endpoint"
 	"github.com/spolu/settle/mint/test"
 	"github.com/stretchr/testify/assert"
 )
 
-func setupCreateTransactionAttack(
+func setupCreateTransactionFailure(
 	t *testing.T,
 ) ([]*test.Mint, []*test.MintUser, []mint.AssetResource, []mint.OfferResource) {
 	m := []*test.Mint{
@@ -53,7 +50,7 @@ func setupCreateTransactionAttack(
 	return m, u, a, o
 }
 
-func tearDownCreateTransactionAttack(
+func tearDownCreateTransactionFailure(
 	t *testing.T,
 	mints []*test.Mint,
 ) {
@@ -62,16 +59,16 @@ func tearDownCreateTransactionAttack(
 	}
 }
 
-func TestCreateTransactionAttackMultiCreation(
+func TestCreateTransactionFailureMultiCreation(
 	t *testing.T,
 ) {
 	t.Parallel()
-	m, u, _, o := setupCreateTransactionAttack(t)
-	defer tearDownCreateTransactionAttack(t, m)
+	m, u, _, o := setupCreateTransactionFailure(t)
+	defer tearDownCreateTransactionFailure(t, m)
 
 	repostDone := false
 	// Intercept transaction propagation and attempt to repost
-	m[2].Mux.Use(func(inner http.Handler) http.Handler {
+	m[1].Mux.Use(func(inner http.Handler) http.Handler {
 		mw := func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
 			pattern := regexp.MustCompile("^/transactions/[a-zA-Z0-9_\\+:@\\.\\[\\]]+$")
@@ -87,20 +84,16 @@ func TestCreateTransactionAttackMultiCreation(
 
 				fmt.Printf("\n ---> %s REPOST ATTACK\n\n", r.URL.Path)
 
-				m[1].Post(t,
+				m[2].Post(t,
 					nil,
 					fmt.Sprintf("/transactions/%s", *id),
 					url.Values{
-						"hop": {"1"},
+						"hop": {"2"},
 					})
 
-				respond.Respond(ctx, w, http.StatusCreated, nil, svc.Resp{
-					"transaction": format.JSONPtr(mint.TransactionResource{
-						ID: *id,
-					}),
-				})
+				inner.ServeHTTP(w, r)
 			} else {
-				fmt.Printf(" ---> %s SKIP\n", r.URL.Path)
+				fmt.Printf(" ---> %s SKIPn\n", r.URL.Path)
 				inner.ServeHTTP(w, r)
 			}
 		}

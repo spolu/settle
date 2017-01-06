@@ -35,15 +35,14 @@ type TxAction struct {
 	OperationAsset       *string
 	OperationSource      *string
 	OperationDestination *string
-
-	IsExecuted bool
 }
 
 // TxHop is a list of action to be performed by the mint at the associated hop.
 // hop 0 is the mint creating the transaction, hop (i) is the mint on the offer
 // path at index (i-1).
 type TxHop struct {
-	Mint     string
+	Mint string
+
 	OpAction *TxAction
 	CrAction *TxAction
 }
@@ -109,7 +108,6 @@ func ComputePlan(
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
-	hop := 0
 
 	// Generate first hop which has one operation on the mint of the base
 	// asset.
@@ -127,7 +125,6 @@ func ComputePlan(
 			Amount:               nil, // computed on second pass
 			OperationDestination: nil, // computed by next offer
 			OperationSource:      &tx.Owner,
-			IsExecuted:           false,
 		},
 	})
 
@@ -147,7 +144,7 @@ func ComputePlan(
 				*plan.Hops[hop-1].OpAction.OperationAsset))
 		}
 		// Fill the previous operation destination.
-		plan.Actions[hop-1].OpAction.OperationDestination = &offer.Owner
+		plan.Hops[hop-1].OpAction.OperationDestination = &offer.Owner
 
 		// Compute the hop for the current offer
 		_, host, err := mint.UsernameAndMintHostFromAddress(ctx, offer.Owner)
@@ -166,7 +163,6 @@ func ComputePlan(
 				Type:          TxActTpCrossing,
 				CrossingOffer: &offer.ID,
 				Amount:        nil, // computed on second pass
-				IsExecuted:    false,
 			},
 			OpAction: &TxAction{
 				Owner:                pair[0].Owner,
@@ -175,7 +171,6 @@ func ComputePlan(
 				Amount:               nil,            // computed on second pass
 				OperationDestination: nil,            // computed by next offer
 				OperationSource:      &pair[0].Owner, // issuing operation
-				IsExecuted:           false,
 			},
 		})
 	}
@@ -216,8 +211,8 @@ func ComputePlan(
 			amount = new(big.Int).Add(amount, big.NewInt(1))
 		}
 
-		plan.Actions[hop].CrAction.Amount = amount
-		plan.Actions[hop-1].OpAction.Amount = amount
+		plan.Hops[hop].CrAction.Amount = amount
+		plan.Hops[hop-1].OpAction.Amount = amount
 	}
 
 	logLine := fmt.Sprintf("Transaction plan for %s:", plan.Transaction)
@@ -225,7 +220,7 @@ func ComputePlan(
 		logLine += fmt.Sprintf("\n  [%d] mint=%s", i, h.Mint)
 		if h.OpAction != nil {
 			a := h.OpAction
-			logLine += fmt.Sprintf("\n    [%s     ] amount=%s asset=%s "+
+			logLine += fmt.Sprintf("\n    [%s] amount=%s asset=%s "+
 				"source=%s destination=%s ",
 				a.Type, a.Amount.String(), *a.OperationAsset,
 				*a.OperationSource, *a.OperationDestination)
@@ -235,7 +230,7 @@ func ComputePlan(
 			logLine += fmt.Sprintf(
 				"\n    [%s ] amount=%s offer=%s pair=%s price=%s",
 				a.Type, a.Amount.String(), *a.CrossingOffer,
-				offers[(i-offset)/2].Pair, offers[(i-offset)/2].Price)
+				offers[i-1].Pair, offers[i-1].Price)
 		}
 	}
 	mint.Logf(ctx, logLine)
@@ -249,12 +244,13 @@ func ComputePlan(
 func (p *TxPlan) Check(
 	ctx context.Context,
 	transaction *mint.TransactionResource,
-	client *mint.Client,
 	hop int8,
 ) error {
 	h := p.Hops[hop]
 
 	if h.OpAction != nil {
+		a := h.OpAction
+
 		operation := (*mint.OperationResource)(nil)
 		for _, op := range transaction.Operations {
 			op := op
@@ -263,36 +259,38 @@ func (p *TxPlan) Check(
 			}
 		}
 		if operation == nil {
-			return nil, errors.Newf("Operation at hop %d not found", hop)
+			return errors.Newf("Operation at hop %d not found", hop)
 		}
-		if operation.Owner != action.Owner {
-			return nil, errors.Newf("Operation at hop %d owner mismatch: "+
+		if operation.Owner != a.Owner {
+			return errors.Newf("Operation at hop %d owner mismatch: "+
 				"%s expected %s",
-				hop, operation.Owner, action.Owner)
+				hop, operation.Owner, a.Owner)
 		}
-		if operation.Amount.Cmp(action.Amount) != 0 {
-			return nil, errors.Newf("Operation at hop %d amount mismatch: "+
+		if operation.Amount.Cmp(a.Amount) != 0 {
+			return errors.Newf("Operation at hop %d amount mismatch: "+
 				"%s expected %s",
-				hop, operation.Amount.String(), action.Amount.String())
+				hop, operation.Amount.String(), a.Amount.String())
 		}
-		if operation.Asset != *action.OperationAsset {
-			return nil, errors.Newf("Operation at hop %d asset mismatch: "+
+		if operation.Asset != *a.OperationAsset {
+			return errors.Newf("Operation at hop %d asset mismatch: "+
 				"%s expected %s",
-				hop, operation.Asset, *action.OperationAsset)
+				hop, operation.Asset, *a.OperationAsset)
 		}
-		if operation.Source != *action.OperationSource {
-			return nil, errors.Newf("Operation at hop %d source mismatch: "+
+		if operation.Source != *a.OperationSource {
+			return errors.Newf("Operation at hop %d source mismatch: "+
 				"%s expected %s",
-				hop, operation.Source, *action.OperationSource)
+				hop, operation.Source, *a.OperationSource)
 		}
-		if operation.Destination != *action.OperationDestination {
-			return nil, errors.Newf("Operation at hop %d destination mismatch: "+
+		if operation.Destination != *a.OperationDestination {
+			return errors.Newf("Operation at hop %d destination mismatch: "+
 				"%s expected %s",
-				hop, operation.Destination, *action.OperationDestination)
+				hop, operation.Destination, *a.OperationDestination)
 		}
 	}
 
 	if h.CrAction != nil {
+		a := h.CrAction
+
 		crossing := (*mint.CrossingResource)(nil)
 		for _, cr := range transaction.Crossings {
 			cr := cr
@@ -301,24 +299,24 @@ func (p *TxPlan) Check(
 			}
 		}
 		if crossing == nil {
-			return nil, errors.Newf("Crossing at hop %d not found", hop)
+			return errors.Newf("Crossing at hop %d not found", hop)
 		}
-		if crossing.Owner != action.Owner {
-			return nil, errors.Newf("Crossing at hop %d owner mismatch: "+
+		if crossing.Owner != a.Owner {
+			return errors.Newf("Crossing at hop %d owner mismatch: "+
 				"%s expected %s",
-				hop, crossing.Owner, action.Owner)
+				hop, crossing.Owner, a.Owner)
 		}
-		if crossing.Amount.Cmp(action.Amount) != 0 {
-			return nil, errors.Newf("Crossing at hop %d amount mismatch: "+
+		if crossing.Amount.Cmp(a.Amount) != 0 {
+			return errors.Newf("Crossing at hop %d amount mismatch: "+
 				"%s expected %s",
-				hop, crossing.Amount.String(), action.Amount.String())
+				hop, crossing.Amount.String(), a.Amount.String())
 		}
-		if crossing.Offer != *action.CrossingOffer {
-			return nil, errors.Newf("Crossing at hop %d offer mismatch: "+
+		if crossing.Offer != *a.CrossingOffer {
+			return errors.Newf("Crossing at hop %d offer mismatch: "+
 				"%s expected %s",
-				hop, crossing.Offer, *action.CrossingOffer)
+				hop, crossing.Offer, *a.CrossingOffer)
 		}
 	}
 
-	return transaction, nil
+	return nil
 }

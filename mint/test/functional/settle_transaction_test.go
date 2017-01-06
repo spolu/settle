@@ -8,7 +8,6 @@ import (
 
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/mint"
-	"github.com/spolu/settle/mint/async"
 	"github.com/spolu/settle/mint/model"
 	"github.com/spolu/settle/mint/test"
 	"github.com/stretchr/testify/assert"
@@ -232,58 +231,4 @@ func TestSettleTransactionmWithNoOffer(
 		a[0].Name, u[1].Address)
 	assert.Nil(t, err)
 	assert.Equal(t, big.NewInt(10), (*big.Int)(&balance.Value))
-}
-
-func TestSettleTransactionWith1OfferExpired(
-	t *testing.T,
-) {
-	t.Parallel()
-	m, u, a, o := setupSettleTransaction(t)
-	defer tearDownSettleTransaction(t, m)
-
-	// Execute offers propagations.
-	async.TestRunOne(m[0].Ctx)
-	async.TestRunOne(m[1].Ctx)
-	async.TestRunOne(m[2].Ctx)
-
-	status, raw := u[0].Post(t,
-		fmt.Sprintf("/transactions"),
-		url.Values{
-			"pair":        {fmt.Sprintf("%s/%s", a[0].Name, a[1].Name)},
-			"amount":      {"10"},
-			"destination": {u[1].Address},
-			"path[]": {
-				o[1].ID,
-			},
-		})
-
-	var tx mint.TransactionResource
-	err := raw.Extract("transaction", &tx)
-	assert.Nil(t, err)
-
-	assert.Equal(t, 201, status)
-
-	// Run propagations
-	async.TestRunOne(m[1].Ctx)
-
-	// Expire transactions
-	async.TestRunOne(m[0].Ctx)
-	async.TestRunOne(m[1].Ctx)
-	async.TestRunOne(m[1].Ctx)
-
-	status, raw = u[0].Post(t,
-		fmt.Sprintf("/transactions/%s/settle", tx.ID),
-		url.Values{})
-
-	var e errors.ConcreteUserError
-	err = raw.Extract("error", &e)
-	assert.Nil(t, err)
-
-	assert.Equal(t, 402, status)
-	assert.Equal(t, "settlement_failed", e.ErrCode)
-
-	// Check offer on m[1]
-	offer, err := model.LoadCanonicalOfferByID(m[1].Ctx, o[1].ID)
-	assert.Nil(t, err)
-	assert.Equal(t, big.NewInt(100), (*big.Int)(&offer.Remainder))
 }

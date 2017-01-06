@@ -121,12 +121,10 @@ func (e *SettleTransaction) Execute(
 func (e *SettleTransaction) ExecuteCanonical(
 	ctx context.Context,
 ) (*int, *svc.Resp, error) {
-	ctx = db.Begin(ctx, "mint")
-	defer db.LoggedRollback(ctx)
+	oCtx := ctx
 
-	// No need to lock the transaction here as we are the only mint to know its
-	// secret before it propagates (also, settlement propagates back to us).
-	txStore.Init(ctx, e.ID)
+	ctx = db.Begin(oCtx, "mint")
+	defer db.LoggedRollback(ctx)
 
 	tx, err := model.LoadCanonicalTransactionByOwnerToken(ctx,
 		e.Owner, e.Token)
@@ -141,43 +139,36 @@ func (e *SettleTransaction) ExecuteCanonical(
 	}
 	e.Tx = tx
 
-	if e.Tx.Expiry.Before(time.Now()) {
+	// Transaction can be either reserved or settled.
+	switch e.Tx.Status {
+	case mint.TxStCanceled:
 		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
 			402, "settlement_failed",
-			"The transaction you are trying to settle has expired: %s. It "+
-				"will automatically be canceled within an hour of its "+
-				"creation (created at %s).", e.ID,
-			e.Tx.Created.Format(time.UnixDate),
+			"The transaction you are trying to settle is canceled: %s.",
+			e.ID,
 		))
-	}
-	if e.Tx.Status == mint.TxStCanceled {
+	case mint.TxStPending:
 		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
 			402, "settlement_failed",
-			"The transaction you are trying to settle is already "+
-				"canceled: %s.", e.ID,
+			"The transaction you are trying to settle is pending: %s ",
+			e.ID,
 		))
 	}
 
-	// Store the transcation in memory so that it's latest version is available
-	// through API before we commit.
-	txStore.Store(ctx, e.ID, tx)
-	defer txStore.Clear(ctx, e.ID)
-
-	e.Plan = txStore.GetPlan(ctx, e.ID)
-	if e.Plan == nil {
-		plan, err := ComputePlan(ctx, e.Client, e.Tx)
-		if err != nil {
-			return nil, nil, errors.Trace(errors.NewUserErrorf(err,
-				402, "settlement_failed",
-				"The plan computation for the transaction failed: %s", e.ID,
-			))
-		}
-		txStore.StorePlan(ctx, e.ID, plan)
-		e.Plan = plan
+	plan, err := ComputePlan(ctx, e.Client, e.Tx)
+	if err != nil {
+		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
+			402, "settlement_failed",
+			"The plan computation for the transaction failed: %s", e.ID,
+		))
 	}
+	e.Plan = plan
 
-	// Set the Hop to the the length of the plan to call Settle
-	e.Hop = int8(len(e.Plan.Actions))
+	db.Commit(ctx)
+
+	// At the canonical mint the settlemetn propagation starts from a virtual
+	// Hop which is the length of the plan hops plus one.
+	e.Hop = int8(len(e.Plan.Hops))
 	e.Secret = *tx.Secret
 
 	err = e.Propagate(ctx)
@@ -189,13 +180,51 @@ func (e *SettleTransaction) ExecuteCanonical(
 		))
 	}
 
+	ctx = db.Begin(oCtx, "mint")
+	defer db.LoggedRollback(ctx)
+
+	// Reload the tranasction post propagation.
+	tx, err = model.LoadTransactionByID(ctx, e.ID)
+	if err != nil {
+		return nil, nil, errors.Trace(err) // 500
+	} else if tx == nil {
+		return nil, nil, errors.Newf(
+			"Failed to retrieve reserved transaction: %s", e.ID) // 500
+	}
+
+	switch tx.Status {
+	case mint.TxStReserved:
+		// Mark the transaction as settled.
+		tx.Status = mint.TxStSettled
+	case mint.TxStSettled:
+		// No-op as the transaction was already marked as settled during
+		// propagation.
+	default:
+		return nil, nil, errors.Newf(
+			"Unexpected transaction status %s: %s", tx.Status, e.ID) // 500
+	}
+
+	err = tx.Save(ctx)
+	if err != nil {
+		return nil, nil, errors.Trace(err) // 500
+	}
+
+	ops, err := model.LoadCanonicalOperationsByTransaction(ctx, e.ID)
+	if err != nil {
+		return nil, nil, errors.Trace(err) // 500
+	}
+
+	crs, err := model.LoadCanonicalCrossingsByTransaction(ctx, e.ID)
+	if err != nil {
+		return nil, nil, errors.Trace(err) // 500
+	}
+
+	// Commit the transaction in settled state.
 	db.Commit(ctx)
 
 	return ptr.Int(http.StatusOK), &svc.Resp{
 		"transaction": format.JSONPtr(model.NewTransactionResource(ctx,
-			txStore.Get(ctx, e.ID),
-			txStore.GetOperations(ctx, e.ID),
-			txStore.GetCrossings(ctx, e.ID),
+			tx, ops, crs,
 		)),
 	}, nil
 }
@@ -205,41 +234,16 @@ func (e *SettleTransaction) ExecuteCanonical(
 func (e *SettleTransaction) ExecutePropagated(
 	ctx context.Context,
 ) (*int, *svc.Resp, error) {
-	txStore.Init(ctx, e.ID)
+	ctx = db.Begin(ctx, "mint")
+	defer db.LoggedRollback(ctx)
 
-	// This is used to be sure to unlock only once even if we use defer and
-	// unlock explicitely before propagation.
-	u := false
-	unlock := func() {
-		if !u {
-			u = true
-			txStore.Unlock(ctx, e.ID)
-		}
+	tx, err := model.LoadTransactionByID(ctx, e.ID)
+	if err != nil {
+		return nil, nil, errors.Trace(err) // 500
 	}
-	lock := func() {
-		u = false
-		txStore.Lock(ctx, e.ID)
-	}
-
-	lock()
-	defer unlock()
-
-	mustCommit := false
-	if txStore.Get(ctx, e.ID) != nil {
-		// If we find the transaction in the txStore, we also reuse the
-		// underlying db.Transaction so that the whole settlement is run on
-		// one single underlying db.Transaction (more consistent and avoids
-		// locking issues).
-		dbTx := txStore.GetDBTransaction(ctx, e.ID)
-		ctx = db.WithTransaction(ctx, *dbTx)
-		mint.Logf(ctx, "Transaction: reuse %s", dbTx.Token)
-
-		e.Tx = txStore.Get(ctx, e.ID)
+	if tx != nil {
+		e.Tx = tx
 	} else {
-		mustCommit = true
-		ctx = db.Begin(ctx, "mint")
-		defer db.LoggedRollback(ctx)
-
 		tx, err := model.LoadPropagatedTransactionByOwnerToken(ctx,
 			e.Owner, e.Token)
 		if err != nil {
@@ -252,51 +256,24 @@ func (e *SettleTransaction) ExecutePropagated(
 			))
 		}
 		e.Tx = tx
-
-		// If the transaction is already settled in database, we must return
-		// 200 here to avoid double settlement (also if we're settled, we
-		// already funded the money and are convinced that we were funded as
-		// well).
-		if e.Tx.Status == mint.TxStSettled {
-			mint.Logf(ctx,
-				"Transaction already settled: transaction=%s hop=%d",
-				e.ID, e.Hop)
-			ops, err := model.LoadCanonicalOperationsByTransaction(ctx, e.ID)
-			if err != nil {
-				return nil, nil, errors.Trace(err) // 500
-			}
-			crs, err := model.LoadCanonicalCrossingsByTransaction(ctx, e.ID)
-			if err != nil {
-				return nil, nil, errors.Trace(err) // 500
-			}
-			return ptr.Int(http.StatusOK), &svc.Resp{
-				"transaction": format.JSONPtr(model.NewTransactionResource(ctx,
-					e.Tx, ops, crs)),
-			}, nil
-		} else if e.Tx.Status == mint.TxStCanceled {
-			mint.Logf(ctx,
-				"Transaction already canceled: transaction=%s hop=%d",
-				e.ID, e.Hop)
-			return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-				402, "settlement_failed",
-				"The transaction you are trying to settle is already "+
-					"canceled: %s.", e.ID,
-			))
-		}
-
-		// Store the transcation in memory so that it's latest version is available
-		// through API before we commit.
-		txStore.Store(ctx, e.ID, tx)
-		defer txStore.Clear(ctx, e.ID)
 	}
 
-	if e.Tx.Expiry.Before(time.Now()) {
+	// TODO(stan): Retrieve transaction at next hop and cancel if it was
+	// canceled.
+
+	// Transaction can be either reserved or settled.
+	switch e.Tx.Status {
+	case mint.TxStCanceled:
 		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
 			402, "settlement_failed",
-			"The transaction you are trying to settle has expired: %s. It "+
-				"will automatically be canceled within an hour of its "+
-				"creation (created at %s).", e.ID,
-			e.Tx.Created.Format(time.UnixDate),
+			"The transaction you are trying to settle is canceled: %s.",
+			e.ID,
+		))
+	case mint.TxStPending:
+		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
+			402, "settlement_failed",
+			"The transaction you are trying to settle is pending: %s ",
+			e.ID,
 		))
 	}
 
@@ -312,50 +289,27 @@ func (e *SettleTransaction) ExecutePropagated(
 		))
 	}
 
-	e.Plan = txStore.GetPlan(ctx, e.ID)
-	if e.Plan == nil {
-		plan, err := ComputePlan(ctx, e.Client, e.Tx)
-		if err != nil {
-			return nil, nil, errors.Trace(errors.NewUserErrorf(err,
-				402, "settlement_failed",
-				"The plan computation for the transaction failed: %s", e.ID,
-			))
-		}
-		txStore.StorePlan(ctx, e.ID, plan)
-		e.Plan = plan
-	}
-
-	if e.Plan.Actions[e.Hop].Mint != mint.GetHost(ctx) {
-		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-			402, "settlement_failed",
-			"The hop provided does not match the current mint for "+
-				"transaction: %s", e.ID,
-		))
-	}
-
-	// We unlock the tranaction before propagating.
-	unlock()
-
-	err = e.Propagate(ctx)
+	plan, err := ComputePlan(ctx, e.Client, e.Tx)
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 			402, "settlement_failed",
-			"The transaction failed to settle on required mints: %s.",
-			e.ID,
+			"The plan computation for the transaction failed: %s", e.ID,
+		))
+	}
+	e.Plan = plan
+
+	if int(e.Hop) >= len(e.Plan.Hops) ||
+		e.Plan.Hops[e.Hop].Mint != mint.GetHost(ctx) {
+		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
+			402, "settlement_failed",
+			"The hop provided (%d) does not match the current mint (%s) for "+
+				"transaction: %s", e.Hop, mint.GetHost(ctx), e.ID,
 		))
 	}
 
-	// Reacquire the lock for final settlement.
-	lock()
-
-	// Settle will idempotently (across tranasction) settle the whole
-	// transaction (generally called on lowest hop first). Subsequent calls (on
-	// higher hops will be no-ops). It is fine to settle the whole transaction
-	// here as we effectively trust other mints will dtrt and we know we have
-	// at least communicated the lock to everyone here.
-	// In case of cycle we are protected by the shared transaction on that
-	// mint, meaning that a higher mint failing would fail the entire
-	// settlement as well.
+	// Settle will idempotently (at specified hop) settle the
+	// transaction (generally called on highest hop first). Subsequent calls (on
+	// same hop will be no-ops).
 	err = e.Settle(ctx)
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
@@ -364,51 +318,84 @@ func (e *SettleTransaction) ExecutePropagated(
 		))
 	}
 
-	if mustCommit {
-		db.Commit(ctx)
+	// Mark the transaction as settled (if there's a loop we'll call settle on
+	// the other hop even if marked as settled).
+	tx.Status = mint.TxStSettled
+	err = tx.Save(ctx)
+	if err != nil {
+		return nil, nil, errors.Trace(err) // 500
+	}
+
+	ops, err := model.LoadCanonicalOperationsByTransaction(ctx, e.ID)
+	if err != nil {
+		return nil, nil, errors.Trace(err) // 500
+	}
+
+	crs, err := model.LoadCanonicalCrossingsByTransaction(ctx, e.ID)
+	if err != nil {
+		return nil, nil, errors.Trace(err) // 500
+	}
+
+	// Commit the transaction as well as operations and crossings as settled.
+	db.Commit(ctx)
+
+	err = e.Propagate(ctx)
+	if err != nil {
+
+		// TODO(stan): async propagate in case of synchronous error
+
+		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
+			402, "settlement_failed",
+			"The transaction failed to settle on required mints: %s.",
+			e.ID,
+		))
 	}
 
 	return ptr.Int(http.StatusOK), &svc.Resp{
 		"transaction": format.JSONPtr(model.NewTransactionResource(ctx,
-			txStore.Get(ctx, e.ID),
-			txStore.GetOperations(ctx, e.ID),
-			txStore.GetCrossings(ctx, e.ID),
+			tx, ops, crs,
 		)),
 	}, nil
 }
 
-// Settle checks the secret against the lock and settles the underlying
-// operation or crossing.
+// Settle settles idempotently the underlying operations and crossings at the
+// current hop.
 func (e *SettleTransaction) Settle(
 	ctx context.Context,
 ) error {
-	// Simply return if we already settled.
-	if e.Tx.Status == mint.TxStSettled {
-		return nil
+	if int(e.Hop) >= len(e.Plan.Hops) {
+		return errors.Trace(errors.Newf(
+			"Hop (%d) is higher than the transaction plan length (%d)",
+			e.Hop, len(e.Plan.Hops)))
 	}
 
-	for h := 0; h < len(e.Plan.Actions); h++ {
-		if e.Plan.Actions[h].Mint != mint.GetHost(ctx) {
-			continue
+	h := e.Plan.Hops[e.Hop]
+	mint.Logf(ctx,
+		"Executing settlement plan: transaction=%s hop=%d", e.ID, e.Hop)
+
+	// Settle the OpAction (should always be defined)
+	if h.OpAction != nil {
+		op, err := model.LoadCanonicalOperationByTransactionHop(ctx,
+			e.ID, e.Hop)
+		if err != nil {
+			return errors.Trace(err)
+		} else if op == nil {
+			return errors.Trace(errors.Newf(
+				"Operation not found for transaction %s and hop %d",
+				e.ID, h))
 		}
 
-		// Defense in depth as we should go only once through this.
-		a := e.Plan.Actions[h]
-		if a.IsExecuted {
+		if op.Status == mint.TxStSettled {
 			mint.Logf(ctx,
-				"Skipping settlement plan: transaction=%s hop=%d", e.ID, h)
-			return nil
-		}
-		mint.Logf(ctx,
-			"Executing settlement plan: transaction=%s hop=%d", e.ID, h)
+				"Skipped operation: id=%s[%s] created=%q propagation=%s "+
+					"asset=%s source=%s destination=%s amount=%s "+
+					"status=%s transaction=%s",
+				op.Owner, op.Token, op.Created, op.Propagation, op.Asset,
+				op.Source, op.Destination, (*big.Int)(&op.Amount).String(),
+				op.Status, *op.Transaction)
 
-		// We have the transaction lock so this is safe to write. Also we can mark
-		// it as executed right away since everything gets canceled in case of
-		// error.
-		a.IsExecuted = true
-
-		switch a.Type {
-		case TxActTpOperation:
+		} else {
+			a := h.OpAction
 
 			asset, err := model.LoadCanonicalAssetByName(ctx, *a.OperationAsset)
 			if err != nil {
@@ -427,16 +414,6 @@ func (e *SettleTransaction) Settle(
 				if err != nil {
 					return errors.Trace(err)
 				}
-			}
-
-			op, err := model.LoadCanonicalOperationByTransactionHop(ctx,
-				e.ID, int8(h))
-			if err != nil {
-				return errors.Trace(err)
-			} else if op == nil {
-				return errors.Trace(errors.Newf(
-					"Operation not found for transaction %s and hop %d",
-					e.ID, h))
 			}
 
 			if dstBalance != nil {
@@ -468,10 +445,6 @@ func (e *SettleTransaction) Settle(
 				return errors.Trace(err)
 			}
 
-			// Store the operation so that it's available when the transaction is
-			// returned from this mint.
-			txStore.StoreOperation(ctx, e.ID, op)
-
 			mint.Logf(ctx,
 				"Settled operation: id=%s[%s] created=%q propagation=%s "+
 					"asset=%s source=%s destination=%s amount=%s "+
@@ -486,28 +459,32 @@ func (e *SettleTransaction) Settle(
 			if err != nil {
 				return errors.Trace(err)
 			}
+		}
+	}
 
-		case TxActTpCrossing:
+	if h.CrAction != nil {
+		cr, err := model.LoadCanonicalCrossingByTransactionHop(ctx,
+			e.ID, e.Hop)
+		if err != nil {
+			return errors.Trace(err)
+		} else if cr == nil {
+			return errors.Trace(errors.Newf(
+				"Crossing not found for transaction %s and hop %d",
+				e.ID, h))
+		}
 
-			cr, err := model.LoadCanonicalCrossingByTransactionHop(ctx,
-				e.ID, int8(h))
-			if err != nil {
-				return errors.Trace(err)
-			} else if cr == nil {
-				return errors.Trace(errors.Newf(
-					"Crossing not found for transaction %s and hop %d",
-					e.ID, h))
-			}
-
+		if cr.Status == mint.TxStSettled {
+			mint.Logf(ctx,
+				"Skipped crossing: id=%s[%s] created=%q offer=%s amount=%s "+
+					"status=%s transaction=%s",
+				cr.Owner, cr.Token, cr.Created, cr.Offer,
+				(*big.Int)(&cr.Amount).String(), cr.Status, cr.Transaction)
+		} else {
 			cr.Status = mint.TxStSettled
 			err = cr.Save(ctx)
 			if err != nil {
 				return errors.Trace(err)
 			}
-
-			// Store the crossing so that it's available when the transaction is
-			// returned from this mint.
-			txStore.StoreCrossing(ctx, e.ID, cr)
 
 			mint.Logf(ctx,
 				"Settled crossing: id=%s[%s] created=%q offer=%s amount=%s "+
@@ -517,38 +494,27 @@ func (e *SettleTransaction) Settle(
 		}
 	}
 
-	e.Tx.Status = mint.TxStSettled
-	err := e.Tx.Save(ctx)
-	if err != nil {
-		return errors.Trace(err)
-	}
-
 	return nil
 }
 
-// Propagate recursively settles from the last mint to the canonical one.
+// Propagate propagates the lock for settlement. Does not infer with current
+// hop settlement which was already performed.
 func (e *SettleTransaction) Propagate(
 	ctx context.Context,
 ) error {
-	if e.Hop-1 >= 0 {
-		h := e.Hop - 1
-		m := e.Plan.Actions[h].Mint
+	if int(e.Hop)-1 >= 0 {
+		m := e.Plan.Hops[e.Hop-1].Mint
 
 		mint.Logf(ctx,
 			"Propagating settlement: transaction=%s hop=%d mint=%s",
 			e.ID, e.Hop, m)
 
-		_, err := e.Client.SettleTransaction(ctx,
-			e.ID, &h, &e.Secret, &m)
+		hop := e.Hop - 1
+		_, err := e.Client.SettleTransaction(ctx, e.ID, &hop, &e.Secret, &m)
 		if err != nil {
 			return errors.Trace(err)
 		}
 	}
-
-	// If e.Hop == 0 we return no error, as we are the canonical mint and we
-	// are not depending on any other mint for settlement.
-	// Otherwise, if there was no error, we can trust that the mint before us
-	// in the plan has settled the action we depend on.
 
 	return nil
 }

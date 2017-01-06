@@ -45,6 +45,9 @@
 # mint
 
   [ ] refactor transaction creation/settlement
+  [ ] refactor propagated
+  [ ] transaction cancelation
+
   [~] list endpoint
     [ ] list asset operations
     [x] list asset offers (order book)
