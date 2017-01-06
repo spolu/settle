@@ -42,14 +42,17 @@ const (
 type TxStatus string
 
 const (
-	// TxStReserved is used to mark an action (operation or crossing) as
-	// reserved.
+	// TxStPending is used to mark a transaction as pending (created but not
+	// yet finalized)
+	TxStPending TxStatus = "pending"
+	// TxStReserved is used to mark a transaction or action (operation or
+	// crossing) as reserved.
 	TxStReserved TxStatus = "reserved"
-	// TxStSettled is used to mark an action (operation or crossing) as
-	// settled.
+	// TxStSettled is used to mark a transaction or action (operation or
+	// crossing) as settled.
 	TxStSettled TxStatus = "settled"
-	// TxStCanceled is used to mark an action (operation or crossing) as
-	// canceled.
+	// TxStCanceled is used to mark a transaction or action (operation or
+	// crossing) as canceled.
 	TxStCanceled TxStatus = "canceled"
 )
 

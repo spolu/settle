@@ -21,15 +21,14 @@ import (
 var MaxAssetAmount = new(big.Int).Exp(
 	new(big.Int).SetInt64(2), new(big.Int).SetInt64(128), nil)
 
-// Operation represents a movement of an asset, either from an account to
-// another. Asset owners can hold a balance in their own assets so operations
-// referring to the asset owner are either issuing or annihilating the asset.
+// Operation represents a movement of an asset. Asset owners cannot hold a
+// balance in their own assets so operations referring to the asset owner are
+// either issuing or annihilating the asset.
 // - Canonical operations are stored on the mint of the operation's owner
 //   (which acts as source of truth on its state).
 // - Propagated operations are stored on the mints of the operation's source or
 //   destination, for retrieval by impacted users.
-// - When part of a transaction, an operation refers the transaction. Operation
-//   created out of a transaction are created `settled`.
+// - When part of a transaction, an operation refers the transaction and hop.
 // - Only settled operation are propagated.
 type Operation struct {
 	Owner       string // Owner address.

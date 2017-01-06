@@ -1,7 +1,9 @@
 # preview
 
   [ ] finish mint
-    [ ] mint transaction creation refactor
+    [ ] transaction safe cancelation
+    [ ] reintroduce transaction expiry on top of safe cancelation
+    [x] mint transaction creation refactor
     [x] setup loggly
     [x] setup LetsEncrypt
     [x] Mint-Protocol-Version header
@@ -19,7 +21,7 @@
     [x] send email on create user
   [ ] finish site
     [ ] blog post draft
-    [ ] how transactions work draft
+    [ ] documentation
     [x] setup loggly
   [ ] send r?
 
@@ -44,13 +46,15 @@
 
 # mint
 
-  [ ] refactor transaction creation/settlement
+  [ ] transaction safe cancelation
+  [ ] reintroduce transaction expiry on top of safe cancelation
   [~] list endpoint
     [ ] list asset operations
     [x] list asset offers (order book)
     [x] list asset balances
     [x] list balances
     [x] list assets
+  [x] refactor transaction creation/settlement
   [x] Mint-Protocol-Version header
   [x] default LetsEncrypt SSL cert provisioning in production
   [x] default self-signed cert provisioning in QA
@@ -119,12 +123,6 @@
     [x] offer propagation
     [x] operation propagation
     [x] transaction expiry
-
-# site
-
-  [ ] have the get started guide on github, to generate stars?
-  [ ] blog post draft
-  [ ] how transactions work draft
 
 # r? preview
 

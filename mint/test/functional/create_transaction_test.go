@@ -9,8 +9,6 @@ import (
 
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/mint"
-	"github.com/spolu/settle/mint/async"
-	"github.com/spolu/settle/mint/model"
 	"github.com/spolu/settle/mint/test"
 	"github.com/stretchr/testify/assert"
 )
@@ -81,6 +79,7 @@ func TestCreateTransactionWith2Offers(
 	err := raw.Extract("transaction", &tx0)
 	assert.Nil(t, err)
 
+	// Check transaction from m[0].
 	assert.Equal(t, 201, status)
 	assert.Regexp(t, mint.IDRegexp, tx0.ID)
 	assert.WithinDuration(t,
@@ -95,10 +94,6 @@ func TestCreateTransactionWith2Offers(
 	assert.Equal(t, u[2].Address, tx0.Destination)
 	assert.Equal(t, []string{o[1].ID, o[2].ID}, tx0.Path)
 	assert.Equal(t, mint.TxStReserved, tx0.Status)
-	assert.WithinDuration(t,
-		time.Unix(0, tx0.Expiry*mint.TimeResolutionNs),
-		time.Unix(0, tx0.Created*mint.TimeResolutionNs),
-		time.Duration(mint.TransactionExpiryMs)*time.Millisecond)
 	assert.Equal(t, 1, len(tx0.Operations))
 	assert.Equal(t, []mint.CrossingResource{}, tx0.Crossings)
 
@@ -165,7 +160,7 @@ func TestCreateTransactionWith2Offers(
 	assert.Equal(t, big.NewInt(11), tx1.Operations[0].Amount)
 	assert.Equal(t, mint.TxStReserved, tx1.Operations[0].Status)
 	assert.Equal(t, tx1.ID, *tx1.Operations[0].Transaction)
-	assert.Equal(t, int8(2), *tx1.Operations[0].TransactionHop)
+	assert.Equal(t, int8(1), *tx1.Operations[0].TransactionHop)
 
 	// Check transaction on m[2].
 	status, raw = m[2].Get(t, nil, fmt.Sprintf("/transactions/%s", tx0.ID))
@@ -202,7 +197,7 @@ func TestCreateTransactionWith2Offers(
 	assert.Equal(t, big.NewInt(11), tx2.Crossings[0].Amount)
 	assert.Equal(t, mint.TxStReserved, tx2.Crossings[0].Status)
 	assert.Equal(t, tx2.ID, tx2.Crossings[0].Transaction)
-	assert.Equal(t, int8(3), tx2.Crossings[0].TransactionHop)
+	assert.Equal(t, int8(2), tx2.Crossings[0].TransactionHop)
 
 	assert.Regexp(t, mint.IDRegexp, tx2.Operations[0].ID)
 	assert.WithinDuration(t,
@@ -216,7 +211,7 @@ func TestCreateTransactionWith2Offers(
 	assert.Equal(t, big.NewInt(10), tx2.Operations[0].Amount)
 	assert.Equal(t, mint.TxStReserved, tx2.Operations[0].Status)
 	assert.Equal(t, tx2.ID, *tx2.Operations[0].Transaction)
-	assert.Equal(t, int8(4), *tx2.Operations[0].TransactionHop)
+	assert.Equal(t, int8(2), *tx2.Operations[0].TransactionHop)
 }
 
 func TestCreateTransactionWithInsufficientOfferAmount(
@@ -347,6 +342,7 @@ func TestCreateTransactionWith1Offer(
 	err := raw.Extract("transaction", &tx0)
 	assert.Nil(t, err)
 
+	// Check transaction from m[0].
 	assert.Equal(t, 201, status)
 	assert.Regexp(t, mint.IDRegexp, tx0.ID)
 	assert.Equal(t, 1, len(tx0.Operations))
@@ -375,7 +371,7 @@ func TestCreateTransactionWith1Offer(
 	assert.Equal(t, big.NewInt(10), tx1.Operations[0].Amount)
 	assert.Equal(t, mint.TxStReserved, tx1.Operations[0].Status)
 	assert.Equal(t, tx1.ID, *tx1.Operations[0].Transaction)
-	assert.Equal(t, int8(2), *tx1.Operations[0].TransactionHop)
+	assert.Equal(t, int8(1), *tx1.Operations[0].TransactionHop)
 }
 
 func TestCreateTransactionWithRemoteBaseAsset(
@@ -422,6 +418,7 @@ func TestCreateTransactionWithRemoteBaseAsset(
 	err = raw.Extract("transaction", &tx0)
 	assert.Nil(t, err)
 
+	// Check transaction from m[0].
 	assert.Equal(t, 201, status)
 	assert.Regexp(t, mint.IDRegexp, tx0.ID)
 	assert.Equal(t, 0, len(tx0.Operations))
@@ -444,7 +441,7 @@ func TestCreateTransactionWithRemoteBaseAsset(
 	assert.Equal(t, big.NewInt(11), tx1.Operations[0].Amount)
 	assert.Equal(t, mint.TxStReserved, tx1.Operations[0].Status)
 	assert.Equal(t, tx1.ID, *tx1.Operations[0].Transaction)
-	assert.Equal(t, int8(1), *tx1.Operations[0].TransactionHop)
+	assert.Equal(t, int8(0), *tx1.Operations[0].TransactionHop)
 
 	// Check transaction on m[2].
 	status, raw = m[2].Get(t, nil, fmt.Sprintf("/transactions/%s", tx0.ID))
@@ -460,14 +457,14 @@ func TestCreateTransactionWithRemoteBaseAsset(
 	assert.Equal(t, big.NewInt(11), tx2.Crossings[0].Amount)
 	assert.Equal(t, mint.TxStReserved, tx2.Crossings[0].Status)
 	assert.Equal(t, tx1.ID, tx2.Crossings[0].Transaction)
-	assert.Equal(t, int8(2), tx2.Crossings[0].TransactionHop)
+	assert.Equal(t, int8(1), tx2.Crossings[0].TransactionHop)
 
 	assert.Equal(t, u[2].Address, tx2.Operations[0].Source)
 	assert.Equal(t, u[2].Address, tx2.Operations[0].Destination)
 	assert.Equal(t, big.NewInt(10), tx2.Operations[0].Amount)
 	assert.Equal(t, mint.TxStReserved, tx2.Operations[0].Status)
 	assert.Equal(t, tx1.ID, *tx2.Operations[0].Transaction)
-	assert.Equal(t, int8(3), *tx2.Operations[0].TransactionHop)
+	assert.Equal(t, int8(1), *tx2.Operations[0].TransactionHop)
 }
 
 func TestCreateTransactionWithNegativeAmount(
@@ -553,113 +550,4 @@ func TestCreateTransactionWithInvalidQuoteAsset(
 
 	assert.Equal(t, 400, status)
 	assert.Equal(t, "pair_invalid", e.ErrCode)
-}
-
-func TestCreateTransactionWith1OfferExpired(
-	t *testing.T,
-) {
-	t.Parallel()
-	m, u, a, o := setupCreateTransaction(t)
-	defer tearDownCreateTransaction(t, m)
-
-	// Execute offers propagations.
-	async.TestRunOne(m[0].Ctx)
-	async.TestRunOne(m[1].Ctx)
-	async.TestRunOne(m[2].Ctx)
-
-	// Credit u[2] with a[0]
-	status, raw := u[0].Post(t,
-		fmt.Sprintf("/transactions"),
-		url.Values{
-			"pair":        {fmt.Sprintf("%s/%s", a[0].Name, a[0].Name)},
-			"amount":      {"20"},
-			"destination": {u[2].Address},
-		})
-
-	var tx mint.TransactionResource
-	err := raw.Extract("transaction", &tx)
-	assert.Nil(t, err)
-
-	assert.Equal(t, 201, status)
-
-	status, _ = u[0].Post(t,
-		fmt.Sprintf("/transactions/%s/settle", tx.ID),
-		url.Values{})
-
-	assert.Equal(t, 200, status)
-
-	async.TestRunOne(m[0].Ctx)
-	async.TestRunOne(m[0].Ctx)
-	async.TestRunOne(m[0].Ctx)
-
-	// Credit u[1] with a[1] using o[1] (from u[2] balance in a[0])
-	status, raw = u[2].Post(t,
-		fmt.Sprintf("/transactions"),
-		url.Values{
-			"pair":        {fmt.Sprintf("%s/%s", a[0].Name, a[1].Name)},
-			"amount":      {"10"},
-			"destination": {u[1].Address},
-			"path[]": {
-				o[1].ID,
-			},
-		})
-
-	err = raw.Extract("transaction", &tx)
-	assert.Nil(t, err)
-
-	assert.Equal(t, 201, status)
-
-	async.TestRunOne(m[0].Ctx)
-	async.TestRunOne(m[1].Ctx)
-
-	// Check balance on m[0]
-	balance, err := model.LoadCanonicalBalanceByAssetHolder(m[0].Ctx,
-		a[0].Name, u[2].Address)
-	assert.Nil(t, err)
-	assert.Equal(t, big.NewInt(10), (*big.Int)(&balance.Value))
-
-	// Check balance on m[2]
-	balance, err = model.LoadPropagatedBalanceByOwnerToken(m[2].Ctx,
-		balance.Owner, balance.Token)
-	assert.Nil(t, err)
-	assert.Equal(t, big.NewInt(10), (*big.Int)(&balance.Value))
-
-	// Check offer on m[1]
-	offer, err := model.LoadCanonicalOfferByID(m[1].Ctx, o[1].ID)
-	assert.Nil(t, err)
-	assert.Equal(t, big.NewInt(90), (*big.Int)(&offer.Remainder))
-
-	// Check offer on m[0]
-	offer, err = model.LoadPropagatedOfferByID(m[0].Ctx, o[1].ID)
-	assert.Nil(t, err)
-	assert.Equal(t, big.NewInt(90), (*big.Int)(&offer.Remainder))
-
-	// Run the expiration of the transaction on all mints with propagations.
-	async.TestRunOne(m[0].Ctx)
-	async.TestRunOne(m[0].Ctx)
-	async.TestRunOne(m[1].Ctx)
-	async.TestRunOne(m[1].Ctx)
-	async.TestRunOne(m[2].Ctx)
-
-	// Check balance on m[0]
-	balance, err = model.LoadCanonicalBalanceByAssetHolder(m[0].Ctx,
-		a[0].Name, u[2].Address)
-	assert.Nil(t, err)
-	assert.Equal(t, big.NewInt(20), (*big.Int)(&balance.Value))
-
-	// Check balance on m[2]
-	balance, err = model.LoadPropagatedBalanceByOwnerToken(m[2].Ctx,
-		balance.Owner, balance.Token)
-	assert.Nil(t, err)
-	assert.Equal(t, big.NewInt(20), (*big.Int)(&balance.Value))
-
-	// Check offer on m[1]
-	offer, err = model.LoadCanonicalOfferByID(m[1].Ctx, o[1].ID)
-	assert.Nil(t, err)
-	assert.Equal(t, big.NewInt(100), (*big.Int)(&offer.Remainder))
-
-	// Check offer on m[0]
-	offer, err = model.LoadPropagatedOfferByID(m[0].Ctx, o[1].ID)
-	assert.Nil(t, err)
-	assert.Equal(t, big.NewInt(100), (*big.Int)(&offer.Remainder))
 }

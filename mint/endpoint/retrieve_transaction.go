@@ -63,50 +63,32 @@ func (e *RetrieveTransaction) Execute(
 	ctx = db.Begin(ctx, "mint")
 	defer db.LoggedRollback(ctx)
 
-	transaction := txStore.Get(ctx, e.ID)
-	if transaction == nil {
-		tx, err := model.LoadCanonicalTransactionByOwnerToken(ctx,
-			e.Owner, e.Token)
-		if err != nil {
-			return nil, nil, errors.Trace(err) // 500
-		} else if tx == nil {
-			tx, err = model.LoadPropagatedTransactionByOwnerToken(ctx,
-				e.Owner, e.Token)
-			if err != nil {
-				return nil, nil, errors.Trace(err) // 500
-			} else if tx == nil {
-				return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-					404, "transaction_not_found",
-					"The transaction you are trying to retrieve does not "+
-						"exist: %s.", e.ID,
-				))
-			}
-		}
-		transaction = tx
+	tx, err := model.LoadTransactionByID(ctx, e.ID)
+	if err != nil {
+		return nil, nil, errors.Trace(err) // 500
+	} else if tx == nil {
+		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
+			404, "transaction_not_found",
+			"The transaction you are trying to retrieve does not "+
+				"exist: %s.", e.ID,
+		))
 	}
 
-	operations := txStore.GetOperations(ctx, e.ID)
-	if operations == nil {
-		ops, err := model.LoadCanonicalOperationsByTransaction(ctx, e.ID)
-		if err != nil {
-			return nil, nil, errors.Trace(err) // 500
-		}
-		operations = ops
+	ops, err := model.LoadCanonicalOperationsByTransaction(ctx, e.ID)
+	if err != nil {
+		return nil, nil, errors.Trace(err) // 500
 	}
 
-	crossings := txStore.GetCrossings(ctx, e.ID)
-	if crossings == nil {
-		crs, err := model.LoadCanonicalCrossingsByTransaction(ctx, e.ID)
-		if err != nil {
-			return nil, nil, errors.Trace(err) // 500
-		}
-		crossings = crs
+	crs, err := model.LoadCanonicalCrossingsByTransaction(ctx, e.ID)
+	if err != nil {
+		return nil, nil, errors.Trace(err) // 500
 	}
 
 	db.Commit(ctx)
 
 	return ptr.Int(http.StatusOK), &svc.Resp{
 		"transaction": format.JSONPtr(model.NewTransactionResource(ctx,
-			transaction, operations, crossings)),
+			tx, ops, crs,
+		)),
 	}, nil
 }

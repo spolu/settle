@@ -7,12 +7,9 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
-	"sync"
 	"time"
 
 	"goji.io/pat"
-
-	"golang.org/x/sync/errgroup"
 
 	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/errors"
@@ -162,12 +159,10 @@ func (e *CreateTransaction) Execute(
 func (e *CreateTransaction) ExecuteCanonical(
 	ctx context.Context,
 ) (*int, *svc.Resp, error) {
-	ctx = db.Begin(ctx, "mint")
-	defer db.LoggedRollback(ctx)
+	oCtx := ctx
 
-	// No need to lock the transaction here as we are the only mint to know its
-	// ID before it propagagtes.
-	txStore.Init(ctx, e.ID)
+	ctx = db.Begin(oCtx, "mint")
+	defer db.LoggedRollback(ctx)
 
 	// Create canonical transaction locally.
 	tx, err := model.CreateCanonicalTransaction(ctx,
@@ -177,9 +172,7 @@ func (e *CreateTransaction) ExecuteCanonical(
 		model.Amount(e.Amount),
 		e.Destination,
 		model.OfPath(e.Path),
-		mint.TxStReserved,
-		time.Now().Add(
-			time.Duration(mint.TransactionExpiryMs)*time.Millisecond),
+		mint.TxStPending,
 	)
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
@@ -187,34 +180,23 @@ func (e *CreateTransaction) ExecuteCanonical(
 	e.Tx = tx
 	e.ID = fmt.Sprintf("%s[%s]", tx.Owner, tx.Token)
 
-	// Store the transcation in memory so that it's available through API
-	// before we commit.
-	txStore.Store(ctx, e.ID, tx)
-	defer txStore.Clear(ctx, e.ID)
-
-	e.Plan = txStore.GetPlan(ctx, e.ID)
-	if e.Plan == nil {
-		plan, err := ComputePlan(ctx, e.Client, e.Tx)
-		if err != nil {
-			return nil, nil, errors.Trace(errors.NewUserErrorf(err,
-				402, "transaction_failed",
-				"The plan computation for the transaction failed: %s", e.ID,
-			))
-		}
-		txStore.StorePlan(ctx, e.ID, plan)
-		e.Plan = plan
-	}
-
-	err = e.ExecutePlan(ctx)
+	plan, err := ComputePlan(ctx, e.Client, e.Tx)
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 			402, "transaction_failed",
-			"The plan execution failed at hop %d for transaction: %s",
-			e.Hop, e.ID,
+			"The plan computation for the transaction failed: %s", e.ID,
 		))
 	}
+	e.Plan = plan
 
-	_, err = e.Propagate(ctx)
+	// Commit the transaction in pending state.
+	db.Commit(ctx)
+
+	// At the canonical mint the propagation starts from a virtual Hop which is
+	// the length of the plan hops plus one.
+	e.Hop = int8(len(e.Plan.Hops))
+
+	txn, err := e.Propagate(ctx)
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 			402, "transaction_failed",
@@ -223,28 +205,10 @@ func (e *CreateTransaction) ExecuteCanonical(
 		))
 	}
 
-	// Check all the hops in the transaction in parallel before committing (as
-	// we are the canonical mint for it).
-	g, ctx := errgroup.WithContext(ctx)
-	expiry := e.Tx.Expiry.UnixNano() / mint.TimeResolutionNs
-	l := &sync.Mutex{}
-
-	for hop := 1; hop < len(e.Plan.Actions); hop++ {
-		hop := hop
-		g.Go(func() error {
-			txn, err := e.Plan.Check(ctx, e.Client, int8(hop))
-			if err != nil {
-				return errors.Trace(err)
-			}
-			l.Lock()
-			defer l.Unlock()
-			if txn.Expiry < expiry {
-				expiry = txn.Expiry
-			}
-			return nil
-		})
-	}
-	if err := g.Wait(); err != nil {
+	// We just need to check that the resource we received from the last hop
+	// matches our transaction plan.
+	err = e.Plan.Check(ctx, txn, int8(e.Hop-1))
+	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 			402, "transaction_failed",
 			"Failed to check plan for transaction %s",
@@ -252,24 +216,51 @@ func (e *CreateTransaction) ExecuteCanonical(
 		))
 	}
 
-	e.Tx.Expiry = time.Unix(0, expiry*mint.TimeResolutionNs)
-	err = e.Tx.Save(ctx)
+	ctx = db.Begin(oCtx, "mint")
+	defer db.LoggedRollback(ctx)
+
+	// Reload the tranasction post propagation.
+	tx, err = model.LoadTransactionByID(ctx, e.ID)
+	if err != nil {
+		return nil, nil, errors.Trace(err) // 500
+	} else if tx == nil {
+		return nil, nil, errors.Newf(
+			"Failed to retrieve pending transaction: %s", e.ID) // 500
+	}
+
+	switch tx.Status {
+	case mint.TxStPending:
+		// Mark the transaction as reserved.
+		tx.Status = mint.TxStReserved
+	case mint.TxStReserved:
+		// No-op as the transaction was already marked as reserved during
+		// propagation.
+	default:
+		return nil, nil, errors.Newf(
+			"Unexpected transaction status %s: %s", tx.Status, e.ID) // 500
+	}
+
+	err = tx.Save(ctx)
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
 	}
 
-	err = async.Queue(ctx, task.NewExpireTransaction(ctx, time.Now(), e.ID))
+	ops, err := model.LoadCanonicalOperationsByTransaction(ctx, e.ID)
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
 	}
 
+	crs, err := model.LoadCanonicalCrossingsByTransaction(ctx, e.ID)
+	if err != nil {
+		return nil, nil, errors.Trace(err) // 500
+	}
+
+	// Commit the transaction in reserved state.
 	db.Commit(ctx)
 
 	return ptr.Int(http.StatusCreated), &svc.Resp{
 		"transaction": format.JSONPtr(model.NewTransactionResource(ctx,
-			txStore.Get(ctx, e.ID),
-			txStore.GetOperations(ctx, e.ID),
-			txStore.GetCrossings(ctx, e.ID),
+			tx, ops, crs,
 		)),
 	}, nil
 }
@@ -279,36 +270,17 @@ func (e *CreateTransaction) ExecuteCanonical(
 func (e *CreateTransaction) ExecutePropagated(
 	ctx context.Context,
 ) (*int, *svc.Resp, error) {
-	txStore.Init(ctx, e.ID)
+	oCtx := ctx
 
-	// This is used to be sure to unlock only once even if we use defer and
-	// unlock explicitely before propagation.
-	u := false
-	unlock := func() {
-		if !u {
-			u = true
-			txStore.Unlock(ctx, e.ID)
-		}
+	ctx = db.Begin(oCtx, "mint")
+	defer db.LoggedRollback(ctx)
+
+	tx, err := model.LoadTransactionByID(ctx, e.ID)
+	if err != nil {
+		return nil, nil, errors.Trace(err) // 500
 	}
-	lock := func() {
-		u = false
-		txStore.Lock(ctx, e.ID)
-	}
-
-	lock()
-	defer unlock()
-
-	mustCommit := false
-	if txStore.Get(ctx, e.ID) != nil {
-		// If we find the transaction in the txStore, we also reuse the
-		// underlying db.Transaction so that the whole transaction is run on
-		// one single underlying db.Transaction (more consistent and avoids
-		// locking issues).
-		dbTx := txStore.GetDBTransaction(ctx, e.ID)
-		ctx = db.WithTransaction(ctx, *dbTx)
-		mint.Logf(ctx, "Transaction: reuse %s", dbTx.Token)
-
-		e.Tx = txStore.Get(ctx, e.ID)
+	if tx != nil {
+		e.Tx = tx
 		e.Owner = e.Tx.Owner
 		e.BaseAsset = e.Tx.BaseAsset
 		e.QuoteAsset = e.Tx.QuoteAsset
@@ -316,10 +288,6 @@ func (e *CreateTransaction) ExecutePropagated(
 		e.Destination = e.Tx.Destination
 		e.Path = []string(e.Tx.Path)
 	} else {
-		mustCommit = true
-		ctx = db.Begin(ctx, "mint")
-		defer db.LoggedRollback(ctx)
-
 		transaction, err := e.Client.RetrieveTransaction(ctx, e.ID, nil)
 		if err != nil {
 			return nil, nil, errors.Trace(errors.NewUserErrorf(err,
@@ -359,54 +327,72 @@ func (e *CreateTransaction) ExecutePropagated(
 			model.Amount(e.Amount),
 			e.Destination,
 			model.OfPath(e.Path),
-			mint.TxStReserved,
-			time.Now().Add(
-				time.Duration(mint.TransactionExpiryMs)*time.Millisecond),
+			mint.TxStPending,
 			transaction.Lock,
 		)
 		if err != nil {
 			return nil, nil, errors.Trace(err) // 500
 		}
 		e.Tx = tx
-
-		// Store the transcation in memory so that it's available through API
-		// before we commit.
-		txStore.Store(ctx, e.ID, tx)
-		defer txStore.Clear(ctx, e.ID)
 	}
 
-	e.Plan = txStore.GetPlan(ctx, e.ID)
-	if e.Plan == nil {
-		plan, err := ComputePlan(ctx, e.Client, e.Tx)
-		if err != nil {
-			return nil, nil, errors.Trace(errors.NewUserErrorf(err,
-				402, "transaction_failed",
-				"The plan computation for the transaction failed: %s", e.ID,
-			))
-		}
-		txStore.StorePlan(ctx, e.ID, plan)
-		e.Plan = plan
-	}
-
-	if e.Plan.Actions[e.Hop].Mint != mint.GetHost(ctx) {
-		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-			402, "settlement_failed",
-			"The hop provided does not match the current mint for "+
-				"transaction: %s", e.ID,
-		))
-	}
-
-	// Check the plan at previous hop before we execute this hop, to convince
-	// ourselves that the funds are reserved!
-	_, err := e.Plan.Check(ctx, e.Client, e.Hop-1)
+	plan, err := ComputePlan(ctx, e.Client, e.Tx)
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 			402, "transaction_failed",
-			"Failed to check plan at hop %d for transaction %s",
-			e.Hop-1, e.ID,
+			"The plan computation for the transaction failed: %s", e.ID,
+		))
+	}
+	e.Plan = plan
+
+	if int(e.Hop) >= len(e.Plan.Hops) ||
+		e.Plan.Hops[e.Hop].Mint != mint.GetHost(ctx) {
+		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
+			402, "transaction_failed",
+			"The hop provided (%d) does not match the current mint (%s) for "+
+				"transaction: %s", e.Hop, mint.GetHost(ctx), e.ID,
 		))
 	}
 
+	// Commit the transaction as pending if it was created.
+	db.Commit(ctx)
+
+	txn, err := e.Propagate(ctx)
+	if err != nil {
+		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
+			402, "transaction_failed",
+			"The transaction failed to propagate to required mints: %s.",
+			e.ID,
+		))
+	}
+
+	// Check the plan of the txn received from previous hop (unles we're the
+	// mint at hop 0) before we execute this hop, to convince ourselves that
+	// the funds are reserved!
+	if txn != nil {
+		err = e.Plan.Check(ctx, txn, e.Hop-1)
+		if err != nil {
+			return nil, nil, errors.Trace(errors.NewUserErrorf(err,
+				402, "transaction_failed",
+				"Failed to check plan at hop %d for transaction %s",
+				e.Hop-1, e.ID,
+			))
+		}
+	}
+
+	ctx = db.Begin(oCtx, "mint")
+	defer db.LoggedRollback(ctx)
+
+	// Reload the tranasction post propagation.
+	tx, err = model.LoadTransactionByID(ctx, e.ID)
+	if err != nil {
+		return nil, nil, errors.Trace(err) // 500
+	} else if tx == nil {
+		return nil, nil, errors.Newf(
+			"Failed to retrieve pending transaction: %s", e.ID) // 500
+	}
+
+	// Idempotently execute plan for the transaction.
 	err = e.ExecutePlan(ctx)
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
@@ -416,34 +402,260 @@ func (e *CreateTransaction) ExecutePropagated(
 		))
 	}
 
-	// We unlock the tranaction before propagating.
-	unlock()
+	switch tx.Status {
+	case mint.TxStPending:
+		// Mark the transaction as reserved.
+		tx.Status = mint.TxStReserved
+	case mint.TxStReserved:
+		// No-op as the transaction was already marked as reserved during
+		// propagation.
+	default:
+		return nil, nil, errors.Newf(
+			"Unexpected transaction status %s: %s", tx.Status, e.ID) // 500
+	}
 
-	_, err = e.Propagate(ctx)
+	err = tx.Save(ctx)
 	if err != nil {
-		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
-			402, "transaction_failed",
-			"The transaction failed to propagate to required mints: %s.",
-			e.ID,
-		))
+		return nil, nil, errors.Trace(err) // 500
 	}
 
-	if mustCommit {
-		err = async.Queue(ctx, task.NewExpireTransaction(ctx, time.Now(), e.ID))
-		if err != nil {
-			return nil, nil, errors.Trace(err) // 500
-		}
-
-		db.Commit(ctx)
+	ops, err := model.LoadCanonicalOperationsByTransaction(ctx, e.ID)
+	if err != nil {
+		return nil, nil, errors.Trace(err) // 500
 	}
+
+	crs, err := model.LoadCanonicalCrossingsByTransaction(ctx, e.ID)
+	if err != nil {
+		return nil, nil, errors.Trace(err) // 500
+	}
+
+	// Commit the plan execution as well as the transaction status change.
+	db.Commit(ctx)
 
 	return ptr.Int(http.StatusCreated), &svc.Resp{
 		"transaction": format.JSONPtr(model.NewTransactionResource(ctx,
-			txStore.Get(ctx, e.ID),
-			txStore.GetOperations(ctx, e.ID),
-			txStore.GetCrossings(ctx, e.ID),
+			tx, ops, crs,
 		)),
 	}, nil
+}
+
+// ExecutePlan executes the Hop locally, performing the operation and the
+// crossing action if applicable. ExecutePlan is executed in the context of a
+// DB transaction and is idempotent (attempts to retrieve operations for that
+// hop and transaction before executing them).
+func (e *CreateTransaction) ExecutePlan(
+	ctx context.Context,
+) error {
+	if int(e.Hop) >= len(e.Plan.Hops) {
+		return errors.Trace(errors.Newf(
+			"Hop (%d) is higher than the transaction plan length (%d)",
+			e.Hop, len(e.Plan.Hops)))
+	}
+
+	h := e.Plan.Hops[e.Hop]
+	mint.Logf(ctx,
+		"Executing transaction plan: transaction=%s hop=%d", e.ID, e.Hop)
+
+	// Execute the OpAction (should always be defined)
+	if h.OpAction != nil {
+		op, err := model.LoadCanonicalOperationByTransactionHop(ctx,
+			e.ID, e.Hop)
+		if err != nil {
+			return errors.Trace(err)
+		}
+		if op != nil {
+			mint.Logf(ctx,
+				"Skipped operation: id=%s[%s] created=%q propagation=%s "+
+					"asset=%s source=%s destination=%s amount=%s "+
+					"status=%s transaction=%s",
+				op.Owner, op.Token, op.Created, op.Propagation, op.Asset,
+				op.Source, op.Destination, (*big.Int)(&op.Amount).String(),
+				op.Status, *op.Transaction)
+		} else {
+			a := h.OpAction
+
+			asset, err := model.LoadCanonicalAssetByName(ctx, *a.OperationAsset)
+			if err != nil {
+				return errors.Trace(err)
+			} else if asset == nil {
+				return errors.Trace(errors.Newf(
+					"Asset not found: %s", *a.OperationAsset))
+			}
+
+			var srcBalance *model.Balance
+			if a.OperationSource != nil && asset.Owner != *a.OperationSource {
+				srcBalance, err = model.LoadCanonicalBalanceByAssetHolder(ctx,
+					*a.OperationAsset, *a.OperationSource)
+				if err != nil {
+					return errors.Trace(err)
+				} else if srcBalance == nil {
+					return errors.Trace(errors.Newf(
+						"Source has no balance in %s: %s",
+						*a.OperationAsset, *a.OperationSource))
+				}
+			}
+
+			var dstBalance *model.Balance
+			if a.OperationDestination != nil &&
+				asset.Owner != *a.OperationDestination {
+				dstBalance, err =
+					model.LoadOrCreateCanonicalBalanceByAssetHolder(ctx,
+						asset.Owner, *a.OperationAsset, *a.OperationDestination)
+				if err != nil {
+					return errors.Trace(err)
+				}
+			}
+
+			op, err := model.CreateCanonicalOperation(ctx,
+				asset.Owner,
+				*a.OperationAsset,
+				*a.OperationSource,
+				*a.OperationDestination,
+				model.Amount(*a.Amount),
+				mint.TxStReserved,
+				&e.ID,
+				&e.Hop,
+			)
+			if err != nil {
+				return errors.Trace(err)
+			}
+
+			// Check the balances but only update the source balance. The
+			// destination balance will get updated when the operation is
+			// settled and the source balance will get reverted if it cancels.
+
+			if dstBalance != nil {
+				(*big.Int)(&dstBalance.Value).Add(
+					(*big.Int)(&dstBalance.Value), (*big.Int)(&op.Amount))
+				// Checks if the dstBalance is positive and not overflown.
+				b := (*big.Int)(&dstBalance.Value)
+				if new(big.Int).Abs(b).Cmp(model.MaxAssetAmount) >= 0 ||
+					b.Cmp(new(big.Int)) < 0 {
+					return errors.Trace(errors.Newf(
+						"Invalid resulting balance for %s: %s",
+						dstBalance.Holder, b.String()))
+				}
+			}
+
+			// The srcBalance is not nil only if the transaction baseAsset is
+			// not owned by the transaction owner (paying with a balance at
+			// another mint). In which case we substract the balance. This is
+			// quite dangerous as if a mint along the offer path fails its
+			// reservation (on the way back), the funds will end-up reserved
+			// and locked, as this is the only way to guarantee the necessary
+			// commitment for the reservation.
+			if srcBalance != nil {
+				(*big.Int)(&srcBalance.Value).Sub(
+					(*big.Int)(&srcBalance.Value), (*big.Int)(&op.Amount))
+
+				// Checks if the srcBalance is positive and not overflown.
+				b := (*big.Int)(&srcBalance.Value)
+				if new(big.Int).Abs(b).Cmp(model.MaxAssetAmount) >= 0 ||
+					b.Cmp(new(big.Int)) < 0 {
+					return errors.Trace(errors.Newf(
+						"Invalid resulting balance for %s: %s",
+						srcBalance.Holder, b.String()))
+				}
+
+				err = srcBalance.Save(ctx)
+				if err != nil {
+					return errors.Trace(err)
+				}
+
+				err = async.Queue(ctx,
+					task.NewPropagateBalance(ctx, time.Now(), srcBalance.ID()))
+				if err != nil {
+					return errors.Trace(err)
+				}
+			}
+
+			mint.Logf(ctx,
+				"Reserved operation: id=%s[%s] created=%q propagation=%s "+
+					"asset=%s source=%s destination=%s amount=%s "+
+					"status=%s transaction=%s",
+				op.Owner, op.Token, op.Created, op.Propagation, op.Asset,
+				op.Source, op.Destination, (*big.Int)(&op.Amount).String(),
+				op.Status, *op.Transaction)
+		}
+	}
+
+	if h.CrAction != nil {
+		cr, err := model.LoadCanonicalCrossingByTransactionHop(ctx,
+			e.ID, e.Hop)
+		if err != nil {
+			return errors.Trace(err)
+		}
+		if cr != nil {
+			mint.Logf(ctx,
+				"Skipped crossing: id=%s[%s] created=%q offer=%s amount=%s "+
+					"status=%s transaction=%s",
+				cr.Owner, cr.Token, cr.Created, cr.Offer,
+				(*big.Int)(&cr.Amount).String(), cr.Status, cr.Transaction)
+		} else {
+			a := h.CrAction
+
+			offer, err := model.LoadCanonicalOfferByID(ctx,
+				*a.CrossingOffer)
+			if err != nil {
+				return errors.Trace(err)
+			} else if offer == nil {
+				return errors.Trace(errors.Newf(
+					"Offer not found: %s", *a.CrossingOffer))
+			}
+
+			if offer.Status != mint.OfStActive {
+				return errors.Trace(errors.Newf(
+					"Offer is not active (%s)", offer.Status))
+			}
+
+			cr, err := model.CreateCanonicalCrossing(ctx,
+				offer.Owner,
+				*a.CrossingOffer,
+				model.Amount(*a.Amount),
+				mint.TxStReserved,
+				e.ID,
+				e.Hop,
+			)
+			if err != nil {
+				return errors.Trace(err)
+			}
+
+			(*big.Int)(&offer.Remainder).Sub(
+				(*big.Int)(&offer.Remainder), (*big.Int)(&cr.Amount))
+
+			// Checks if the remainder is positive and not overflown.
+			b := (*big.Int)(&offer.Remainder)
+			if new(big.Int).Abs(b).Cmp(model.MaxAssetAmount) >= 0 ||
+				b.Cmp(new(big.Int)) < 0 {
+				return errors.Trace(errors.Newf(
+					"Invalid resulting remainder: %s", b.String()))
+			}
+			// Set the offer as consumed if all funds are reserved. If the
+			// transaction gets canceled, it'll get reverted.
+			if b.Cmp(new(big.Int)) == 0 {
+				offer.Status = mint.OfStConsumed
+			}
+
+			err = offer.Save(ctx)
+			if err != nil {
+				return errors.Trace(err)
+			}
+
+			err = async.Queue(ctx,
+				task.NewPropagateOffer(ctx, time.Now(), offer.ID()))
+			if err != nil {
+				return errors.Trace(err)
+			}
+
+			mint.Logf(ctx,
+				"Reserved crossing: id=%s[%s] created=%q offer=%s amount=%s "+
+					"status=%s transaction=%s",
+				cr.Owner, cr.Token, cr.Created, cr.Offer,
+				(*big.Int)(&cr.Amount).String(), cr.Status, cr.Transaction)
+		}
+	}
+
+	return nil
 }
 
 // Propagate recursively propagates to the next mint in the chain of mint
@@ -451,215 +663,18 @@ func (e *CreateTransaction) ExecutePropagated(
 func (e *CreateTransaction) Propagate(
 	ctx context.Context,
 ) (*mint.TransactionResource, error) {
-	if int(e.Hop)+1 < len(e.Plan.Actions) {
-
-		m := e.Plan.Actions[e.Hop+1].Mint
+	if int(e.Hop)-1 >= 0 {
+		m := e.Plan.Hops[e.Hop-1].Mint
 
 		mint.Logf(ctx,
 			"Propagating transaction: transaction=%s hop=%d mint=%s",
-			e.ID, e.Hop, m)
+			e.ID, e.Hop-1, m)
 
-		txn, err := e.Client.PropagateTransaction(ctx, e.ID, e.Hop+1, m)
+		txn, err := e.Client.PropagateTransaction(ctx, e.ID, e.Hop-1, m)
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
 		return txn, nil
 	}
 	return nil, nil
-}
-
-// ExecutePlan executes the action locally at the current hop.
-func (e *CreateTransaction) ExecutePlan(
-	ctx context.Context,
-) error {
-	if int(e.Hop) >= len(e.Plan.Actions) {
-		return errors.Trace(errors.Newf(
-			"Hop (%d) is higher than the transaction plan length (%d)",
-			e.Hop, len(e.Plan.Actions)))
-	}
-
-	a := e.Plan.Actions[e.Hop]
-	if a.IsExecuted {
-		mint.Logf(ctx,
-			"Skipping transaction plan: transaction=%s hop=%d", e.ID, e.Hop)
-		return nil
-	}
-	mint.Logf(ctx,
-		"Executing transcation plan: transaction=%s hop=%d", e.ID, e.Hop)
-
-	// We have the transaction lock so this is safe to write. Also we can mark
-	// it as executed right away since everything gets canceled in case of
-	// error.
-	a.IsExecuted = true
-
-	switch a.Type {
-	case TxActTpOperation:
-
-		asset, err := model.LoadCanonicalAssetByName(ctx, *a.OperationAsset)
-		if err != nil {
-			return errors.Trace(err)
-		} else if asset == nil {
-			return errors.Trace(errors.Newf(
-				"Asset not found: %s", *a.OperationAsset))
-		}
-
-		var srcBalance *model.Balance
-		if a.OperationSource != nil && asset.Owner != *a.OperationSource {
-			srcBalance, err = model.LoadCanonicalBalanceByAssetHolder(ctx,
-				*a.OperationAsset, *a.OperationSource)
-			if err != nil {
-				return errors.Trace(err)
-			} else if srcBalance == nil {
-				return errors.Trace(errors.Newf(
-					"Source has no balance in %s: %s",
-					*a.OperationAsset, *a.OperationSource))
-			}
-		}
-
-		var dstBalance *model.Balance
-		if a.OperationDestination != nil &&
-			asset.Owner != *a.OperationDestination {
-			dstBalance, err =
-				model.LoadOrCreateCanonicalBalanceByAssetHolder(ctx,
-					asset.Owner, *a.OperationAsset, *a.OperationDestination)
-			if err != nil {
-				return errors.Trace(err)
-			}
-		}
-
-		op, err := model.CreateCanonicalOperation(ctx,
-			asset.Owner,
-			*a.OperationAsset,
-			*a.OperationSource,
-			*a.OperationDestination,
-			model.Amount(*a.Amount),
-			mint.TxStReserved,
-			&e.ID,
-			&e.Hop,
-		)
-		if err != nil {
-			return errors.Trace(err)
-		}
-
-		// Store the newly created operation so that it's available when the
-		// transaction is returned from this mint.
-		txStore.StoreOperation(ctx, e.ID, op)
-
-		// Check the balances but only update the source balance. The
-		// destination balance will get updated when the operation is settled
-		// and the source balance will get reverted if it cancels.
-
-		if dstBalance != nil {
-			(*big.Int)(&dstBalance.Value).Add(
-				(*big.Int)(&dstBalance.Value), (*big.Int)(&op.Amount))
-			// Checks if the dstBalance is positive and not overflown.
-			b := (*big.Int)(&dstBalance.Value)
-			if new(big.Int).Abs(b).Cmp(model.MaxAssetAmount) >= 0 ||
-				b.Cmp(new(big.Int)) < 0 {
-				return errors.Trace(errors.Newf(
-					"Invalid resulting balance for %s: %s",
-					dstBalance.Holder, b.String()))
-			}
-		}
-
-		if srcBalance != nil {
-			(*big.Int)(&srcBalance.Value).Sub(
-				(*big.Int)(&srcBalance.Value), (*big.Int)(&op.Amount))
-
-			// Checks if the srcBalance is positive and not overflown.
-			b := (*big.Int)(&srcBalance.Value)
-			if new(big.Int).Abs(b).Cmp(model.MaxAssetAmount) >= 0 ||
-				b.Cmp(new(big.Int)) < 0 {
-				return errors.Trace(errors.Newf(
-					"Invalid resulting balance for %s: %s",
-					srcBalance.Holder, b.String()))
-			}
-
-			err = srcBalance.Save(ctx)
-			if err != nil {
-				return errors.Trace(err)
-			}
-
-			err = async.Queue(ctx,
-				task.NewPropagateBalance(ctx, time.Now(), srcBalance.ID()))
-			if err != nil {
-				return errors.Trace(err)
-			}
-		}
-
-		mint.Logf(ctx,
-			"Reserved operation: id=%s[%s] created=%q propagation=%s "+
-				"asset=%s source=%s destination=%s amount=%s "+
-				"status=%s transaction=%s",
-			op.Owner, op.Token, op.Created, op.Propagation, op.Asset,
-			op.Source, op.Destination, (*big.Int)(&op.Amount).String(),
-			op.Status, *op.Transaction)
-
-	case TxActTpCrossing:
-
-		offer, err := model.LoadCanonicalOfferByID(ctx,
-			*a.CrossingOffer)
-		if err != nil {
-			return errors.Trace(err)
-		} else if offer == nil {
-			return errors.Trace(errors.Newf(
-				"Offer not found: %s", *a.CrossingOffer))
-		}
-
-		if offer.Status != mint.OfStActive {
-			return errors.Trace(errors.Newf(
-				"Offer is not active (%s)", offer.Status))
-		}
-
-		cr, err := model.CreateCanonicalCrossing(ctx,
-			offer.Owner,
-			*a.CrossingOffer,
-			model.Amount(*a.Amount),
-			mint.TxStReserved,
-			e.ID,
-			e.Hop,
-		)
-		if err != nil {
-			return errors.Trace(err)
-		}
-
-		// Store the newly created crossing so that it's available when the
-		// transaction is returned from this mint.
-		txStore.StoreCrossing(ctx, e.ID, cr)
-
-		(*big.Int)(&offer.Remainder).Sub(
-			(*big.Int)(&offer.Remainder), (*big.Int)(&cr.Amount))
-
-		// Checks if the remainder is positive and not overflown.
-		b := (*big.Int)(&offer.Remainder)
-		if new(big.Int).Abs(b).Cmp(model.MaxAssetAmount) >= 0 ||
-			b.Cmp(new(big.Int)) < 0 {
-			return errors.Trace(errors.Newf(
-				"Invalid resulting remainder: %s", b.String()))
-		}
-		// Set the offer as consumed if all funds are reserved. If the
-		// transaction gets canceled, it'll get reverted.
-		if b.Cmp(new(big.Int)) == 0 {
-			offer.Status = mint.OfStConsumed
-		}
-
-		err = offer.Save(ctx)
-		if err != nil {
-			return errors.Trace(err)
-		}
-
-		err = async.Queue(ctx,
-			task.NewPropagateOffer(ctx, time.Now(), offer.ID()))
-		if err != nil {
-			return errors.Trace(err)
-		}
-
-		mint.Logf(ctx,
-			"Reserved crossing: id=%s[%s] created=%q offer=%s amount=%s "+
-				"status=%s transaction=%s",
-			cr.Owner, cr.Token, cr.Created, cr.Offer,
-			(*big.Int)(&cr.Amount).String(), cr.Status, cr.Transaction)
-	}
-
-	return nil
 }
