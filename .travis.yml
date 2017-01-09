@@ -1,2 +1,10 @@
 language: go
-script: go test mint/test/functional/*
+sudo: false
+
+matrix:
+  include:
+    - go: 1.7
+    - go: tip
+
+script:
+  - go test -race ./...
