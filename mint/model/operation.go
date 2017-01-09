@@ -27,9 +27,9 @@ var MaxAssetAmount = new(big.Int).Exp(
 // - Canonical operations are stored on the mint of the operation's owner
 //   (which acts as source of truth on its state).
 // - Propagated operations are stored on the mints of the operation's source or
-//   destination, for retrieval by impacted users.
+//   destination, for retrieval by impacted users (only settled operations are
+//   reserved).
 // - When part of a transaction, an operation refers the transaction and hop.
-// - Only settled operation are propagated.
 type Operation struct {
 	Owner       string // Owner address.
 	Token       string

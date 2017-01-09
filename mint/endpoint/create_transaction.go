@@ -507,7 +507,7 @@ func (e *CreateTransaction) ExecutePlan(
 			}
 
 			op, err := model.CreateCanonicalOperation(ctx,
-				asset.Owner,
+				a.Owner,
 				*a.OperationAsset,
 				*a.OperationSource,
 				*a.OperationDestination,
@@ -594,8 +594,7 @@ func (e *CreateTransaction) ExecutePlan(
 		} else {
 			a := h.CrAction
 
-			offer, err := model.LoadCanonicalOfferByID(ctx,
-				*a.CrossingOffer)
+			offer, err := model.LoadCanonicalOfferByID(ctx, *a.CrossingOffer)
 			if err != nil {
 				return errors.Trace(err)
 			} else if offer == nil {
@@ -609,7 +608,7 @@ func (e *CreateTransaction) ExecutePlan(
 			}
 
 			cr, err := model.CreateCanonicalCrossing(ctx,
-				offer.Owner,
+				a.Owner,
 				*a.CrossingOffer,
 				model.Amount(*a.Amount),
 				mint.TxStReserved,
