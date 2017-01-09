@@ -320,3 +320,25 @@ func (p *TxPlan) Check(
 
 	return nil
 }
+
+// MinMaxHop returns the lowest and highest hops for the local mint in the
+// transaction plan.
+func (p *TxPlan) MinMaxHop(
+	ctx context.Context,
+) (*int8, *int8, error) {
+	min := int8(-1)
+	max := int8(-1)
+	for i, h := range p.Hops {
+		if h.Mint == mint.GetHost(ctx) {
+			max = int8(i)
+			if min == -1 {
+				min = int8(i)
+			}
+		}
+	}
+	if max == -1 {
+		return nil, nil, errors.Newf(
+			"This mint is not part of the transction plan.")
+	}
+	return &min, &max, nil
+}

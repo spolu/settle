@@ -1,8 +1,21 @@
+# reservation commitments
+
+  Node at hop, commits to:
+    - settle (irrevocably issue/credit the funds) if:
+      - it has not yet canceled the transaction.
+      - it is presented with the lock.
+      - node at hop-1 has made the same commitment.
+    - cancel the transaction if:
+      - it has not yet settled the transaction.
+      - node at hop+1 has canceled.
+
 # preview
 
   [ ] finish mint
-    [ ] transaction safe cancelation
+    [ ] async propagation in case of failure
+    [ ] support for 404 on retrieve transaction
     [ ] reintroduce transaction expiry on top of safe cancelation
+    [x] transaction safe cancelation
     [x] mint transaction creation refactor
     [x] setup loggly
     [x] setup LetsEncrypt
@@ -46,7 +59,8 @@
 
 # mint
 
-  [ ] transaction safe cancelation
+  [ ] async propagation in case of failure
+  [ ] support for 404 on retrieve transaction
   [ ] reintroduce transaction expiry on top of safe cancelation
   [~] list endpoint
     [ ] list asset operations
@@ -54,6 +68,7 @@
     [x] list asset balances
     [x] list balances
     [x] list assets
+  [x] transaction safe cancelation
   [x] refactor transaction creation/settlement
   [x] Mint-Protocol-Version header
   [x] default LetsEncrypt SSL cert provisioning in production
@@ -98,6 +113,9 @@
       [ ] B gives different offer price to A and C
       [ ] B fails reservation entirely
       [ ] B pass reservation through but fails responding to C
+      [ ] A settles to C who fails
+    [ ] test same mint multiple uers
+    [ ] test cycles in offer path
     [ ] offer closing + attempt transaction on it
     [ ] offer closing of an offer not owned by caller
     [ ] test that consumes an offer entirely (check status)

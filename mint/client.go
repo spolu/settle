@@ -531,3 +531,42 @@ func (c *Client) SettleTransaction(
 
 	return &transaction, nil
 }
+
+// CancelTransaction propagates the cancelation of a transaction on the
+// specified mint for the specified hop.
+func (c *Client) CancelTransaction(
+	ctx context.Context,
+	id string,
+	hop int8,
+	mint string,
+) (*TransactionResource, error) {
+	body := url.Values{
+		"hop": []string{fmt.Sprintf("%d", hop)},
+	}
+	req, err := http.NewRequest("POST",
+		FullMintURL(ctx, mint,
+			fmt.Sprintf("/transactions/%s/cancel", id), url.Values{}).String(),
+		strings.NewReader(body.Encode()))
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Add("Mint-Protocol-Version", ProtocolVersion)
+	r, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	defer r.Body.Close()
+
+	var raw svc.Resp
+	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	var transaction TransactionResource
+	if err := raw.Extract("transaction", &transaction); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &transaction, nil
+}

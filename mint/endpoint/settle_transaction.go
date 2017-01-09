@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	// EndPtSettleTransaction creates a new transaction.
+	// EndPtSettleTransaction settles a reserved transaction.
 	EndPtSettleTransaction EndPtName = "SettleTransaction"
 )
 
@@ -139,6 +139,18 @@ func (e *SettleTransaction) ExecuteCanonical(
 	}
 	e.Tx = tx
 
+	owner := fmt.Sprintf("%s@%s",
+		authentication.Get(ctx).User.Username,
+		mint.GetHost(ctx))
+
+	if e.Tx.Owner != owner {
+		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
+			402, "settlement_not_authorized",
+			"Only the owner of the transaction can settle it: %s"+
+				e.Tx.Owner,
+		))
+	}
+
 	// Transaction can be either reserved or settled.
 	switch e.Tx.Status {
 	case mint.TxStCanceled:
@@ -164,6 +176,14 @@ func (e *SettleTransaction) ExecuteCanonical(
 	}
 	e.Plan = plan
 
+	// Settle the transaction definitely before we reveal the secret (even if
+	// it eventually fails).
+	tx.Status = mint.TxStSettled
+	err = tx.Save(ctx)
+	if err != nil {
+		return nil, nil, errors.Trace(err) // 500
+	}
+
 	db.Commit(ctx)
 
 	// At the canonical mint the settlemetn propagation starts from a virtual
@@ -173,6 +193,9 @@ func (e *SettleTransaction) ExecuteCanonical(
 
 	err = e.Propagate(ctx)
 	if err != nil {
+
+		// TODO(stan): async propagate in case of synchronous error
+
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 			402, "settlement_failed",
 			"The transaction failed to settle on required mints: %s.",
@@ -193,20 +216,10 @@ func (e *SettleTransaction) ExecuteCanonical(
 	}
 
 	switch tx.Status {
-	case mint.TxStReserved:
-		// Mark the transaction as settled.
-		tx.Status = mint.TxStSettled
 	case mint.TxStSettled:
-		// No-op as the transaction was already marked as settled during
-		// propagation.
 	default:
 		return nil, nil, errors.Newf(
 			"Unexpected transaction status %s: %s", tx.Status, e.ID) // 500
-	}
-
-	err = tx.Save(ctx)
-	if err != nil {
-		return nil, nil, errors.Trace(err) // 500
 	}
 
 	ops, err := model.LoadCanonicalOperationsByTransaction(ctx, e.ID)
@@ -342,7 +355,8 @@ func (e *SettleTransaction) ExecutePropagated(
 	err = e.Propagate(ctx)
 	if err != nil {
 
-		// TODO(stan): async propagate in case of synchronous error
+		// TODO(stan): async propagate in case of synchronous error instead of
+		// erroring.
 
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 			402, "settlement_failed",
@@ -497,8 +511,8 @@ func (e *SettleTransaction) Settle(
 	return nil
 }
 
-// Propagate propagates the lock for settlement. Does not infer with current
-// hop settlement which was already performed.
+// Propagate the lock for settlement. Current hop settlement is already
+// performed.
 func (e *SettleTransaction) Propagate(
 	ctx context.Context,
 ) error {
