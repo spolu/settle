@@ -148,8 +148,10 @@ fi
 cleanUp
 
 echo
-echo "Settle ${RELEASE} has been installed in your home directory (~/.settle)"
-echo "Get started with 'settle help'."
+echo "Settle ${RELEASE} has been installed in your home directory (under ~/.settle)"
+echo
+echo "Checkout the command help: 'settle help'."
+echo "Register on a mint: 'settle register'."
 echo
 
 trap - EXIT
