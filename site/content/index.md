@@ -18,8 +18,12 @@ exchange of value without relying on a blockchain.
 
 ## Getting started
 
+Install `settle` locally:
 ```
-$> curl -L https://settle.network/install | sh && export PATH=$PATH:~/.settle/bin
-$> settle help
+curl -L https://settle.network/install | sh && export PATH=$PATH:~/.settle/bin
+```
+
+Register on a mint:
+```
 $> settle register
 ```
