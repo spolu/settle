@@ -202,6 +202,17 @@ func (c *Client) RetrieveBalance(
 		return nil, errors.Trace(err)
 	}
 
+	if r.StatusCode != http.StatusOK && r.StatusCode != http.StatusCreated {
+		var e errors.ConcreteUserError
+		err = raw.Extract("error", &e)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		return nil, errors.Trace(ErrMintClient{
+			r.StatusCode, e.ErrCode, e.ErrMessage,
+		})
+	}
+
 	var balance BalanceResource
 	if err := raw.Extract("balance", &balance); err != nil {
 		return nil, errors.Trace(err)
@@ -243,6 +254,17 @@ func (c *Client) RetrieveOffer(
 		return nil, errors.Trace(err)
 	}
 
+	if r.StatusCode != http.StatusOK && r.StatusCode != http.StatusCreated {
+		var e errors.ConcreteUserError
+		err = raw.Extract("error", &e)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		return nil, errors.Trace(ErrMintClient{
+			r.StatusCode, e.ErrCode, e.ErrMessage,
+		})
+	}
+
 	var offer OfferResource
 	if err := raw.Extract("offer", &offer); err != nil {
 		return nil, errors.Trace(err)
@@ -282,6 +304,17 @@ func (c *Client) RetrieveOperation(
 	var raw svc.Resp
 	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
 		return nil, errors.Trace(err)
+	}
+
+	if r.StatusCode != http.StatusOK && r.StatusCode != http.StatusCreated {
+		var e errors.ConcreteUserError
+		err = raw.Extract("error", &e)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		return nil, errors.Trace(ErrMintClient{
+			r.StatusCode, e.ErrCode, e.ErrMessage,
+		})
 	}
 
 	var operation OperationResource
@@ -330,6 +363,17 @@ func (c *Client) RetrieveTransaction(
 		return nil, errors.Trace(err)
 	}
 
+	if r.StatusCode != http.StatusOK && r.StatusCode != http.StatusCreated {
+		var e errors.ConcreteUserError
+		err = raw.Extract("error", &e)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		return nil, errors.Trace(ErrMintClient{
+			r.StatusCode, e.ErrCode, e.ErrMessage,
+		})
+	}
+
 	var transaction TransactionResource
 	if err := raw.Extract("transaction", &transaction); err != nil {
 		return nil, errors.Trace(err)
@@ -361,6 +405,17 @@ func (c *Client) PropagateBalance(
 	var raw svc.Resp
 	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
 		return nil, errors.Trace(err)
+	}
+
+	if r.StatusCode != http.StatusOK && r.StatusCode != http.StatusCreated {
+		var e errors.ConcreteUserError
+		err = raw.Extract("error", &e)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		return nil, errors.Trace(ErrMintClient{
+			r.StatusCode, e.ErrCode, e.ErrMessage,
+		})
 	}
 
 	var balance BalanceResource
@@ -396,6 +451,17 @@ func (c *Client) PropagateOffer(
 		return nil, errors.Trace(err)
 	}
 
+	if r.StatusCode != http.StatusOK && r.StatusCode != http.StatusCreated {
+		var e errors.ConcreteUserError
+		err = raw.Extract("error", &e)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		return nil, errors.Trace(ErrMintClient{
+			r.StatusCode, e.ErrCode, e.ErrMessage,
+		})
+	}
+
 	var offer OfferResource
 	if err := raw.Extract("offer", &offer); err != nil {
 		return nil, errors.Trace(err)
@@ -427,6 +493,17 @@ func (c *Client) PropagateOperation(
 	var raw svc.Resp
 	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
 		return nil, errors.Trace(err)
+	}
+
+	if r.StatusCode != http.StatusOK && r.StatusCode != http.StatusCreated {
+		var e errors.ConcreteUserError
+		err = raw.Extract("error", &e)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		return nil, errors.Trace(ErrMintClient{
+			r.StatusCode, e.ErrCode, e.ErrMessage,
+		})
 	}
 
 	var operation OperationResource
@@ -464,6 +541,17 @@ func (c *Client) PropagateTransaction(
 	var raw svc.Resp
 	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
 		return nil, errors.Trace(err)
+	}
+
+	if r.StatusCode != http.StatusOK && r.StatusCode != http.StatusCreated {
+		var e errors.ConcreteUserError
+		err = raw.Extract("error", &e)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		return nil, errors.Trace(ErrMintClient{
+			r.StatusCode, e.ErrCode, e.ErrMessage,
+		})
 	}
 
 	var transaction TransactionResource
@@ -524,6 +612,17 @@ func (c *Client) SettleTransaction(
 		return nil, errors.Trace(err)
 	}
 
+	if r.StatusCode != http.StatusOK && r.StatusCode != http.StatusCreated {
+		var e errors.ConcreteUserError
+		err = raw.Extract("error", &e)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		return nil, errors.Trace(ErrMintClient{
+			r.StatusCode, e.ErrCode, e.ErrMessage,
+		})
+	}
+
 	var transaction TransactionResource
 	if err := raw.Extract("transaction", &transaction); err != nil {
 		return nil, errors.Trace(err)
@@ -561,6 +660,17 @@ func (c *Client) CancelTransaction(
 	var raw svc.Resp
 	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
 		return nil, errors.Trace(err)
+	}
+
+	if r.StatusCode != http.StatusOK && r.StatusCode != http.StatusCreated {
+		var e errors.ConcreteUserError
+		err = raw.Extract("error", &e)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		return nil, errors.Trace(ErrMintClient{
+			r.StatusCode, e.ErrCode, e.ErrMessage,
+		})
 	}
 
 	var transaction TransactionResource
