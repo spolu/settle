@@ -1,2 +1,5 @@
 language: go
-script: go test mint/test/functional/*
+sudo: false
+
+script:
+  - go test ./...
