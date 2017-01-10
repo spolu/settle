@@ -116,6 +116,21 @@ func ComputePlan(
 		return nil, errors.Trace(err)
 	}
 
+	// If this is a transaction whose baseAsset owner is not the transaction
+	// owner, we inject a first hop with no action (for proper cancelation
+	// propagation).
+	offset := 0
+	if bAsset.Owner != tx.Owner {
+		_, host, err := mint.UsernameAndMintHostFromAddress(ctx, tx.Owner)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		offset = 1
+		plan.Hops = append(plan.Hops, &TxHop{
+			Mint: host,
+		})
+	}
+
 	plan.Hops = append(plan.Hops, &TxHop{
 		Mint: host,
 		OpAction: &TxAction{
@@ -130,7 +145,7 @@ func ComputePlan(
 
 	// Generate actions from path of offers.
 	for i, offer := range offers {
-		hop := i + 1
+		hop := i + 1 + offset
 		offer := offer
 		pair, err := mint.AssetResourcesFromPair(ctx, offer.Pair)
 		if err != nil {
@@ -191,7 +206,7 @@ func ComputePlan(
 
 	// Compute amounts for each action.
 	for i := len(offers) - 1; i >= 0; i-- {
-		hop := i + 1
+		hop := i + 1 + offset
 		// Offer amounts are expressed in quote asset
 		basePrice, quotePrice, err := ValidatePrice(ctx, offers[i].Price)
 		if err != nil {
@@ -230,7 +245,7 @@ func ComputePlan(
 			logLine += fmt.Sprintf(
 				"\n    [%s ] amount=%s offer=%s pair=%s price=%s",
 				a.Type, a.Amount.String(), *a.CrossingOffer,
-				offers[i-1].Pair, offers[i-1].Price)
+				offers[i-offset-1].Pair, offers[i-offset-1].Price)
 		}
 	}
 	mint.Logf(ctx, logLine)

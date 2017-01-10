@@ -195,8 +195,6 @@ func (e *PropagateOffer) Execute(
 		of.Status = offer.Status
 		of.Remainder = model.Amount(*remainder)
 
-		// TODO(stan): check that the rest offer hasn't changed.
-
 		err := of.Save(ctx)
 		if err != nil {
 			return nil, nil, errors.Trace(err) // 500
