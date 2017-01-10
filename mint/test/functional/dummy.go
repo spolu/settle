@@ -1,0 +1,4 @@
+package functional
+
+func init() {
+}
