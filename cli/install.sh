@@ -4,11 +4,11 @@
 #
 # MAC:
 #   Open the terminal (look for the "Terminal" app) and type:
-#     `export PATH=$PATH:~/.settle/bin && curl -L https://settle.network/install | sh`
+#     `curl -L https://settle.network/install | sh && export PATH=$PATH:~/.settle/bin`
 #
 # LINUX:
 #   Open a terminal and run:
-#     `export PATH=$PATH:~/.settle/bin && curl -L https://settle.network/install | sh`
+#     `curl -L https://settle.network/install | sh && export PATH=$PATH:~/.settle/bin`
 #
 # (This script is largely inspired by the Meteor install script whose license
 #  is at https://github.com/meteor/meteor/blob/devel/LICENSE)
@@ -150,7 +150,7 @@ cleanUp
 echo
 echo "Settle ${RELEASE} has been installed locally (under ~/.settle)."
 echo
-echo "Checkout the command help: 'settle help'"
+echo "Read the command help: 'settle help'"
 echo "Register on a mint: 'settle register'"
 echo
 
