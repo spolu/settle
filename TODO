@@ -13,8 +13,8 @@
 
   [ ] finish mint
     [ ] async propagation in case of failure
-    [ ] support for 404 on retrieve transaction
     [ ] reintroduce transaction expiry on top of safe cancelation
+    [x] support for 404 on retrieve transaction
     [x] transaction safe cancelation
     [x] mint transaction creation refactor
     [x] setup loggly
@@ -63,7 +63,6 @@
 # mint
 
   [ ] async propagation in case of failure
-  [ ] support for 404 on retrieve transaction
   [ ] reintroduce transaction expiry on top of safe cancelation
   [~] list endpoint
     [ ] list asset operations
@@ -71,6 +70,7 @@
     [x] list asset balances
     [x] list balances
     [x] list assets
+  [x] support for 404 on retrieve transaction
   [x] transaction safe cancelation
   [x] refactor transaction creation/settlement
   [x] Mint-Protocol-Version header

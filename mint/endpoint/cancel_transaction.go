@@ -354,7 +354,8 @@ func (e *CancelTransaction) ExecutePropagated(
 	err = e.Propagate(ctx)
 	if err != nil {
 
-		// TODO(stan): async propagate in case of synchronous error
+		// TODO(stan): async propagate in case of synchronous error instead of
+		// erroring.
 
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 			402, "settlement_failed",
@@ -577,10 +578,18 @@ func (e *CancelTransaction) CheckCanCancel(
 	txn, err := e.Client.RetrieveTransaction(ctx,
 		e.ID, &e.Plan.Hops[e.Hop+1].Mint)
 	if err != nil {
-		return errors.Trace(err)
+		switch err := errors.Cause(err).(type) {
+		case mint.ErrMintClient:
+			// If we get a legit 404 transaction_not_found from the mint, it
+			// indicates that the transaction never propagated there or the
+			// mint failed to persist it, so it's safe to cancel.
+			if err.ErrCode == "transaction_not_found" {
+				return nil
+			}
+		default:
+			return errors.Trace(err)
+		}
 	}
-
-	// TODO(stan): add support for 404
 
 	operation := (*mint.OperationResource)(nil)
 	for _, op := range txn.Operations {
