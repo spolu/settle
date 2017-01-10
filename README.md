@@ -1,6 +1,6 @@
 # Settle
 
-*Decentralized trust graph for value exchange without a blockchain*
+*Decentralized trust graph for value exchange without a blockchain.*
 
 Settle's goal is to explore a new financial trust primitive on the Internet,
 and doing so, construct a decentralized trust graph enabling (totally) free
