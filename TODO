@@ -21,7 +21,9 @@
     [x] setup LetsEncrypt
     [x] Mint-Protocol-Version header
   [ ] finish cli
+    [x] install process
     [ ] pay command
+    [ ] add confirmations to actions (at least register)
     [x] cli install
     [x] register command
     [x] Mint-Protocol-Version header
@@ -40,8 +42,9 @@
 
 # cli
 
+  [ ] install process
   [ ] pay command
-  [?] add confirmations to actions
+  [ ] add confirmations to actions (at least register)
   [x] cli install
   [x] register command
   [x] Mint-Protocol-Version header

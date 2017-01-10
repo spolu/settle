@@ -4,11 +4,11 @@
 #
 # MAC:
 #   Open the terminal (look for the "Terminal" app) and type:
-#     `export PATH=$PATH:~/.settle/bin && curl https://settle.network/install | sh`
+#     `export PATH=$PATH:~/.settle/bin && curl -L https://settle.network/install | sh`
 #
 # LINUX:
 #   Open a terminal and run:
-#     `export PATH=$PATH:~/.settle/bin && curl https://settle.network/install | sh`
+#     `export PATH=$PATH:~/.settle/bin && curl -L https://settle.network/install | sh`
 #
 # (This script is largely inspired by the Meteor install script whose license
 #  is at https://github.com/meteor/meteor/blob/devel/LICENSE)
@@ -115,7 +115,7 @@ while [ $ATTEMPTS -lt $MAX_ATTEMPTS ]
 do
   ATTEMPTS=$((ATTEMPTS + 1))
 
-  curl $VERBOSITY --fail --continue-at - \
+  curl -L $VERBOSITY --fail --continue-at - \
     "$BINARY_URL" --output "$BINARY_FILE"
 
   if [ $? -eq 0 ]
