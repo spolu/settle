@@ -117,12 +117,13 @@
       [ ] B fails reservation entirely
       [ ] B pass reservation through but fails responding to C
       [ ] A settles to C who fails
-    [ ] test same mint multiple uers
+    [ ] test same mint multiple users
     [ ] test cycles in offer path
     [ ] offer closing + attempt transaction on it
     [ ] offer closing of an offer not owned by caller
     [ ] test that consumes an offer entirely (check status)
     [~] transaction tests with misbehaving mint
+    [x] test transaction cancellation
     [x] test asset retrieval
     [x] test settling an expired transaction
     [x] transaction expiration and balance fixup

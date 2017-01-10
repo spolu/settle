@@ -193,8 +193,6 @@ func (e *PropagateOperation) ExecutePropagated(
 		return nil, nil, errors.Trace(err) // 500
 	} else if op != nil {
 		// Nothing to do: an operation is immutable once settled.
-		// TODO(stan): check that the operation hasn't changed.
-
 		code = http.StatusOK
 	} else {
 		// Create propagated operation locally.

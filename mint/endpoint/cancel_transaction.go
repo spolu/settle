@@ -160,9 +160,9 @@ func (e *CancelTransaction) ExecuteAuthenticated(
 		authentication.Get(ctx).User.Username,
 		mint.GetHost(ctx))
 
-	// Check that the requestor is the owner of the operation associated with
-	// this transaction at this hop.
-	if owner != e.Plan.Hops[e.Hop].OpAction.Owner {
+	// Check that the requestor is the owner of the transaction or the
+	// operation associated with the transaction at this hop.
+	if owner != e.Tx.Owner && owner != e.Plan.Hops[e.Hop].OpAction.Owner {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 			402, "cancellation_not_authorized",
 			"Only the owner of the action associated with the highest hop of "+

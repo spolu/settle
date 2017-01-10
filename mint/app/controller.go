@@ -26,6 +26,7 @@ func (c *Controller) Bind(
 
 	// Mixed.
 	mux.HandleFunc(pat.Post("/transactions/:transaction/settle"), endpoint.HandlerFor(endpoint.EndPtSettleTransaction))
+	mux.HandleFunc(pat.Post("/transactions/:transaction/cancel"), endpoint.HandlerFor(endpoint.EndPtCancelTransaction))
 
 	// Public.
 	mux.HandleFunc(pat.Get("/offers/:offer"), endpoint.HandlerFor(endpoint.EndPtRetrieveOffer))
