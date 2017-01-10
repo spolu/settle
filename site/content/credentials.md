@@ -12,6 +12,6 @@ layout = "credentials"
 Use these credentials to login with the settle command:
 
 ```
-$ settle login
+settle login
 ```
 

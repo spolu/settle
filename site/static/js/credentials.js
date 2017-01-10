@@ -66,7 +66,7 @@ $(document).ready(function() {
     env = "prod"
   } else {
     // quite an hack
-    $("#wrapper pre code").text("$> settle -env=qa login")
+    $("#wrapper pre code").text("settle -env=qa login")
   }
 
   console.log("Retrieving credentials:"+
