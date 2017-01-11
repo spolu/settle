@@ -221,12 +221,18 @@ func (e *CancelTransaction) ExecuteAuthenticated(
 
 	err = e.Propagate(ctx)
 	if err != nil {
-		// If it errored synchronously we just log the error and continue as
-		// the mint will check on us before attempting to settle and will
-		// eventually try to cancel the transaction itself.
+		// If cancellation propagation failed we log it and trigger an
+		// asyncrhonous one. In any case the node before us will check on us
+		// before attempting to settle as well.
 		mint.Logf(ctx,
 			"Cancellation propagation failed: transaction=%s hop=%d error=%s",
 			e.ID, e.Hop, err.Error())
+		err = async.Queue(ctx,
+			task.NewPropagateCancellation(ctx,
+				time.Now(), fmt.Sprintf("%s:%d", e.ID, e.Hop)))
+		if err != nil {
+			return nil, nil, errors.Trace(err) // 500
+		}
 	}
 
 	return ptr.Int(http.StatusOK), &svc.Resp{
@@ -342,12 +348,18 @@ func (e *CancelTransaction) ExecutePropagated(
 
 	err = e.Propagate(ctx)
 	if err != nil {
-		// If it errored synchronously we just log the error and continue as
-		// the mint will check on us before attempting to settle and will
-		// eventually try to cancel the transaction itself.
+		// If cancellation propagation failed we log it and trigger an
+		// asyncrhonous one. In any case the node before us will check on us
+		// before attempting to settle as well.
 		mint.Logf(ctx,
 			"Cancellation propagation failed: transaction=%s hop=%d error=%s",
 			e.ID, e.Hop, err.Error())
+		err = async.Queue(ctx,
+			task.NewPropagateCancellation(ctx,
+				time.Now(), fmt.Sprintf("%s:%d", e.ID, e.Hop)))
+		if err != nil {
+			return nil, nil, errors.Trace(err) // 500
+		}
 	}
 
 	return ptr.Int(http.StatusOK), &svc.Resp{
@@ -541,8 +553,7 @@ func (e *CancelTransaction) Propagate(
 			"Propagating cancellation: transaction=%s hop=%d mint=%s",
 			e.ID, e.Hop, m)
 
-		hop := e.Hop - 1
-		_, err := e.Client.CancelTransaction(ctx, e.ID, hop, m)
+		_, err := e.Client.CancelTransaction(ctx, e.ID, e.Hop-1, m)
 		if err != nil {
 			return errors.Trace(err)
 		}
