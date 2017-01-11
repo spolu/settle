@@ -51,9 +51,9 @@ func BackgroundContextFromFlags(
 	ctx = env.With(ctx, &mintEnv)
 
 	mintDB, err := db.NewDBForDSN(ctx,
+		dsnFlag,
 		fmt.Sprintf("sqlite3://~/.mint/mint-%s.db",
-			env.Get(ctx).Environment),
-		dsnFlag)
+			env.Get(ctx).Environment))
 	if err != nil {
 		return nil, errors.Trace(err)
 	}

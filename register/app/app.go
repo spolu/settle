@@ -61,9 +61,9 @@ func BackgroundContextFromFlags(
 
 	// registerDB is the DB backing the register service.
 	registerDB, err := db.NewDBForDSN(ctx,
+		dsnFlag,
 		fmt.Sprintf("sqlite3://~/.mint/register-%s.db",
-			env.Get(ctx).Environment),
-		dsnFlag)
+			env.Get(ctx).Environment))
 	if err != nil {
 		return nil, err
 	}
