@@ -25,11 +25,13 @@ func init() {
 			"\r\n" +
 			"Hi {{.Username}}!\n" +
 			"\n" +
-			"Please click on the link below to retrieve your credentials to access the mint at {{.Mint}}[0]:\n" +
+			"Please click on the link below to retrieve your credentials for\n" +
+			"{{.Mint}}[0]:\n" +
 			"\n" +
 			"{{.CredsURL}}#?env={{.Env}}&username={{.Username}}&secret={{.Secret}}\n" +
 			"\n" +
-			"Keep this link safe and secure as this your only way to retrieve or roll your credentials.\n" +
+			"Keep this link safe and secure as this is your only way to retrieve or\n" +
+			"roll your credentials in the future.\n" +
 			"\n" +
 			"-settle\n" +
 			"\n" +
