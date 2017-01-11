@@ -13,38 +13,18 @@
 
   [ ] finish cli
     [ ] pay command
-    [ ] add confirmations to actions (at least register)
-    [x] install process
-    [x] cli install
-    [x] register command
-    [x] Mint-Protocol-Version header
   [ ] finish site
     [ ] blog post draft
     [ ] documentation
-    [x] setup loggly
   [ ] send r?
-  [x] finish mint
-    [x] reintroduce transaction expiry on top of safe cancelation
-    [x] async propagation in case of failure
-    [x] support for 404 on retrieve transaction
-    [x] transaction safe cancelation
-    [x] mint transaction creation refactor
-    [x] setup loggly
-    [x] setup LetsEncrypt
-    [x] Mint-Protocol-Version header
-  [x] finish register
-    [x] site credentials page
-    [x] setup loggly
-    [x] roll user
-    [x] retrieve user
-    [x] setup LetsEncrypt
-    [x] send email on create user
 
 # cli
 
-  [ ] install process
   [ ] pay command
-  [ ] add confirmations to actions (at least register)
+  [ ] close (offer) command
+  [x] check credentials
+  [x] add confirmations to actions (at least register)
+  [x] install process
   [x] cli install
   [x] register command
   [x] Mint-Protocol-Version header
@@ -145,8 +125,8 @@
 
   # async processes
 
-    [ ] cancellation propagation
-    [ ] expiry on top of cancellation
+    [x] cancellation propagation
+    [x] expiry on top of cancellation
     [x] offer propagation
     [x] operation propagation
     [x] transaction expiry

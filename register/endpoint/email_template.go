@@ -21,10 +21,11 @@ func init() {
 		"From: Mint Registration <{{.From}}>\r\n" +
 			"To: {{.Email}}\r\n" +
 			"Subject: Credentials for {{.Username}}@{{.Mint}}\r\n" +
+			"Content-Type: text/plain; charset=UTF-8" +
 			"\r\n" +
 			"Hi {{.Username}}!\n" +
 			"\n" +
-			"Please click on the link below to verify your address and retrieve your credentials to access the mint at {{.Mint}}[0]:\n" +
+			"Please click on the link below to retrieve your credentials to access the mint at {{.Mint}}[0]:\n" +
 			"\n" +
 			"{{.CredsURL}}#?env={{.Env}}&username={{.Username}}&secret={{.Secret}}\n" +
 			"\n" +
