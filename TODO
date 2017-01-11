@@ -21,9 +21,9 @@
     [x] setup LetsEncrypt
     [x] Mint-Protocol-Version header
   [ ] finish cli
-    [x] install process
     [ ] pay command
     [ ] add confirmations to actions (at least register)
+    [x] install process
     [x] cli install
     [x] register command
     [x] Mint-Protocol-Version header
@@ -63,6 +63,7 @@
 # mint
 
   [ ] reintroduce transaction expiry on top of safe cancelation
+  [ ] propagate cancellation on syncrhonous failure
   [~] list endpoint
     [ ] list asset operations
     [x] list asset offers (order book)
@@ -143,9 +144,12 @@
 
   # async processes
 
+    [ ] cancellation propagation
+    [ ] expiry on top of cancellation
     [x] offer propagation
     [x] operation propagation
     [x] transaction expiry
+    [x] settlement propagation
 
 # r? preview
 
