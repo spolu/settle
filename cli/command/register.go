@@ -71,9 +71,9 @@ func (c *Register) Execute(
 	ctx context.Context,
 ) error {
 
-	out.Normf("  List of available mints:\n")
+	out.Normf("List of available mints:\n")
 	for i, r := range PublicMints {
-		out.Normf("    (%d) ", i)
+		out.Normf("  (%d) ", i)
 		out.Boldf("%s", r.Name)
 		out.Normf(" [")
 		out.Valuf("%s", r.Host)
@@ -84,7 +84,7 @@ func (c *Register) Execute(
 
 	reader := bufio.NewReader(os.Stdin)
 
-	out.Normf("Mint selection [0]: ")
+	out.Normf("    Mint selection [0]: ")
 	choice, _ := reader.ReadString('\n')
 	choice = strings.TrimSpace(choice)
 
@@ -98,11 +98,18 @@ func (c *Register) Execute(
 	}
 	register := PublicMints[i]
 
-	out.Normf("       Username []: ")
+	out.Normf("    Username []: ")
 	username, _ := reader.ReadString('\n')
 
-	out.Normf("          Email []: ")
+	out.Normf("    Email []: ")
 	email, _ := reader.ReadString('\n')
+
+	out.Normf("Is the information correct? [Y/n]: ")
+	confirmation, _ := reader.ReadString('\n')
+	confirmation = strings.TrimSpace(confirmation)
+	if confirmation != "" && confirmation != "Y" {
+		return errors.Trace(errors.Newf("Login aborted by user."))
+	}
 
 	// Register the user.
 	_, err := RegisterUser(ctx,

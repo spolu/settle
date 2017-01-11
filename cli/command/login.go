@@ -72,11 +72,18 @@ func (c *Login) Execute(
 
 	reader := bufio.NewReader(os.Stdin)
 
-	out.Normf("User address []: ")
+	out.Normf("    Address []: ")
 	address, _ := reader.ReadString('\n')
 
 	out.Normf("    Password []: ")
 	password, _ := reader.ReadString('\n')
+
+	out.Normf("Is the information correct? [Y/n]: ")
+	confirmation, _ := reader.ReadString('\n')
+	confirmation = strings.TrimSpace(confirmation)
+	if confirmation != "" && confirmation != "Y" {
+		return errors.Trace(errors.Newf("Registration aborted by user."))
+	}
 
 	err := cli.Login(ctx,
 		strings.TrimSpace(address), strings.TrimSpace(password))

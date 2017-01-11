@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 
@@ -104,7 +106,24 @@ func Login(
 		Password: password,
 	}
 
-	// TOOD(spolu): check credentials
+	// Check the credentials validity.
+	m := &Mint{
+		Host:        creds.Host,
+		Credentials: creds,
+	}
+	status, raw, err := m.Get(ctx, "/balances", url.Values{})
+	if err != nil {
+		return errors.Trace(err)
+	}
+	if *status != http.StatusOK {
+		var e errors.ConcreteUserError
+		err = raw.Extract("error", &e)
+		if err != nil {
+			return errors.Trace(err)
+		}
+		return errors.Trace(
+			errors.Newf("(%s) %s", e.ErrCode, e.ErrMessage))
+	}
 
 	path, err := CredentialsPath(ctx)
 	if err != nil {
