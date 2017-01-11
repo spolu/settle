@@ -196,6 +196,11 @@ VALUES
 	return &transaction, nil
 }
 
+// ID returns the ID of the object.
+func (t *Transaction) ID() string {
+	return fmt.Sprintf("%s[%s]", t.Owner, t.Token)
+}
+
 // Save updates the object database representation with the in-memory values.
 func (t *Transaction) Save(
 	ctx context.Context,

@@ -8,8 +8,8 @@ const (
 	// TimeResolutionNs is the resolution of our time variables in nanoseconds
 	// (aka resolution in milliseconds).
 	TimeResolutionNs int64 = 1000 * 1000
-	// TransactionExpiryMs is the time it takes to expire a transaction for
-	// this mint (get it canceled if not settled). Expressed in ms.
+	// TransactionExpiryMs is the time it takes to attempt to cancel a
+	// transaction for this mint. Expressed in ms.
 	TransactionExpiryMs int64 = 1000 * 60 * 60
 )
 

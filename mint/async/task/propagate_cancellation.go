@@ -17,24 +17,24 @@ import (
 )
 
 const (
-	// TkPropagateSettlement propagates a transaction settlement.
-	TkPropagateSettlement mint.TkName = "PropagateSettlement"
+	// TkPropagateCancellation propagates a transaction cancellation.
+	TkPropagateCancellation mint.TkName = "PropagateCancellation"
 )
 
 func init() {
-	async.Registrar[TkPropagateSettlement] = NewPropagateSettlement
+	async.Registrar[TkPropagateCancellation] = NewPropagateCancellation
 }
 
-// PropagateSettlement is in charge of propagating the settlement of a
+// PropagateCancellation is in charge of propagating the cancellation of a
 // tranasaction asyncrhonously if synchronous propagation failed.
-type PropagateSettlement struct {
+type PropagateCancellation struct {
 	created time.Time
 	id      string
 	hop     int8
 }
 
-// NewPropagateSettlement constructs and initializes the task.
-func NewPropagateSettlement(
+// NewPropagateCancellation constructs and initializes the task.
+func NewPropagateCancellation(
 	ctx context.Context,
 	created time.Time,
 	subject string,
@@ -49,7 +49,7 @@ func NewPropagateSettlement(
 	}
 	hop := int8(h)
 
-	return &PropagateSettlement{
+	return &PropagateCancellation{
 		created: created,
 		id:      ss[0],
 		hop:     hop,
@@ -57,34 +57,34 @@ func NewPropagateSettlement(
 }
 
 // Name returns the task name.
-func (t *PropagateSettlement) Name() mint.TkName {
-	return TkPropagateSettlement
+func (t *PropagateCancellation) Name() mint.TkName {
+	return TkPropagateCancellation
 }
 
 // Created returns the task creation time.
-func (t *PropagateSettlement) Created() time.Time {
+func (t *PropagateCancellation) Created() time.Time {
 	return t.created
 }
 
 // Subject returns the task subject.
-func (t *PropagateSettlement) Subject() string {
+func (t *PropagateCancellation) Subject() string {
 	return t.id
 }
 
 // MaxRetries returns the max retries for the task.
-func (t *PropagateSettlement) MaxRetries() uint {
+func (t *PropagateCancellation) MaxRetries() uint {
 	return 18
 }
 
 // DeadlineForRetry returns the deadline for the provided retry count.
-func (t *PropagateSettlement) DeadlineForRetry(
+func (t *PropagateCancellation) DeadlineForRetry(
 	retry uint,
 ) time.Time {
 	return t.Created().Add((1<<retry - 1) * time.Second)
 }
 
 // Execute idempotently runs the task to completion or errors.
-func (t *PropagateSettlement) Execute(
+func (t *PropagateCancellation) Execute(
 	ctx context.Context,
 ) error {
 	client := &mint.Client{}
@@ -106,15 +106,6 @@ func (t *PropagateSettlement) Execute(
 
 	db.Commit(ctx)
 
-	if tx.Status != mint.TxStSettled {
-		return errors.Trace(
-			errors.Newf("Unexpected transaction status: %s", tx.Status))
-	}
-	if tx.Secret == nil {
-		return errors.Trace(
-			errors.Newf("Transation %s missing secret", tx.ID))
-	}
-
 	// For propagation we can do away with a shallow plan.
 	plan, err := plan.Compute(ctx, client, tx, true)
 	if err != nil {
@@ -125,11 +116,10 @@ func (t *PropagateSettlement) Execute(
 		m := plan.Hops[t.hop-1].Mint
 
 		mint.Logf(ctx,
-			"Propagating settlement: transaction=%s hop=%d mint=%s",
+			"Propagating cancellation: transaction=%s hop=%d mint=%s",
 			tx.ID(), t.hop, m)
 
-		hop := t.hop - 1
-		_, err := client.SettleTransaction(ctx, tx.ID(), &hop, tx.Secret, &m)
+		_, err := client.CancelTransaction(ctx, tx.ID(), t.hop-1, m)
 		if err != nil {
 			return errors.Trace(err)
 		}

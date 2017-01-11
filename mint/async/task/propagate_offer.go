@@ -102,7 +102,7 @@ func (t *PropagateOffer) Execute(
 	}
 
 	if host != mint.GetHost(ctx) {
-		_, err := client.PropagateOffer(ctx, t.id, host)
+		_, err := client.PropagateOffer(ctx, offer.ID(), host)
 		if err != nil {
 			return errors.Trace(err)
 		}

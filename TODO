@@ -11,21 +11,26 @@
 
 # preview
 
-  [ ] finish mint
-    [ ] reintroduce transaction expiry on top of safe cancelation
-    [x] async propagation in case of failure
-    [x] support for 404 on retrieve transaction
-    [x] transaction safe cancelation
-    [x] mint transaction creation refactor
-    [x] setup loggly
-    [x] setup LetsEncrypt
-    [x] Mint-Protocol-Version header
   [ ] finish cli
     [ ] pay command
     [ ] add confirmations to actions (at least register)
     [x] install process
     [x] cli install
     [x] register command
+    [x] Mint-Protocol-Version header
+  [ ] finish site
+    [ ] blog post draft
+    [ ] documentation
+    [x] setup loggly
+  [ ] send r?
+  [x] finish mint
+    [x] reintroduce transaction expiry on top of safe cancelation
+    [x] async propagation in case of failure
+    [x] support for 404 on retrieve transaction
+    [x] transaction safe cancelation
+    [x] mint transaction creation refactor
+    [x] setup loggly
+    [x] setup LetsEncrypt
     [x] Mint-Protocol-Version header
   [x] finish register
     [x] site credentials page
@@ -34,11 +39,6 @@
     [x] retrieve user
     [x] setup LetsEncrypt
     [x] send email on create user
-  [ ] finish site
-    [ ] blog post draft
-    [ ] documentation
-    [x] setup loggly
-  [ ] send r?
 
 # cli
 
@@ -62,14 +62,15 @@
 
 # mint
 
-  [ ] reintroduce transaction expiry on top of safe cancelation
-  [ ] propagate cancellation on syncrhonous failure
   [~] list endpoint
     [ ] list asset operations
     [x] list asset offers (order book)
     [x] list asset balances
     [x] list balances
     [x] list assets
+  [x] allow cancellation without plan computation (use offer path, move CheckCanShouldCancel to plan))
+  [x] reintroduce transaction expiry on top of safe cancelation
+  [x] propagate cancellation on syncrhonous failure
   [x] async propagation in case of failure
   [x] support for 404 on retrieve transaction
   [x] transaction safe cancelation

@@ -97,7 +97,7 @@ func (t *PropagateBalance) Execute(
 	}
 
 	if host != mint.GetHost(ctx) {
-		_, err := client.PropagateBalance(ctx, t.id, host)
+		_, err := client.PropagateBalance(ctx, balance.ID(), host)
 		if err != nil {
 			return errors.Trace(err)
 		}

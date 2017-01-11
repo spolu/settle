@@ -4,13 +4,13 @@ package task
 
 import (
 	"context"
-	"math/big"
 	"time"
 
 	"github.com/spolu/settle/lib/db"
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/mint"
 	"github.com/spolu/settle/mint/async"
+	"github.com/spolu/settle/mint/lib/plan"
 	"github.com/spolu/settle/mint/model"
 )
 
@@ -23,8 +23,8 @@ func init() {
 	async.Registrar[TkExpireTransaction] = NewExpireTransaction
 }
 
-// ExpireTransaction is in charge of expiring transactions 1h after their
-// creation in case they haven't been settled.
+// ExpireTransaction is in charge of attempting to cancel the transcation (if
+// possible) mint.TransactionExpiryMs after creation.
 type ExpireTransaction struct {
 	created time.Time
 	id      string
@@ -74,131 +74,49 @@ func (t *ExpireTransaction) DeadlineForRetry(
 func (t *ExpireTransaction) Execute(
 	ctx context.Context,
 ) error {
+	client := &mint.Client{}
+	err := client.Init(ctx)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
 	ctx = db.Begin(ctx, "mint")
 	defer db.LoggedRollback(ctx)
 
-	txn, err := model.LoadTransactionByID(ctx, t.id)
+	tx, err := model.LoadTransactionByID(ctx, t.id)
 	if err != nil {
 		return errors.Trace(err)
-	}
-	ops, err := model.LoadCanonicalOperationsByTransaction(ctx, t.id)
-	if err != nil {
-		return errors.Trace(err)
-	}
-	crs, err := model.LoadCanonicalCrossingsByTransaction(ctx, t.id)
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	if txn != nil && txn.Status != mint.TxStCanceled {
-		txn.Status = mint.TxStCanceled
-		err = txn.Save(ctx)
-		if err != nil {
-			return errors.Trace(err)
-		}
-		for _, op := range ops {
-			if op.Status == mint.TxStCanceled {
-				continue
-			}
-			asset, err := model.LoadCanonicalAssetByName(ctx, op.Asset)
-			if err != nil {
-				return errors.Trace(err)
-			} else if asset == nil {
-				return errors.Trace(errors.Newf("Asset not found: %s", op.Asset))
-			}
-
-			// Restore the source balance if applicable (that is if the op
-			// source is not owner of the asset, in which case the asset was
-			// issued on the fly).
-			var srcBalance *model.Balance
-			if asset.Owner != op.Source {
-				srcBalance, err = model.LoadCanonicalBalanceByAssetHolder(ctx,
-					op.Asset, op.Source)
-				if err != nil {
-					return errors.Trace(err)
-				} else if srcBalance == nil {
-					return errors.Trace(errors.Newf(
-						"Source has no balance in %s: %s", op.Asset, op.Source))
-				}
-				(*big.Int)(&srcBalance.Value).Add(
-					(*big.Int)(&srcBalance.Value), (*big.Int)(&op.Amount))
-
-				// Checks if the srcBalance is positive and not overflown.
-				b := (*big.Int)(&srcBalance.Value)
-				if new(big.Int).Abs(b).Cmp(model.MaxAssetAmount) >= 0 ||
-					b.Cmp(new(big.Int)) < 0 {
-					return errors.Trace(errors.Newf(
-						"Invalid resulting balance for %s: %s",
-						srcBalance.Holder, b.String()))
-				}
-
-				err = srcBalance.Save(ctx)
-				if err != nil {
-					return errors.Trace(err)
-				}
-
-				err = async.Queue(ctx,
-					NewPropagateBalance(ctx, time.Now(), srcBalance.ID()))
-				if err != nil {
-					return errors.Trace(err)
-				}
-			}
-
-			op.Status = mint.TxStCanceled
-			err = op.Save(ctx)
-			if err != nil {
-				return errors.Trace(err)
-			}
-		}
-		for _, cr := range crs {
-			if cr.Status == mint.TxStCanceled {
-				continue
-			}
-
-			offer, err := model.LoadCanonicalOfferByID(ctx, cr.Offer)
-			if err != nil {
-				return errors.Trace(err)
-			} else if offer == nil {
-				return errors.Trace(errors.Newf(
-					"Offer not found: %s", cr.Offer))
-			}
-
-			(*big.Int)(&offer.Remainder).Add(
-				(*big.Int)(&offer.Remainder), (*big.Int)(&cr.Amount))
-
-			// Checks if the remainder is positive and not overflown.
-			b := (*big.Int)(&offer.Remainder)
-			if new(big.Int).Abs(b).Cmp(model.MaxAssetAmount) >= 0 ||
-				b.Cmp(new(big.Int)) < 0 {
-				return errors.Trace(errors.Newf(
-					"Invalid resulting remainder: %s", b.String()))
-			}
-			// Set the offer as active if the remainder is not 0 and the offer
-			// is not closed.
-			if offer.Status != mint.OfStClosed && b.Cmp(new(big.Int)) > 0 {
-				offer.Status = mint.OfStActive
-			}
-
-			err = offer.Save(ctx)
-			if err != nil {
-				return errors.Trace(err)
-			}
-
-			err = async.Queue(ctx,
-				NewPropagateOffer(ctx, time.Now(), offer.ID()))
-			if err != nil {
-				return errors.Trace(err)
-			}
-
-			cr.Status = mint.TxStCanceled
-			err = cr.Save(ctx)
-			if err != nil {
-				return errors.Trace(err)
-			}
-		}
+	} else if tx == nil {
+		return errors.Trace(
+			errors.Newf("Transaction not found: %s", t.id))
 	}
 
 	db.Commit(ctx)
+
+	if tx.Status == mint.TxStSettled {
+		mint.Logf(ctx,
+			"Skipping settled transaction expiry: transaction=%s status=%s",
+			tx.ID(), tx.Status)
+		return nil
+	}
+
+	// For expiration we can do away with a shallow plan.
+	plan, err := plan.Compute(ctx, client, tx, true)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	// Retrieve our maximal hop for this mint.
+	_, maxHop, err := plan.MinMaxHop(ctx)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	hop := *maxHop
+
+	_, err = client.CancelTransaction(ctx, tx.ID(), hop, mint.GetHost(ctx))
+	if err != nil {
+		return errors.Trace(err)
+	}
 
 	return nil
 }
