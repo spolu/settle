@@ -12,8 +12,8 @@
 # preview
 
   [ ] finish mint
-    [ ] async propagation in case of failure
     [ ] reintroduce transaction expiry on top of safe cancelation
+    [x] async propagation in case of failure
     [x] support for 404 on retrieve transaction
     [x] transaction safe cancelation
     [x] mint transaction creation refactor
@@ -62,7 +62,6 @@
 
 # mint
 
-  [ ] async propagation in case of failure
   [ ] reintroduce transaction expiry on top of safe cancelation
   [~] list endpoint
     [ ] list asset operations
@@ -70,6 +69,7 @@
     [x] list asset balances
     [x] list balances
     [x] list assets
+  [x] async propagation in case of failure
   [x] support for 404 on retrieve transaction
   [x] transaction safe cancelation
   [x] refactor transaction creation/settlement
@@ -122,6 +122,7 @@
     [ ] offer closing + attempt transaction on it
     [ ] offer closing of an offer not owned by caller
     [ ] test that consumes an offer entirely (check status)
+    [ ] test settlement propagation on syncrhonous failures
     [~] transaction tests with misbehaving mint
     [x] test transaction cancellation
     [x] test asset retrieval

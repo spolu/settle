@@ -139,6 +139,7 @@ type TransactionResource struct {
 	Status TxStatus `json:"status"`
 	Expiry int64    `json:"expiry"`
 	Lock   string   `json:"lock"`
+	Secret *string  `json:"secret"`
 
 	Operations []OperationResource `json:"operations"`
 	Crossings  []CrossingResource  `json:"crossings"`

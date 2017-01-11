@@ -1,11 +1,12 @@
 // OWNER: stan
 
-package endpoint
+package plan
 
 import (
 	"context"
 	"fmt"
 	"math/big"
+	"regexp"
 
 	"github.com/spolu/settle/lib/errors"
 	"github.com/spolu/settle/mint"
@@ -55,9 +56,8 @@ type TxPlan struct {
 	Transaction string
 }
 
-// ComputePlan retrieves the offers of the path and compute the transaction
-// plan.
-func ComputePlan(
+// Compute retrieves the offers of the path and compute the transaction plan.
+func Compute(
 	ctx context.Context,
 	client *mint.Client,
 	tx *model.Transaction,
@@ -208,7 +208,7 @@ func ComputePlan(
 	for i := len(offers) - 1; i >= 0; i-- {
 		hop := i + 1 + offset
 		// Offer amounts are expressed in quote asset
-		basePrice, quotePrice, err := ValidatePrice(ctx, offers[i].Price)
+		basePrice, quotePrice, err := ExtractPrice(ctx, offers[i].Price)
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
@@ -356,4 +356,36 @@ func (p *TxPlan) MinMaxHop(
 			"This mint is not part of the transction plan.")
 	}
 	return &min, &max, nil
+}
+
+// PriceRegexp is used to validate and parse a transaction price.
+var PriceRegexp = regexp.MustCompile(
+	"^([0-9]+)\\/([0-9]+)$")
+
+// ExtractPrice validates a price (pB/pQ).
+func ExtractPrice(
+	ctx context.Context,
+	price string,
+) (*big.Int, *big.Int, error) {
+	m := PriceRegexp.FindStringSubmatch(price)
+	if len(m) == 0 {
+		return nil, nil, errors.Trace(errors.Newf("Invalid price: %s", price))
+	}
+	var basePrice big.Int
+	_, success := basePrice.SetString(m[1], 10)
+	if !success ||
+		basePrice.Cmp(new(big.Int)) < 0 ||
+		basePrice.Cmp(model.MaxAssetAmount) >= 0 {
+		return nil, nil, errors.Trace(errors.Newf("Invalid price: %s", price))
+	}
+
+	var quotePrice big.Int
+	_, success = quotePrice.SetString(m[2], 10)
+	if !success ||
+		quotePrice.Cmp(new(big.Int)) < 0 ||
+		quotePrice.Cmp(model.MaxAssetAmount) >= 0 {
+		return nil, nil, errors.Trace(errors.Newf("Invalid price: %s", price))
+	}
+
+	return &basePrice, &quotePrice, nil
 }
