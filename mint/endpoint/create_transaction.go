@@ -20,6 +20,7 @@ import (
 	"github.com/spolu/settle/mint/async"
 	"github.com/spolu/settle/mint/async/task"
 	"github.com/spolu/settle/mint/lib/authentication"
+	"github.com/spolu/settle/mint/lib/plan"
 	"github.com/spolu/settle/mint/model"
 )
 
@@ -48,7 +49,7 @@ type CreateTransaction struct {
 
 	// State
 	Tx   *model.Transaction
-	Plan *TxPlan
+	Plan *plan.TxPlan
 }
 
 // NewCreateTransaction constructs and initialiezes the endpoint.
@@ -178,9 +179,9 @@ func (e *CreateTransaction) ExecuteCanonical(
 		return nil, nil, errors.Trace(err) // 500
 	}
 	e.Tx = tx
-	e.ID = fmt.Sprintf("%s[%s]", tx.Owner, tx.Token)
+	e.ID = fmt.Sprintf("%s[%s]", e.Tx.Owner, e.Tx.Token)
 
-	plan, err := ComputePlan(ctx, e.Client, e.Tx)
+	plan, err := plan.Compute(ctx, e.Client, e.Tx)
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 			402, "transaction_failed",
@@ -219,28 +220,26 @@ func (e *CreateTransaction) ExecuteCanonical(
 	ctx = db.Begin(oCtx, "mint")
 	defer db.LoggedRollback(ctx)
 
-	// Reload the tranasction post propagation.
+	// Reload the transaction post propagation.
 	tx, err = model.LoadTransactionByID(ctx, e.ID)
-	if err != nil {
+	if err != nil || tx == nil {
 		return nil, nil, errors.Trace(err) // 500
-	} else if tx == nil {
-		return nil, nil, errors.Newf(
-			"Failed to retrieve pending transaction: %s", e.ID) // 500
 	}
+	e.Tx = tx
 
-	switch tx.Status {
+	switch e.Tx.Status {
 	case mint.TxStPending:
 		// Mark the transaction as reserved.
-		tx.Status = mint.TxStReserved
+		e.Tx.Status = mint.TxStReserved
 	case mint.TxStReserved:
 		// No-op as the transaction was already marked as reserved during
 		// propagation.
 	default:
 		return nil, nil, errors.Newf(
-			"Unexpected transaction status %s: %s", tx.Status, e.ID) // 500
+			"Unexpected transaction status %s: %s", e.Tx.Status, e.ID) // 500
 	}
 
-	err = tx.Save(ctx)
+	err = e.Tx.Save(ctx)
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
 	}
@@ -336,7 +335,7 @@ func (e *CreateTransaction) ExecutePropagated(
 		e.Tx = tx
 	}
 
-	plan, err := ComputePlan(ctx, e.Client, e.Tx)
+	plan, err := plan.Compute(ctx, e.Client, e.Tx)
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 			402, "transaction_failed",
@@ -383,14 +382,12 @@ func (e *CreateTransaction) ExecutePropagated(
 	ctx = db.Begin(oCtx, "mint")
 	defer db.LoggedRollback(ctx)
 
-	// Reload the tranasction post propagation.
+	// Reload the transaction post propagation.
 	tx, err = model.LoadTransactionByID(ctx, e.ID)
-	if err != nil {
+	if err != nil || tx == nil {
 		return nil, nil, errors.Trace(err) // 500
-	} else if tx == nil {
-		return nil, nil, errors.Newf(
-			"Failed to retrieve pending transaction: %s", e.ID) // 500
 	}
+	e.Tx = tx
 
 	// Idempotently execute plan for the transaction.
 	err = e.ExecutePlan(ctx)
@@ -402,19 +399,19 @@ func (e *CreateTransaction) ExecutePropagated(
 		))
 	}
 
-	switch tx.Status {
+	switch e.Tx.Status {
 	case mint.TxStPending:
 		// Mark the transaction as reserved.
-		tx.Status = mint.TxStReserved
+		e.Tx.Status = mint.TxStReserved
 	case mint.TxStReserved:
 		// No-op as the transaction was already marked as reserved during
 		// propagation.
 	default:
 		return nil, nil, errors.Newf(
-			"Unexpected transaction status %s: %s", tx.Status, e.ID) // 500
+			"Unexpected transaction status %s: %s", e.Tx.Status, e.ID) // 500
 	}
 
-	err = tx.Save(ctx)
+	err = e.Tx.Save(ctx)
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
 	}

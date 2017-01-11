@@ -18,6 +18,7 @@ import (
 	"github.com/spolu/settle/mint/async"
 	"github.com/spolu/settle/mint/async/task"
 	"github.com/spolu/settle/mint/lib/authentication"
+	"github.com/spolu/settle/mint/lib/plan"
 	"github.com/spolu/settle/mint/model"
 	"goji.io/pat"
 )
@@ -43,7 +44,7 @@ type CancelTransaction struct {
 
 	// State
 	Tx   *model.Transaction
-	Plan *TxPlan
+	Plan *plan.TxPlan
 }
 
 // NewCancelTransaction constructs and initialiezes the endpoint.
@@ -122,8 +123,8 @@ func (e *CancelTransaction) ExecuteAuthenticated(
 	} else if tx == nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
 			404, "transaction_not_found",
-			"The transaction you are trying to cancel does not "+
-				"exist: %s.", e.ID,
+			"The transaction you are trying to cancel does not exist: %s.",
+			e.ID,
 		))
 	}
 	e.Tx = tx
@@ -138,7 +139,7 @@ func (e *CancelTransaction) ExecuteAuthenticated(
 		))
 	}
 
-	plan, err := ComputePlan(ctx, e.Client, e.Tx)
+	plan, err := plan.Compute(ctx, e.Client, e.Tx)
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 			402, "cancellation_failed",
@@ -199,8 +200,8 @@ func (e *CancelTransaction) ExecuteAuthenticated(
 	// anre the status of a transaction is mostly indicative, but we want to
 	// mark it as cancelled only after it is cancelled at all hops.
 	if e.Hop == *minHop {
-		tx.Status = mint.TxStCanceled
-		err = tx.Save(ctx)
+		e.Tx.Status = mint.TxStCanceled
+		err = e.Tx.Save(ctx)
 		if err != nil {
 			return nil, nil, errors.Trace(err) // 500
 		}
@@ -220,15 +221,12 @@ func (e *CancelTransaction) ExecuteAuthenticated(
 
 	err = e.Propagate(ctx)
 	if err != nil {
-
-		// TODO(stan): async propagate in case of synchronous error instead of
-		// erroring.
-
-		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
-			402, "cancelation_failed",
-			"The transaction failed to cancel on required mints: %s.",
-			e.ID,
-		))
+		// If it errored synchronously we just log the error and continue as
+		// the mint will check on us before attempting to settle and will
+		// eventually try to cancel the transaction itself.
+		mint.Logf(ctx,
+			"Cancellation propagation failed: transaction=%s hop=%d error=%s",
+			e.ID, e.Hop, err.Error())
 	}
 
 	return ptr.Int(http.StatusOK), &svc.Resp{
@@ -249,23 +247,14 @@ func (e *CancelTransaction) ExecutePropagated(
 	tx, err := model.LoadTransactionByID(ctx, e.ID)
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
+	} else if tx == nil {
+		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
+			404, "transaction_not_found",
+			"The transaction you are trying to settle does not exist: %s.",
+			e.ID,
+		))
 	}
-	if tx != nil {
-		e.Tx = tx
-	} else {
-		tx, err := model.LoadPropagatedTransactionByOwnerToken(ctx,
-			e.Owner, e.Token)
-		if err != nil {
-			return nil, nil, errors.Trace(err) // 500
-		} else if tx == nil {
-			return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-				404, "transaction_not_found",
-				"The transaction you are trying to settle does not "+
-					"exist: %s.", e.ID,
-			))
-		}
-		e.Tx = tx
-	}
+	e.Tx = tx
 
 	// Transaction can be either pending, reserved or already canceled.
 	switch e.Tx.Status {
@@ -277,7 +266,7 @@ func (e *CancelTransaction) ExecutePropagated(
 		))
 	}
 
-	plan, err := ComputePlan(ctx, e.Client, e.Tx)
+	plan, err := plan.Compute(ctx, e.Client, e.Tx)
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 			402, "settlement_failed",
@@ -331,8 +320,8 @@ func (e *CancelTransaction) ExecutePropagated(
 	// anre the status of a transaction is mostly indicative, but we want to
 	// mark it as cancelled only after it is cancelled at all hops.
 	if e.Hop == *minHop {
-		tx.Status = mint.TxStCanceled
-		err = tx.Save(ctx)
+		e.Tx.Status = mint.TxStCanceled
+		err = e.Tx.Save(ctx)
 		if err != nil {
 			return nil, nil, errors.Trace(err) // 500
 		}
@@ -353,15 +342,12 @@ func (e *CancelTransaction) ExecutePropagated(
 
 	err = e.Propagate(ctx)
 	if err != nil {
-
-		// TODO(stan): async propagate in case of synchronous error instead of
-		// erroring.
-
-		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
-			402, "settlement_failed",
-			"The transaction failed to settle on required mints: %s.",
-			e.ID,
-		))
+		// If it errored synchronously we just log the error and continue as
+		// the mint will check on us before attempting to settle and will
+		// eventually try to cancel the transaction itself.
+		mint.Logf(ctx,
+			"Cancellation propagation failed: transaction=%s hop=%d error=%s",
+			e.ID, e.Hop, err.Error())
 	}
 
 	return ptr.Int(http.StatusOK), &svc.Resp{

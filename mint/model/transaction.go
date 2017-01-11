@@ -64,6 +64,10 @@ func NewTransactionResource(
 		Operations:  []mint.OperationResource{},
 		Crossings:   []mint.CrossingResource{},
 	}
+	// If we settled and we have the secret, return it openly.
+	if transaction.Status == mint.TxStSettled && transaction.Secret != nil {
+		tx.Secret = transaction.Secret
+	}
 	for _, op := range operations {
 		tx.Operations = append(tx.Operations, NewOperationResource(ctx, op))
 	}
@@ -200,7 +204,7 @@ func (t *Transaction) Save(
 	ext := db.Ext(ctx, "mint")
 	_, err := sqlx.NamedExec(ext, `
 UPDATE transactions
-SET status = :status
+SET status = :status, secret = :secret
 WHERE owner = :owner
   AND token = :token
 `, t)

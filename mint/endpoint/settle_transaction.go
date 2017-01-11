@@ -21,6 +21,7 @@ import (
 	"github.com/spolu/settle/mint/async"
 	"github.com/spolu/settle/mint/async/task"
 	"github.com/spolu/settle/mint/lib/authentication"
+	"github.com/spolu/settle/mint/lib/plan"
 	"github.com/spolu/settle/mint/model"
 	"goji.io/pat"
 )
@@ -47,7 +48,7 @@ type SettleTransaction struct {
 
 	// State
 	Tx   *model.Transaction
-	Plan *TxPlan
+	Plan *plan.TxPlan
 }
 
 // NewSettleTransaction constructs and initialiezes the endpoint.
@@ -167,7 +168,7 @@ func (e *SettleTransaction) ExecuteCanonical(
 		))
 	}
 
-	plan, err := ComputePlan(ctx, e.Client, e.Tx)
+	plan, err := plan.Compute(ctx, e.Client, e.Tx)
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 			402, "settlement_failed",
@@ -178,8 +179,8 @@ func (e *SettleTransaction) ExecuteCanonical(
 
 	// Settle the transaction definitely before we reveal the secret (even if
 	// it eventually fails).
-	tx.Status = mint.TxStSettled
-	err = tx.Save(ctx)
+	e.Tx.Status = mint.TxStSettled
+	err = e.Tx.Save(ctx)
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
 	}
@@ -189,18 +190,20 @@ func (e *SettleTransaction) ExecuteCanonical(
 	// At the canonical mint the settlemetn propagation starts from a virtual
 	// Hop which is the length of the plan hops plus one.
 	e.Hop = int8(len(e.Plan.Hops))
-	e.Secret = *tx.Secret
+	e.Secret = *e.Tx.Secret
 
 	err = e.Propagate(ctx)
 	if err != nil {
-
-		// TODO(stan): async propagate in case of synchronous error
-
-		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
-			402, "settlement_failed",
-			"The transaction failed to settle on required mints: %s.",
-			e.ID,
-		))
+		// If propagation failed we log it and trigger an asyncrhonous one.
+		mint.Logf(ctx,
+			"Settlement propagation failed: transaction=%s hop=%d error=%s",
+			e.ID, e.Hop, err.Error())
+		err = async.Queue(ctx,
+			task.NewPropagateSettlement(ctx,
+				time.Now(), fmt.Sprintf("%s:%d", e.ID, e.Hop)))
+		if err != nil {
+			return nil, nil, errors.Trace(err) // 500
+		}
 	}
 
 	ctx = db.Begin(oCtx, "mint")
@@ -208,18 +211,16 @@ func (e *SettleTransaction) ExecuteCanonical(
 
 	// Reload the tranasction post propagation.
 	tx, err = model.LoadTransactionByID(ctx, e.ID)
-	if err != nil {
+	if err != nil || tx == nil {
 		return nil, nil, errors.Trace(err) // 500
-	} else if tx == nil {
-		return nil, nil, errors.Newf(
-			"Failed to retrieve reserved transaction: %s", e.ID) // 500
 	}
+	e.Tx = tx
 
-	switch tx.Status {
+	switch e.Tx.Status {
 	case mint.TxStSettled:
 	default:
 		return nil, nil, errors.Newf(
-			"Unexpected transaction status %s: %s", tx.Status, e.ID) // 500
+			"Unexpected transaction status %s: %s", e.Tx.Status, e.ID) // 500
 	}
 
 	ops, err := model.LoadCanonicalOperationsByTransaction(ctx, e.ID)
@@ -247,48 +248,22 @@ func (e *SettleTransaction) ExecuteCanonical(
 func (e *SettleTransaction) ExecutePropagated(
 	ctx context.Context,
 ) (*int, *svc.Resp, error) {
-	ctx = db.Begin(ctx, "mint")
+	oCtx := ctx
+
+	ctx = db.Begin(oCtx, "mint")
 	defer db.LoggedRollback(ctx)
 
 	tx, err := model.LoadTransactionByID(ctx, e.ID)
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
-	}
-	if tx != nil {
-		e.Tx = tx
-	} else {
-		tx, err := model.LoadPropagatedTransactionByOwnerToken(ctx,
-			e.Owner, e.Token)
-		if err != nil {
-			return nil, nil, errors.Trace(err) // 500
-		} else if tx == nil {
-			return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-				404, "transaction_not_found",
-				"The transaction you are trying to settle does not "+
-					"exist: %s.", e.ID,
-			))
-		}
-		e.Tx = tx
-	}
-
-	// TODO(stan): Retrieve transaction at next hop and cancel if it was
-	// canceled.
-
-	// Transaction can be either reserved or settled.
-	switch e.Tx.Status {
-	case mint.TxStCanceled:
+	} else if tx == nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-			402, "settlement_failed",
-			"The transaction you are trying to settle is canceled: %s.",
-			e.ID,
-		))
-	case mint.TxStPending:
-		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-			402, "settlement_failed",
-			"The transaction you are trying to settle is pending: %s ",
+			404, "transaction_not_found",
+			"The transaction you are trying to settle does not exist: %s.",
 			e.ID,
 		))
 	}
+	e.Tx = tx
 
 	h, err := scrypt.Key([]byte(e.Secret), []byte(e.Tx.Token), 16384, 8, 1, 64)
 	if err != nil {
@@ -302,7 +277,7 @@ func (e *SettleTransaction) ExecutePropagated(
 		))
 	}
 
-	plan, err := ComputePlan(ctx, e.Client, e.Tx)
+	plan, err := plan.Compute(ctx, e.Client, e.Tx)
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 			402, "settlement_failed",
@@ -320,6 +295,49 @@ func (e *SettleTransaction) ExecutePropagated(
 		))
 	}
 
+	// Check for potential opportunity to cancel before settling.
+	if e.CheckShouldCancel(ctx) {
+		// Commit the transaction while we cancel.
+		db.Commit(ctx)
+
+		// Attempt to trigger a cancelation locally as we know it should
+		// cancel. If we fail, just continue as we were.
+		_, err := e.Client.CancelTransaction(ctx,
+			e.ID, e.Hop, mint.GetHost(ctx))
+		if err != nil {
+			mint.Logf(ctx,
+				"Opportunistic cancellation failed: transaction=%s hop=%d error=%s",
+				e.ID, e.Hop, err.Error())
+		}
+
+		// Reopen a DB transaction and reload the transaction, hopefully
+		// updated.
+		ctx = db.Begin(oCtx, "mint")
+		defer db.LoggedRollback(ctx)
+
+		tx, err = model.LoadTransactionByID(ctx, e.ID)
+		if err != nil || tx == nil {
+			return nil, nil, errors.Trace(err) // 500
+		}
+		e.Tx = tx
+	}
+
+	// Transaction can be either reserved or settled.
+	switch e.Tx.Status {
+	case mint.TxStCanceled:
+		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
+			402, "settlement_failed",
+			"The transaction you are trying to settle is canceled: %s.",
+			e.ID,
+		))
+	case mint.TxStPending:
+		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
+			402, "settlement_failed",
+			"The transaction you are trying to settle is pending: %s ",
+			e.ID,
+		))
+	}
+
 	// Settle will idempotently (at specified hop) settle the
 	// transaction (generally called on highest hop first). Subsequent calls (on
 	// same hop will be no-ops).
@@ -332,9 +350,10 @@ func (e *SettleTransaction) ExecutePropagated(
 	}
 
 	// Mark the transaction as settled (if there's a loop we'll call settle on
-	// the other hop even if marked as settled).
-	tx.Status = mint.TxStSettled
-	err = tx.Save(ctx)
+	// the other hop even if marked as settled) and store the secret.
+	e.Tx.Status = mint.TxStSettled
+	e.Tx.Secret = &e.Secret
+	err = e.Tx.Save(ctx)
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
 	}
@@ -354,15 +373,16 @@ func (e *SettleTransaction) ExecutePropagated(
 
 	err = e.Propagate(ctx)
 	if err != nil {
-
-		// TODO(stan): async propagate in case of synchronous error instead of
-		// erroring.
-
-		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
-			402, "settlement_failed",
-			"The transaction failed to settle on required mints: %s.",
-			e.ID,
-		))
+		// If propagation failed we log it and trigger an asyncrhonous one.
+		mint.Logf(ctx,
+			"Settlement propagation failed: transaction=%s hop=%d error=%s",
+			e.ID, e.Hop, err.Error())
+		err = async.Queue(ctx,
+			task.NewPropagateSettlement(ctx,
+				time.Now(), fmt.Sprintf("%s:%d", e.ID, e.Hop)))
+		if err != nil {
+			return nil, nil, errors.Trace(err) // 500
+		}
 	}
 
 	return ptr.Int(http.StatusOK), &svc.Resp{
@@ -531,4 +551,44 @@ func (e *SettleTransaction) Propagate(
 	}
 
 	return nil
+}
+
+// CheckShouldCancel checks whether the next node on the offer path has
+// canceled. If so, no need to settle, we can cancel instead.
+func (e *SettleTransaction) CheckShouldCancel(
+	ctx context.Context,
+) bool {
+	// If we're the recipient we should not cancel unless instructed.
+	if e.Hop == int8(len(e.Plan.Hops)-1) {
+		return false
+	}
+
+	txn, err := e.Client.RetrieveTransaction(ctx,
+		e.ID, &e.Plan.Hops[e.Hop+1].Mint)
+	if err != nil {
+		switch err := errors.Cause(err).(type) {
+		case mint.ErrMintClient:
+			// If we get a legit 404 transaction_not_found from the mint, it
+			// indicates that the transaction never propagated there or the
+			// mint failed to persist it, so it's safe to cancel.
+			if err.ErrCode == "transaction_not_found" {
+				return true
+			}
+		default:
+			return false
+		}
+	}
+
+	operation := (*mint.OperationResource)(nil)
+	for _, op := range txn.Operations {
+		op := op
+		if op.TransactionHop != nil && *op.TransactionHop == e.Hop+1 {
+			operation = &op
+		}
+	}
+	if operation != nil && operation.Status == mint.TxStCanceled {
+		return true
+	}
+
+	return false
 }
