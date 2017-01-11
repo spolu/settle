@@ -110,10 +110,15 @@ func NewAsync(
 			return nil, errors.Trace(
 				errors.Newf("Unregistered task name: %s", m.Name))
 		}
-		deadlines = append(deadlines, Deadline{
+
+		d := Deadline{
 			Task:  generator(ctx, m.Created, m.Subject),
 			Model: m,
-		})
+		}
+		deadlines = append(deadlines, d)
+		mint.Logf(ctx, "Retrieved task: "+
+			"name=%s subject=%s retry=%d deadline=%q",
+			d.Task.Name(), d.Task.Subject(), d.Model.Retry, d.Deadline())
 	}
 
 	a.Pending = deadlines
@@ -135,17 +140,24 @@ func (a *Async) schedule(
 		return
 	}
 	d := a.Pending[len(a.Pending)-1]
-	if d.Deadline().After(time.Now()) {
+	if d.Deadline().Before(time.Now()) {
 		select {
 		case a.Scheduled <- d:
 			a.Pending = a.Pending[:len(a.Pending)-1]
 
 			mint.Logf(ctx, "Scheduled task: "+
-				"name=%s subject=%s retry=%d deadline=%q",
-				d.Task.Name(), d.Task.Subject(), d.Model.Retry, d.Deadline())
+				"name=%s subject=%s retry=%d deadline=%s",
+				d.Task.Name(), d.Task.Subject(), d.Model.Retry,
+				d.Deadline().String())
 		default:
 		}
+	} else {
+		mint.Logf(ctx, "Scheduler next task: "+
+			"name=%s subject=%s retry=%d deadline=%s duration=%s",
+			d.Task.Name(), d.Task.Subject(), d.Model.Retry,
+			d.Deadline().String(), d.Deadline().Sub(time.Now()).String())
 	}
+
 }
 
 // Queue queues a new task by adding it to the list of pending tasks and
@@ -173,6 +185,18 @@ func (a *Async) Queue(
 	})
 
 	return nil
+}
+
+// LockAndSchedule locks and schedule a task if possible
+func (a *Async) LockAndSchedule(
+	ctx context.Context,
+) {
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
+
+	sort.Sort(a.Pending)
+
+	a.schedule(ctx)
 }
 
 // AppendAndSchedule appends a deadline to the list of pending deadlines while
@@ -238,13 +262,26 @@ func (a *Async) RunOne(
 	db.Commit(ctx)
 
 	if d.Model.Status == mint.TkStPending {
-		a.AppendAndSchedule(ctx, d)
+		go func() {
+			a.AppendAndSchedule(ctx, d)
+		}()
+	} else {
+		go func() {
+			time.Sleep(100 * time.Millisecond)
+			a.LockAndSchedule(a.Ctx)
+		}()
 	}
 }
 
 // Run should be called from a go routine to execute task as a worker. Multiple
 // worker can be run concurrently.
 func (a *Async) Run() {
+	go func() {
+		for {
+			time.Sleep(10 * time.Second)
+			a.LockAndSchedule(a.Ctx)
+		}
+	}()
 	for d := range a.Scheduled {
 		a.RunOne(d)
 	}
