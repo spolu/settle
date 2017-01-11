@@ -1,5 +1,3 @@
-// OWNER: stan
-
 package plan
 
 import (

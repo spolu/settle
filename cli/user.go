@@ -1,5 +1,3 @@
-// OWNER stan
-
 package cli
 
 import (
@@ -106,7 +104,7 @@ func Login(
 		Password: password,
 	}
 
-	// TOOD(stan): check credentials
+	// TOOD(spolu): check credentials
 
 	path, err := CredentialsPath(ctx)
 	if err != nil {
