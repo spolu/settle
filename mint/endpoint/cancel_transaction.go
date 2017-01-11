@@ -139,14 +139,14 @@ func (e *CancelTransaction) ExecuteAuthenticated(
 		))
 	}
 
-	plan, err := plan.Compute(ctx, e.Client, e.Tx)
+	pl, err := plan.Compute(ctx, e.Client, e.Tx, false)
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 			402, "cancellation_failed",
 			"The plan computation for the transaction failed: %s", e.ID,
 		))
 	}
-	e.Plan = plan
+	e.Plan = pl
 
 	minHop, maxHop, err := e.Plan.MinMaxHop(ctx)
 	if err != nil {
@@ -175,9 +175,8 @@ func (e *CancelTransaction) ExecuteAuthenticated(
 	// Check cancelation can be performed (either we're the last node, or the
 	// node after us has already canceled the transaction, or the node after us
 	// does not know about the transaction).
-	err = e.CheckCanCancel(ctx)
-	if err != nil {
-		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
+	if !e.Plan.CheckCanCancel(ctx, e.Client, e.Hop) {
+		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
 			402, "cancellation_failed",
 			"This transaction has not been cancelled by the next node on the "+
 				"transaction plan: %s",
@@ -229,7 +228,7 @@ func (e *CancelTransaction) ExecuteAuthenticated(
 			e.ID, e.Hop, err.Error())
 		err = async.Queue(ctx,
 			task.NewPropagateCancellation(ctx,
-				time.Now(), fmt.Sprintf("%s:%d", e.ID, e.Hop)))
+				time.Now(), fmt.Sprintf("%s|%d", e.ID, e.Hop)))
 		if err != nil {
 			return nil, nil, errors.Trace(err) // 500
 		}
@@ -272,14 +271,14 @@ func (e *CancelTransaction) ExecutePropagated(
 		))
 	}
 
-	plan, err := plan.Compute(ctx, e.Client, e.Tx)
+	pl, err := plan.Compute(ctx, e.Client, e.Tx, false)
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 			402, "settlement_failed",
 			"The plan computation for the transaction failed: %s", e.ID,
 		))
 	}
-	e.Plan = plan
+	e.Plan = pl
 
 	minHop, _, err := e.Plan.MinMaxHop(ctx)
 	if err != nil {
@@ -301,9 +300,8 @@ func (e *CancelTransaction) ExecutePropagated(
 	// Check cancelation can be performed (either we're the last node, or the
 	// node after us has already canceled the transaction, or the node after us
 	// does not know about the transaction).
-	err = e.CheckCanCancel(ctx)
-	if err != nil {
-		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
+	if !e.Plan.CheckCanCancel(ctx, e.Client, e.Hop) {
+		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
 			402, "cancellation_failed",
 			"This transaction has not been cancelled by the next node on the "+
 				"transaction plan: %s",
@@ -356,7 +354,7 @@ func (e *CancelTransaction) ExecutePropagated(
 			e.ID, e.Hop, err.Error())
 		err = async.Queue(ctx,
 			task.NewPropagateCancellation(ctx,
-				time.Now(), fmt.Sprintf("%s:%d", e.ID, e.Hop)))
+				time.Now(), fmt.Sprintf("%s|%d", e.ID, e.Hop)))
 		if err != nil {
 			return nil, nil, errors.Trace(err) // 500
 		}
@@ -557,57 +555,6 @@ func (e *CancelTransaction) Propagate(
 		if err != nil {
 			return errors.Trace(err)
 		}
-	}
-
-	return nil
-}
-
-// CheckCanCancel checks that this node is authorized to cancel the transaction
-// (this is the node with higher hop or the node above it has already canceled
-// the transaction).
-func (e *CancelTransaction) CheckCanCancel(
-	ctx context.Context,
-) error {
-	if e.Hop == int8(len(e.Plan.Hops)-1) {
-		return nil
-	}
-
-	txn, err := e.Client.RetrieveTransaction(ctx,
-		e.ID, &e.Plan.Hops[e.Hop+1].Mint)
-	if err != nil {
-		switch err := errors.Cause(err).(type) {
-		case mint.ErrMintClient:
-			// If we get a legit 404 transaction_not_found from the mint, it
-			// indicates that the transaction never propagated there or the
-			// mint failed to persist it, so it's safe to cancel.
-			if err.ErrCode == "transaction_not_found" {
-				return nil
-			}
-		default:
-			return errors.Trace(err)
-		}
-	}
-
-	operation := (*mint.OperationResource)(nil)
-	for _, op := range txn.Operations {
-		op := op
-		if op.TransactionHop != nil && *op.TransactionHop == e.Hop+1 {
-			operation = &op
-		}
-	}
-	if operation != nil && operation.Status != mint.TxStCanceled {
-		return errors.Newf("Mint at next hop has not canceled the transaction")
-	}
-
-	crossing := (*mint.CrossingResource)(nil)
-	for _, cr := range txn.Crossings {
-		cr := cr
-		if cr.TransactionHop == e.Hop+1 {
-			crossing = &cr
-		}
-	}
-	if crossing != nil && crossing.Status != mint.TxStCanceled {
-		return errors.Newf("Mint at next hop has not canceled the transaction")
 	}
 
 	return nil

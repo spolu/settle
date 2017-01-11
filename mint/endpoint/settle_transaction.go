@@ -168,14 +168,15 @@ func (e *SettleTransaction) ExecuteCanonical(
 		))
 	}
 
-	plan, err := plan.Compute(ctx, e.Client, e.Tx)
+	// For canonical settlement we can do away with a shallow plan.
+	pl, err := plan.Compute(ctx, e.Client, e.Tx, true)
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 			402, "settlement_failed",
 			"The plan computation for the transaction failed: %s", e.ID,
 		))
 	}
-	e.Plan = plan
+	e.Plan = pl
 
 	// Settle the transaction definitely before we reveal the secret (even if
 	// it eventually fails).
@@ -187,7 +188,7 @@ func (e *SettleTransaction) ExecuteCanonical(
 
 	db.Commit(ctx)
 
-	// At the canonical mint the settlemetn propagation starts from a virtual
+	// At the canonical mint the settlement propagation starts from a virtual
 	// Hop which is the length of the plan hops plus one.
 	e.Hop = int8(len(e.Plan.Hops))
 	e.Secret = *e.Tx.Secret
@@ -200,7 +201,7 @@ func (e *SettleTransaction) ExecuteCanonical(
 			e.ID, e.Hop, err.Error())
 		err = async.Queue(ctx,
 			task.NewPropagateSettlement(ctx,
-				time.Now(), fmt.Sprintf("%s:%d", e.ID, e.Hop)))
+				time.Now(), fmt.Sprintf("%s|%d", e.ID, e.Hop)))
 		if err != nil {
 			return nil, nil, errors.Trace(err) // 500
 		}
@@ -265,29 +266,17 @@ func (e *SettleTransaction) ExecutePropagated(
 	}
 	e.Tx = tx
 
-	h, err := scrypt.Key([]byte(e.Secret), []byte(e.Tx.Token), 16384, 8, 1, 64)
-	if err != nil {
-		return nil, nil, errors.Trace(err) // 500
-	}
-	if e.Tx.Lock != base64.StdEncoding.EncodeToString(h) {
-		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
-			402, "settlement_failed",
-			"The secret provided does not match the lock value for "+
-				"transaction: %s", e.ID,
-		))
-	}
-
-	plan, err := plan.Compute(ctx, e.Client, e.Tx)
+	// We first compute a shallow plan to check whether we should cancel
+	pl, err := plan.Compute(ctx, e.Client, e.Tx, true)
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 			402, "settlement_failed",
 			"The plan computation for the transaction failed: %s", e.ID,
 		))
 	}
-	e.Plan = plan
 
-	if int(e.Hop) >= len(e.Plan.Hops) ||
-		e.Plan.Hops[e.Hop].Mint != mint.GetHost(ctx) {
+	if int(e.Hop) >= len(pl.Hops) ||
+		pl.Hops[e.Hop].Mint != mint.GetHost(ctx) {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
 			402, "settlement_failed",
 			"The hop provided (%d) does not match the current mint (%s) for "+
@@ -296,7 +285,7 @@ func (e *SettleTransaction) ExecutePropagated(
 	}
 
 	// Check for potential opportunity to cancel before settling.
-	if e.CheckShouldCancel(ctx) {
+	if pl.CheckShouldCancel(ctx, e.Client, e.Hop) {
 		// Commit the transaction while we cancel.
 		db.Commit(ctx)
 
@@ -337,6 +326,28 @@ func (e *SettleTransaction) ExecutePropagated(
 			e.ID,
 		))
 	}
+
+	h, err := scrypt.Key([]byte(e.Secret), []byte(e.Tx.Token), 16384, 8, 1, 64)
+	if err != nil {
+		return nil, nil, errors.Trace(err) // 500
+	}
+	if e.Tx.Lock != base64.StdEncoding.EncodeToString(h) {
+		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
+			402, "settlement_failed",
+			"The secret provided does not match the lock value for "+
+				"transaction: %s", e.ID,
+		))
+	}
+
+	// Compute now the full plan to execute settlement.
+	pl, err = plan.Compute(ctx, e.Client, e.Tx, false)
+	if err != nil {
+		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
+			402, "settlement_failed",
+			"The plan computation for the transaction failed: %s", e.ID,
+		))
+	}
+	e.Plan = pl
 
 	// Settle will idempotently (at specified hop) settle the
 	// transaction (generally called on highest hop first). Subsequent calls (on
@@ -379,7 +390,7 @@ func (e *SettleTransaction) ExecutePropagated(
 			e.ID, e.Hop, err.Error())
 		err = async.Queue(ctx,
 			task.NewPropagateSettlement(ctx,
-				time.Now(), fmt.Sprintf("%s:%d", e.ID, e.Hop)))
+				time.Now(), fmt.Sprintf("%s|%d", e.ID, e.Hop)))
 		if err != nil {
 			return nil, nil, errors.Trace(err) // 500
 		}
@@ -487,7 +498,7 @@ func (e *SettleTransaction) Settle(
 				op.Source, op.Destination, (*big.Int)(&op.Amount).String(),
 				op.Status, *op.Transaction)
 
-			opID := fmt.Sprintf("%s[%s]", op.Owner, op.Token)
+			opID := op.ID()
 			err = async.Queue(ctx,
 				task.NewPropagateOperation(ctx, time.Now(), opID))
 			if err != nil {
@@ -551,44 +562,4 @@ func (e *SettleTransaction) Propagate(
 	}
 
 	return nil
-}
-
-// CheckShouldCancel checks whether the next node on the offer path has
-// canceled. If so, no need to settle, we can cancel instead.
-func (e *SettleTransaction) CheckShouldCancel(
-	ctx context.Context,
-) bool {
-	// If we're the recipient we should not cancel unless instructed.
-	if e.Hop == int8(len(e.Plan.Hops)-1) {
-		return false
-	}
-
-	txn, err := e.Client.RetrieveTransaction(ctx,
-		e.ID, &e.Plan.Hops[e.Hop+1].Mint)
-	if err != nil {
-		switch err := errors.Cause(err).(type) {
-		case mint.ErrMintClient:
-			// If we get a legit 404 transaction_not_found from the mint, it
-			// indicates that the transaction never propagated there or the
-			// mint failed to persist it, so it's safe to cancel.
-			if err.ErrCode == "transaction_not_found" {
-				return true
-			}
-		default:
-			return false
-		}
-	}
-
-	operation := (*mint.OperationResource)(nil)
-	for _, op := range txn.Operations {
-		op := op
-		if op.TransactionHop != nil && *op.TransactionHop == e.Hop+1 {
-			operation = &op
-		}
-	}
-	if operation != nil && operation.Status == mint.TxStCanceled {
-		return true
-	}
-
-	return false
 }

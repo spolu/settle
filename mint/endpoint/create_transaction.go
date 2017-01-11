@@ -179,16 +179,16 @@ func (e *CreateTransaction) ExecuteCanonical(
 		return nil, nil, errors.Trace(err) // 500
 	}
 	e.Tx = tx
-	e.ID = fmt.Sprintf("%s[%s]", e.Tx.Owner, e.Tx.Token)
+	e.ID = e.Tx.ID()
 
-	plan, err := plan.Compute(ctx, e.Client, e.Tx)
+	pl, err := plan.Compute(ctx, e.Client, e.Tx, false)
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 			402, "transaction_failed",
 			"The plan computation for the transaction failed: %s", e.ID,
 		))
 	}
-	e.Plan = plan
+	e.Plan = pl
 
 	// Commit the transaction in pending state.
 	db.Commit(ctx)
@@ -335,14 +335,14 @@ func (e *CreateTransaction) ExecutePropagated(
 		e.Tx = tx
 	}
 
-	plan, err := plan.Compute(ctx, e.Client, e.Tx)
+	pl, err := plan.Compute(ctx, e.Client, e.Tx, false)
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
 			402, "transaction_failed",
 			"The plan computation for the transaction failed: %s", e.ID,
 		))
 	}
-	e.Plan = plan
+	e.Plan = pl
 
 	if int(e.Hop) >= len(e.Plan.Hops) ||
 		e.Plan.Hops[e.Hop].Mint != mint.GetHost(ctx) {

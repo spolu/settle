@@ -39,7 +39,7 @@ func NewPropagateSettlement(
 	created time.Time,
 	subject string,
 ) async.Task {
-	ss := strings.Split(subject, ":")
+	ss := strings.Split(subject, "|")
 	if len(ss) != 2 {
 		panic(errors.Newf("Invalid subject: %s", subject))
 	}
@@ -115,7 +115,8 @@ func (t *PropagateSettlement) Execute(
 			errors.Newf("Transation %s missing secret", tx.ID))
 	}
 
-	plan, err := plan.Compute(ctx, client, tx)
+	// For propagation we can do away with a shallow plan.
+	plan, err := plan.Compute(ctx, client, tx, true)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -125,10 +126,10 @@ func (t *PropagateSettlement) Execute(
 
 		mint.Logf(ctx,
 			"Propagating settlement: transaction=%s hop=%d mint=%s",
-			t.id, t.hop, m)
+			tx.ID(), t.hop, m)
 
 		hop := t.hop - 1
-		_, err := client.SettleTransaction(ctx, t.id, &hop, tx.Secret, &m)
+		_, err := client.SettleTransaction(ctx, tx.ID(), &hop, tx.Secret, &m)
 		if err != nil {
 			return errors.Trace(err)
 		}

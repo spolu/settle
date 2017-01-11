@@ -99,6 +99,11 @@ VALUES
 	return &crossing, nil
 }
 
+// ID returns the ID of the object.
+func (c *Crossing) ID() string {
+	return fmt.Sprintf("%s[%s]", c.Owner, c.Token)
+}
+
 // Save updates the object database representation with the in-memory values.
 func (c *Crossing) Save(
 	ctx context.Context,

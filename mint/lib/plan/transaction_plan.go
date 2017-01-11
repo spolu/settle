@@ -61,6 +61,7 @@ func Compute(
 	ctx context.Context,
 	client *mint.Client,
 	tx *model.Transaction,
+	shallow bool,
 ) (*TxPlan, error) {
 	g, ctx := errgroup.WithContext(ctx)
 	offers := make([]mint.OfferResource, len(tx.Path))
@@ -68,21 +69,34 @@ func Compute(
 	for i, id := range tx.Path {
 		i, id := i, id
 		g.Go(func() error {
-			offer, err := client.RetrieveOffer(ctx, id)
-			if err != nil {
-				return errors.Trace(err)
-			}
+			if !shallow {
+				offer, err := client.RetrieveOffer(ctx, id)
+				if err != nil {
+					return errors.Trace(err)
+				}
 
-			// Validate that the offer owner owns the base asset (enforced by
-			// offer creation but good defense in depth to validate here).
-			pair, err := mint.AssetResourcesFromPair(ctx, offer.Pair)
-			if offer.Owner != pair[0].Owner {
-				return errors.Newf(
-					"Offer/BaseAsset owner mismatch at offer %s: %s expected "+
-						"%s.", offer.ID, pair[0].Owner, offer.Owner)
-			}
+				// Validate that the offer owner owns the base asset (enforced by
+				// offer creation but good defense in depth to validate here).
+				pair, err := mint.AssetResourcesFromPair(ctx, offer.Pair)
+				if offer.Owner != pair[0].Owner {
+					return errors.Newf(
+						"Offer/BaseAsset owner mismatch at offer %s: %s expected "+
+							"%s.", offer.ID, pair[0].Owner, offer.Owner)
+				}
 
-			offers[i] = *offer
+				offers[i] = *offer
+			} else {
+				// If we computing a shallow transaction plan, just store
+				// minimal representation of offers.
+				owner, id, err := mint.NormalizedOwnerAndTokenFromID(ctx, id)
+				if err != nil {
+					return errors.Trace(err)
+				}
+				offers[i] = mint.OfferResource{
+					ID:    id,
+					Owner: owner,
+				}
+			}
 			return nil
 		})
 	}
@@ -98,20 +112,13 @@ func Compute(
 
 	plan := TxPlan{
 		Hops:        []*TxHop{},
-		Transaction: fmt.Sprintf("%s[%s]", tx.Owner, tx.Token),
+		Transaction: tx.ID(),
 	}
 
 	// FIRST PASS: consists in computing the actions for all hops, leaving the
 	// amounts empty.
 
 	bAsset, err := mint.AssetResourceFromName(ctx, tx.BaseAsset)
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-
-	// Generate first hop which has one operation on the mint of the base
-	// asset.
-	_, host, err := mint.UsernameAndMintHostFromAddress(ctx, bAsset.Owner)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -131,64 +138,87 @@ func Compute(
 		})
 	}
 
-	plan.Hops = append(plan.Hops, &TxHop{
+	// Generate first hop which has one operation on the mint of the base
+	// asset.
+	_, host, err := mint.UsernameAndMintHostFromAddress(ctx, bAsset.Owner)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	h := TxHop{
 		Mint: host,
-		OpAction: &TxAction{
+	}
+	if !shallow {
+		h.OpAction = &TxAction{
 			Owner:                bAsset.Owner,
 			Type:                 TxActTpOperation,
 			OperationAsset:       &bAsset.Name,
 			Amount:               nil, // computed on second pass
 			OperationDestination: nil, // computed by next offer
 			OperationSource:      &tx.Owner,
-		},
-	})
+		}
+	}
+	plan.Hops = append(plan.Hops, &h)
 
 	// Generate actions from path of offers.
 	for i, offer := range offers {
 		hop := i + 1 + offset
 		offer := offer
-		pair, err := mint.AssetResourcesFromPair(ctx, offer.Pair)
-		if err != nil {
-			return nil, errors.Trace(err)
-		}
-		// Compare the previous operation asset with the offer quote asset.
-		if pair[1].Name != *plan.Hops[hop-1].OpAction.OperationAsset {
-			return nil, errors.Trace(errors.Newf(
-				"Operation/Offer asset mismatch at offer %s: %s expected %s.",
-				offer.ID, pair[1].Name,
-				*plan.Hops[hop-1].OpAction.OperationAsset))
-		}
-		// Fill the previous operation destination.
-		plan.Hops[hop-1].OpAction.OperationDestination = &offer.Owner
-
-		// Compute the hop for the current offer
 		_, host, err := mint.UsernameAndMintHostFromAddress(ctx, offer.Owner)
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
-		if offer.Owner != pair[0].Owner {
-			return nil, errors.Trace(errors.Newf(
-				"Offer owner (%s) is not the offer base asset owner (%s).",
-				offer.Owner, pair[0].Owner))
+
+		if !shallow {
+			pair, err := mint.AssetResourcesFromPair(ctx, offer.Pair)
+			if err != nil {
+				return nil, errors.Trace(err)
+			}
+			// Compare the previous operation asset with the offer quote asset.
+			if pair[1].Name != *plan.Hops[hop-1].OpAction.OperationAsset {
+				return nil, errors.Trace(errors.Newf(
+					"Operation/Offer asset mismatch at offer %s: %s expected %s.",
+					offer.ID, pair[1].Name,
+					*plan.Hops[hop-1].OpAction.OperationAsset))
+			}
+			// Fill the previous operation destination.
+			plan.Hops[hop-1].OpAction.OperationDestination = &offer.Owner
+
+			// Compute the hop for the current offer
+			if offer.Owner != pair[0].Owner {
+				return nil, errors.Trace(errors.Newf(
+					"Offer owner (%s) is not the offer base asset owner (%s).",
+					offer.Owner, pair[0].Owner))
+			}
+			plan.Hops = append(plan.Hops, &TxHop{
+				Mint: host,
+				CrAction: &TxAction{
+					Owner:         offer.Owner,
+					Type:          TxActTpCrossing,
+					CrossingOffer: &offer.ID,
+					Amount:        nil, // computed on second pass
+				},
+				OpAction: &TxAction{
+					Owner:                pair[0].Owner,
+					Type:                 TxActTpOperation,
+					OperationAsset:       &pair[0].Name,
+					Amount:               nil,            // computed on second pass
+					OperationDestination: nil,            // computed by next offer
+					OperationSource:      &pair[0].Owner, // issuing operation
+				},
+			})
+		} else {
+			plan.Hops = append(plan.Hops, &TxHop{
+				Mint: host,
+			})
 		}
-		plan.Hops = append(plan.Hops, &TxHop{
-			Mint: host,
-			CrAction: &TxAction{
-				Owner:         offer.Owner,
-				Type:          TxActTpCrossing,
-				CrossingOffer: &offer.ID,
-				Amount:        nil, // computed on second pass
-			},
-			OpAction: &TxAction{
-				Owner:                pair[0].Owner,
-				Type:                 TxActTpOperation,
-				OperationAsset:       &pair[0].Name,
-				Amount:               nil,            // computed on second pass
-				OperationDestination: nil,            // computed by next offer
-				OperationSource:      &pair[0].Owner, // issuing operation
-			},
-		})
 	}
+
+	// If we're computing a shallow plan, we're good to return.
+	if shallow {
+		return &plan, nil
+	}
+
 	// Compare the last operation asset to the transaction quote asset.
 	if tx.QuoteAsset != *plan.Hops[len(plan.Hops)-1].OpAction.OperationAsset {
 		return nil, errors.Trace(errors.Newf(
@@ -337,7 +367,7 @@ func (p *TxPlan) Check(
 }
 
 // MinMaxHop returns the lowest and highest hops for the local mint in the
-// transaction plan.
+// transaction plan. Works on a shallow plan.
 func (p *TxPlan) MinMaxHop(
 	ctx context.Context,
 ) (*int8, *int8, error) {
@@ -356,6 +386,102 @@ func (p *TxPlan) MinMaxHop(
 			"This mint is not part of the transction plan.")
 	}
 	return &min, &max, nil
+}
+
+// CheckShouldCancel checks whether the next node on the offer path has
+// canceled. If so, no need to settle, we can cancel instead. Works on a
+// shallow plan.
+func (p *TxPlan) CheckShouldCancel(
+	ctx context.Context,
+	client *mint.Client,
+	hop int8,
+) bool {
+	// If we're the recipient we should not cancel unless instructed.
+	if hop == int8(len(p.Hops)-1) {
+		return false
+	}
+
+	txn, err := client.RetrieveTransaction(ctx,
+		p.Transaction, &p.Hops[hop+1].Mint)
+	if err != nil {
+		switch err := errors.Cause(err).(type) {
+		case mint.ErrMintClient:
+			// If we get a legit 404 transaction_not_found from the mint, it
+			// indicates that the transaction never propagated there or the
+			// mint failed to persist it, so it's safe to cancel.
+			if err.ErrCode == "transaction_not_found" {
+				return true
+			}
+		default:
+			return false
+		}
+	}
+
+	operation := (*mint.OperationResource)(nil)
+	for _, op := range txn.Operations {
+		op := op
+		if op.TransactionHop != nil && *op.TransactionHop == hop+1 {
+			operation = &op
+		}
+	}
+	if operation != nil && operation.Status == mint.TxStCanceled {
+		return true
+	}
+
+	return false
+}
+
+// CheckCanCancel checks that this node is authorized to cancel the transaction
+// (this is the node with higher hop or the node above it has already canceled
+// the transaction). Works on a shallow plan.
+func (p *TxPlan) CheckCanCancel(
+	ctx context.Context,
+	client *mint.Client,
+	hop int8,
+) bool {
+	if hop == int8(len(p.Hops)-1) {
+		return true
+	}
+
+	txn, err := client.RetrieveTransaction(ctx,
+		p.Transaction, &p.Hops[hop+1].Mint)
+	if err != nil {
+		switch err := errors.Cause(err).(type) {
+		case mint.ErrMintClient:
+			// If we get a legit 404 transaction_not_found from the mint, it
+			// indicates that the transaction never propagated there or the
+			// mint failed to persist it, so it's safe to cancel.
+			if err.ErrCode == "transaction_not_found" {
+				return true
+			}
+		default:
+			return false
+		}
+	}
+
+	operation := (*mint.OperationResource)(nil)
+	for _, op := range txn.Operations {
+		op := op
+		if op.TransactionHop != nil && *op.TransactionHop == hop+1 {
+			operation = &op
+		}
+	}
+	if operation != nil && operation.Status != mint.TxStCanceled {
+		return false
+	}
+
+	crossing := (*mint.CrossingResource)(nil)
+	for _, cr := range txn.Crossings {
+		cr := cr
+		if cr.TransactionHop == hop+1 {
+			crossing = &cr
+		}
+	}
+	if crossing != nil && crossing.Status != mint.TxStCanceled {
+		return false
+	}
+
+	return true
 }
 
 // PriceRegexp is used to validate and parse a transaction price.

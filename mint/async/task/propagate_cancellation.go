@@ -39,7 +39,7 @@ func NewPropagateCancellation(
 	created time.Time,
 	subject string,
 ) async.Task {
-	ss := strings.Split(subject, ":")
+	ss := strings.Split(subject, "|")
 	if len(ss) != 2 {
 		panic(errors.Newf("Invalid subject: %s", subject))
 	}
@@ -106,7 +106,8 @@ func (t *PropagateCancellation) Execute(
 
 	db.Commit(ctx)
 
-	plan, err := plan.Compute(ctx, client, tx)
+	// For propagation we can do away with a shallow plan.
+	plan, err := plan.Compute(ctx, client, tx, true)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -116,9 +117,9 @@ func (t *PropagateCancellation) Execute(
 
 		mint.Logf(ctx,
 			"Propagating cancellation: transaction=%s hop=%d mint=%s",
-			t.id, t.hop, m)
+			tx.ID(), t.hop, m)
 
-		_, err := client.CancelTransaction(ctx, t.id, t.hop-1, m)
+		_, err := client.CancelTransaction(ctx, tx.ID(), t.hop-1, m)
 		if err != nil {
 			return errors.Trace(err)
 		}
