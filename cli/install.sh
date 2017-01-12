@@ -4,11 +4,11 @@
 #
 # MAC:
 #   Open the terminal (look for the "Terminal" app) and type:
-#     `curl -L https://settle.network/install | sh && export PATH=$PATH:~/.settle/bin`
+#     `curl -L https://settle.network/install | sh && export PATH=$PATH:~/.settle`
 #
 # LINUX:
 #   Open a terminal and run:
-#     `curl -L https://settle.network/install | sh && export PATH=$PATH:~/.settle/bin`
+#     `curl -L https://settle.network/install | sh && export PATH=$PATH:~/.settle`
 #
 # (This script is largely inspired by the Meteor install script whose license
 #  is at https://github.com/meteor/meteor/blob/devel/LICENSE)
@@ -73,14 +73,13 @@ fi
 
 # If you already have a tropohouse/warehouse, we do a clean install here:
 if [ -e "$HOME/.settle" ]; then
-  echo "> Updating your existing Settle executable."
-  rm -rf "$HOME/.settle/bin"
+  echo "> Deleting your existing Settle executable."
+  rm -rf "$HOME/.settle/settle"
 else
   # Create the .settle directory
   echo "> Creating your local Settle directory $HOME/.settle."
   mkdir -p "$HOME/.settle"
 fi
-mkdir -p "$HOME/.settle/bin"
 
 INSTALL_TMPDIR="$HOME/.settle/tmp"
 BINARY_URL="https://github.com/spolu/settle/releases/download/${RELEASE}/settle.${RELEASE}.${PLATFORM}"
@@ -131,12 +130,12 @@ set -e
 # bomb out if it didn't work, eg no net
 test -e "${BINARY_FILE}"
 chmod +x "${BINARY_FILE}"
-mv "${BINARY_FILE}" "$HOME/.settle/bin"
+mv "${BINARY_FILE}" "$HOME/.settle"
 
 # just double-checking :)
-test -x "$HOME/.settle/bin/settle"
+test -x "$HOME/.settle/settle"
 
-BASHRC_PATH="export PATH=\$PATH:$HOME/.settle/bin"
+BASHRC_PATH="export PATH=\$PATH:$HOME/.settle"
 if ! grep -q "$BASHRC_PATH" "$HOME/.bashrc"; then
   echo "> Adding '$BASHRC_PATH' to your .bashrc file."
   touch "$HOME/.bashrc"
@@ -150,7 +149,7 @@ cleanUp
 echo
 echo "Settle ${RELEASE} has been installed locally (under ~/.settle)."
 echo
-echo "Read the command help: 'settle help'"
+echo "Read the command line help: 'settle help'"
 echo "Register on a mint: 'settle register'"
 echo
 
