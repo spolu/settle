@@ -99,41 +99,18 @@ Edit the HAProxy configuraiton file with:
 
 Here's the configuration file used by *t.settle.network*:
 ```
-global
-        log /dev/log    local0
-        log /dev/log    local1 notice
-        chroot /var/lib/haproxy
-        stats socket /run/haproxy/admin.sock mode 660 level admin
-        stats timeout 30s
-        user haproxy
-        group haproxy
-        daemon
-        ca-base /etc/ssl/certs
-        crt-base /etc/ssl/private
-        ssl-default-bind-ciphers ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+3DES:!aNULL:!MD5:!DSS
-        ssl-default-bind-options no-sslv3
-
-defaults
-        log     global
-        mode    http
-        option  httplog
-        option  dontlognull
-        timeout connect 5000
-        timeout client  50000
-        timeout server  50000
-
 frontend frt-qa-mint
-        bind *:2047
+        bind *:2407
         reqadd X-Forwarded-Proto:\ http
-        acl is_mint hdr(host) -i t.settle.network
+        acl is_mint hdr(host) -i t.settle.network:2407
         use_backend qa-mint if is_mint
 
 backend qa-mint
-        server qa-mint1 127.0.0.1:2047
+        server qa-mint1 127.0.0.1:12407
 ```
 
-QA mints have to listen on port *2407* and we'll be running it locally on the
-same port.
+QA mints have to listen on port *2407* and we'll be running the mint locally on
+port *12407*.
 
 # Running the mint in QA
 
@@ -141,7 +118,7 @@ You're now all set to run the mint. By default the mint will use SQLite3 and
 store the DB file in `~/.mint/mint-qa.db`:
 
 ```
-mint:~$ mint -env=qa -host=t.settle.network -port-2407
+mint:~$ mint -env=qa -host=t.settle.network -port=12407
 ```
 
 # Creating a user for your mint
@@ -178,13 +155,13 @@ As well as the HAProxy configuration for *m.settle.network*:
 
 ```
 frontend frt-prod-mint
-        bind *:2046 ssl crt /etc/ssl/private/m.settle.network.pem
+        bind *:2406 ssl crt /etc/ssl/private/m.settle.network.pem
         reqadd X-Forwarded-Proto:\ https
-        acl is_mint hdr(host) -i m.settle.network
+        acl is_mint hdr(host) -i m.settle.network:2406
         use_backend prod-mint if is_mint
 
 backend prod-mint
-        server mint1 127.0.0.1:2046
+        server mint1 127.0.0.1:12406
 ```
 
 ## Graceful deploys
