@@ -178,10 +178,10 @@ mint:~$ killall -s USR2 mint
 # Conclusion
 
 I hope you managed to setup your mint successfully without too much trouble.
-This guide is definitely quite "raw"!  The source of this post is available
-publicly[0], please don't hesitate to submit pull-requests if you see any way
-to improve it!
+This guide is still definitely quite "raw"!  The source of this post is
+available publicly[0], please don't hesitate to submit pull-requests if you see
+anything to improve!
 
 -stan
 
-[0] https://github.com/spolu/settle/blob/master/site/content/posts/setting-up-a-mint.md
+[0] https://github.com/spolu/settle/blob/master/site/content/posts/guide-setting-up-a-mint.md
