@@ -57,7 +57,7 @@ func (c *Help) Help(
 	out.Valuf("    settle trust von.neumann@ias.edu EUR.2 200\n")
 	out.Normf("\n")
 
-	out.Boldf("  pay <asset> <amount> to <user>\n")
+	out.Boldf("  pay <user> <asset> <amount>\n")
 	out.Normf("    Pay a user.\n")
 	out.Valuf("    settle pay von.neumann@ias.edu GBP.2 20\n")
 	out.Normf("\n")

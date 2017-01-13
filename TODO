@@ -12,7 +12,10 @@
 # preview
 
   [ ] finish cli
+    [ ] confirm trust creation
     [ ] pay command
+  [ ] fix mint
+    [ ] refuse trust to oneself
   [ ] finish site
     [ ] blog post draft
     [ ] documentation

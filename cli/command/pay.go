@@ -1,9 +1,14 @@
 package command
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"math/big"
+	"os"
+	"sort"
+	"strconv"
+	"strings"
 
 	"golang.org/x/sync/errgroup"
 
@@ -31,11 +36,28 @@ type Candidate struct {
 	Amount    big.Int
 }
 
+// Candidates is a slice of Candidate implementing sort.Interface
+type Candidates []Candidate
+
+// Len implenents the sort.Interface
+func (s Candidates) Len() int {
+	return len(s)
+}
+
+// Less implenents the sort.Interface
+func (s Candidates) Less(i, j int) bool {
+	return s[i].Amount.Cmp(&s[j].Amount) < 0
+}
+
+// Swap implenents the sort.Interface
+func (s Candidates) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
 // Pay a user up to a certain amount of a given asset they issued.
 type Pay struct {
-	QuoteAsset  string
-	Amount      big.Int
-	Destination string
+	QuoteAsset string
+	Amount     big.Int
 }
 
 // NewPay constructs and initializes the command.
@@ -65,6 +87,9 @@ func (c *Pay) Help(
 	out.Normf("   - retrieving all the assets you control or own a balance in.\n")
 	out.Normf("   - compute set of assets trusted by the quote asset.\n")
 	out.Normf("   - use these sets to compute a trust path of length 0 or 1.\n")
+	out.Normf("\n")
+	out.Normf("  Currently, only paths of length at most 1 with one base asset are supported\n")
+	out.Normf("  (transactions with longer paths can be created using your mint API directly).\n")
 	out.Normf("\n")
 	out.Normf("Arguments:\n")
 	out.Boldf("  user\n")
@@ -150,8 +175,82 @@ func (c *Pay) Execute(
 			c.QuoteAsset, c.Amount.String()))
 	}
 
-	// Ask confirmation to use.
+	out.Boldf("Candidates:\n")
+	for i, c := range candidates {
+		if i > 9 {
+			break
+		}
+		out.Normf("  (%d) BaseAsset : ", i)
+		out.Valuf("%s\n", c.BaseAsset)
+		out.Normf("      Amount    : ")
+		out.Valuf("%s\n", c.Amount.String())
+		out.Normf("      Path      : ")
+		if len(c.Path) == 0 {
+			out.Normf("(empty)")
+		} else {
+			for j, o := range c.Path {
+				if j > 0 {
+					out.Normf("\n                  ")
+				}
+				out.Valuf("%s", o.Pair)
+				out.Normf(" ")
+				out.Valuf("%s", o.Price)
+			}
+			out.Normf("\n")
+		}
+	}
+
+	reader := bufio.NewReader(os.Stdin)
+
+	out.Normf("Candidate selection [0]: ")
+	choice, _ := reader.ReadString('\n')
+	choice = strings.TrimSpace(choice)
+
+	i := int64(0)
+	if choice != "" {
+		var err error
+		i, err = strconv.ParseInt(choice, 10, 8)
+		if err != nil || i < 0 || i >= int64(len(candidates)) {
+			return errors.Trace(errors.Newf("Invalid choice: %s", choice))
+		}
+	}
+	candidate := candidates[i]
+	_ = candidate
+
+	a, err := mint.AssetResourceFromName(ctx, c.QuoteAsset)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	// Ask confirmation for the transaction.
+	out.Boldf("Proposed transaction:\n")
+	out.Normf("  Destination : ")
+	out.Valuf("%s\n", a.Owner)
+	out.Normf("  Pair        : ")
+	out.Valuf("%s\n", fmt.Sprintf("%s/%s", candidate.BaseAsset, c.QuoteAsset))
+	out.Normf("  Amount      : ")
+	out.Valuf("%s\n", candidate.Amount.String())
+	out.Normf("  Path        : ")
+	if len(candidate.Path) == 0 {
+		out.Normf("(empty)")
+	} else {
+		for j, o := range candidate.Path {
+			if j > 0 {
+				out.Normf("\n                 ")
+			}
+			out.Valuf("%s", o.Pair)
+			out.Normf(" ")
+			out.Valuf("%s", o.Price)
+		}
+		out.Normf("\n")
+	}
+
+	if err := Confirm(ctx, "pay"); err != nil {
+		return errors.Trace(err)
+	}
+
 	// Create the transaction.
+
 	// Settle the transaction.
 	return nil
 }
@@ -160,7 +259,7 @@ func (c *Pay) Execute(
 // asset.
 func (c *Pay) ComputeCandidates(
 	ctx context.Context,
-) ([]Candidate, error) {
+) (Candidates, error) {
 	// Finding a path consists, given the quote asset `q`:
 	// - listing all the assets you control or own a balance in: `cSet`
 	//   - if `q \in cSet`, use that if possible
@@ -196,7 +295,7 @@ func (c *Pay) ComputeCandidates(
 		if b.Asset == c.QuoteAsset && b.Value.Cmp(&c.Amount) >= 0 {
 			// We own enough of the quote asset itself to pay directly with a
 			// path of length 0 and exit early with a unique candidate.
-			return []Candidate{
+			return Candidates{
 				Candidate{
 					[]mint.OfferResource{},
 					c.QuoteAsset,
@@ -213,7 +312,7 @@ func (c *Pay) ComputeCandidates(
 		return nil, errors.Trace(err)
 	}
 
-	candidates := []Candidate{}
+	candidates := Candidates{}
 
 	// Compute length 1 candidates from qSet.
 	for _, o := range qSetOffers {
@@ -252,17 +351,19 @@ func (c *Pay) ComputeCandidates(
 				}
 			}
 			for _, a := range cSetAssets {
-				candidates = append(candidates, Candidate{
-					[]mint.OfferResource{o},
-					a.Name,
-					*amount,
-				})
+				if a.Name == pair[1].Name {
+					candidates = append(candidates, Candidate{
+						[]mint.OfferResource{o},
+						a.Name,
+						*amount,
+					})
+				}
 			}
 		}
 	}
 
-	// Trigger the retrieval of the tSet in parrallel to compute paths of
-	// length 2.
+	// Trigger the retrieval of the tSet (asset that trust the cSet) in
+	// parrallel to compute paths of length 2.
 	// g, ctx = errgroup.WithContext(ctx)
 	//
 	// tSetOffers := make(
@@ -300,6 +401,8 @@ func (c *Pay) ComputeCandidates(
 	// if err := g.Wait(); err != nil {
 	// 	return nil, errors.Trace(err)
 	// }
+
+	sort.Sort(candidates)
 
 	return candidates, nil
 }

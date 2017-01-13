@@ -223,6 +223,18 @@ func (c *Trust) Execute(
 				qA.Name, qA.Owner, qA.Code, qA.Scale))
 	}
 
+	out.Boldf("Proposed trustline:\n")
+	out.Normf("  Pair      : ")
+	out.Valuf("%s\n", fmt.Sprintf("%s/%s", c.BaseAsset, c.QuoteAsset))
+	out.Normf("  Price     : ")
+	out.Valuf("%s\n", c.Price)
+	out.Normf("  Amount    : ")
+	out.Valuf("%s\n", c.Amount.String())
+
+	if err := Confirm(ctx, "trust"); err != nil {
+		return errors.Trace(err)
+	}
+
 	// Create offer.
 	offer, err := CreateOffer(ctx,
 		fmt.Sprintf("%s/%s", c.BaseAsset, c.QuoteAsset),
@@ -233,7 +245,7 @@ func (c *Trust) Execute(
 		return errors.Trace(err)
 	}
 
-	out.Boldf("Trustline:\n")
+	out.Boldf("Trustline created:\n")
 	out.Normf("  ID        : ")
 	out.Valuf("%s\n", offer.ID)
 	out.Normf("  Created   : ")

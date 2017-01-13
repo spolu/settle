@@ -1,12 +1,14 @@
 package command
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
 	"math/big"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/spolu/settle/cli"
@@ -40,6 +42,26 @@ var PublicMints = []MintRegister{
 			env.QA:         "https://qa-register.settle.network/users",
 		},
 	},
+}
+
+// Confirm asks the user for confirmation.
+func Confirm(
+	ctx context.Context,
+	action string,
+) error {
+	reader := bufio.NewReader(os.Stdin)
+
+	out.Normf(
+		"You are about to %s, do you confirm this information is correct? "+
+			"[Y/n]: ",
+		action)
+	confirmation, _ := reader.ReadString('\n')
+	confirmation = strings.TrimSpace(confirmation)
+	if confirmation != "" && confirmation != "Y" {
+		return errors.Trace(errors.Newf("%s aborted by user.", action))
+	}
+
+	return nil
 }
 
 // RegisterUser registers a user on the provded mint register service.
