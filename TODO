@@ -11,8 +11,6 @@
 
 # preview
 
-  [ ] finish cli
-    [ ] pay command
   [ ] fix mint
     [ ] error on offer with same currency
   [ ] finish site
@@ -22,9 +20,9 @@
 
 # cli
 
-  [ ] pay command
   [ ] close (offer) command
   [ ] pay with path of length 2
+  [x] pay command
   [x] check existence of quote asset on trust
   [x] check credentials
   [x] add confirmations to actions (at least register)

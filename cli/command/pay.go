@@ -224,13 +224,15 @@ func (c *Pay) Execute(
 
 	// Ask confirmation for the transaction.
 	out.Boldf("Proposed transaction:\n")
-	out.Normf("  Destination : ")
+	out.Normf("  Destination  : ")
 	out.Valuf("%s\n", a.Owner)
-	out.Normf("  Pair        : ")
+	out.Normf("  Pair         : ")
 	out.Valuf("%s\n", fmt.Sprintf("%s/%s", candidate.BaseAsset, c.QuoteAsset))
-	out.Normf("  Amount      : ")
-	out.Valuf("%s\n", candidate.Amount.String())
-	out.Normf("  Path        : ")
+	out.Normf("  You pay      : ")
+	out.Valuf("%s %s\n", candidate.BaseAsset, candidate.Amount.String())
+	out.Normf("  They receive : ")
+	out.Valuf("%s %s\n", c.QuoteAsset, c.Amount.String())
+	out.Normf("  Path         : ")
 	if len(candidate.Path) == 0 {
 		out.Normf("(empty)")
 	} else {
@@ -249,9 +251,25 @@ func (c *Pay) Execute(
 		return errors.Trace(err)
 	}
 
+	path := []string{}
+	for _, o := range candidate.Path {
+		path = append(path, o.ID)
+	}
+
 	// Create the transaction.
+	tx, err := CreateTransaction(ctx,
+		fmt.Sprintf("%s/%s", candidate.BaseAsset, c.QuoteAsset),
+		c.Amount, a.Owner, path)
+	if err != nil {
+		return errors.Trace(err)
+	}
 
 	// Settle the transaction.
+	tx, err = SettleTransaction(ctx, tx.ID)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
 	return nil
 }
 

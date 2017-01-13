@@ -212,6 +212,98 @@ func CreateOffer(
 	return &offer, nil
 }
 
+// CreateTransaction creates a transaction for the currently authenticated
+// user.
+func CreateTransaction(
+	ctx context.Context,
+	pair string,
+	amount big.Int,
+	destination string,
+	path []string,
+) (*mint.TransactionResource, error) {
+	m, err := cli.MintFromContextCredentials(ctx)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	out.Statf("[Creating transaction] user=%s@%s pair=%s amount=%s "+
+		"destination=%s\n",
+		m.Credentials.Username, m.Credentials.Host, pair, amount.String(),
+		destination)
+
+	status, raw, err := m.Post(ctx,
+		"/transactions",
+		url.Values{},
+		url.Values{
+			"pair":        {pair},
+			"amount":      {amount.String()},
+			"destination": {destination},
+			"path[]":      path,
+		})
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	if *status != http.StatusCreated {
+		var e errors.ConcreteUserError
+		err = raw.Extract("error", &e)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		return nil, errors.Trace(
+			errors.Newf("(%s) %s", e.ErrCode, e.ErrMessage))
+	}
+
+	var transaction mint.TransactionResource
+	err = raw.Extract("transaction", &transaction)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &transaction, nil
+}
+
+// SettleTransaction settles a transaction for the currently authenticated
+// user.
+func SettleTransaction(
+	ctx context.Context,
+	id string,
+) (*mint.TransactionResource, error) {
+	m, err := cli.MintFromContextCredentials(ctx)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	out.Statf("[Settling transaction] user=%s@%s transaction=%s\n",
+		m.Credentials.Username, m.Credentials.Host, id)
+
+	status, raw, err := m.Post(ctx,
+		fmt.Sprintf("/transactions/%s/settle", id),
+		url.Values{},
+		url.Values{})
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	if *status != http.StatusOK {
+		var e errors.ConcreteUserError
+		err = raw.Extract("error", &e)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		return nil, errors.Trace(
+			errors.Newf("(%s) %s", e.ErrCode, e.ErrMessage))
+	}
+
+	var transaction mint.TransactionResource
+	err = raw.Extract("transaction", &transaction)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &transaction, nil
+}
+
 // ListAssets list assets for the current user.
 func ListAssets(
 	ctx context.Context,
