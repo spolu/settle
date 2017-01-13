@@ -12,7 +12,7 @@
 # preview
 
   [ ] fix mint
-    [ ] error on offer with same currency
+    [ ] paying yourself with a currency you trust does not decrease the balance
   [ ] finish site
     [ ] blog post draft
     [ ] documentation
@@ -22,6 +22,7 @@
 
   [ ] close (offer) command
   [ ] pay with path of length 2
+  [ ] list transactions (canonical or destination)
   [x] pay command
   [x] check existence of quote asset on trust
   [x] check credentials
@@ -45,11 +46,13 @@
 # mint
 
   [~] list endpoint
+    [ ] list (asset) transactions
     [ ] list asset operations
     [x] list asset offers (order book)
     [x] list asset balances
     [x] list balances
     [x] list assets
+  [x] error on offer with same currency
   [x] allow cancellation without plan computation (use offer path, move CheckCanShouldCancel to plan))
   [x] reintroduce transaction expiry on top of safe cancelation
   [x] propagate cancellation on syncrhonous failure

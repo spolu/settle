@@ -87,6 +87,13 @@ func (e *CreateOffer) Validate(
 		))
 	}
 
+	if e.Pair[0].Name == e.Pair[1].Name {
+		return errors.Trace(errors.NewUserErrorf(nil,
+			400, "pair_invalid",
+			"You cannot create an offer with the same base and quote asset.",
+		))
+	}
+
 	// Validate price.
 	basePrice, quotePrice, err := ValidatePrice(ctx, r.PostFormValue("price"))
 	if err != nil {
