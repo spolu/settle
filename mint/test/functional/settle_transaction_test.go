@@ -425,3 +425,106 @@ func TestSettleTransactionWithNoOfferAndRemoteBaseAsset(
 	assert.Nil(t, err)
 	assert.Equal(t, big.NewInt(5), (*big.Int)(&balance.Value))
 }
+
+func TestSettleTransactionUsingOfferToPayOneself(
+	t *testing.T,
+) {
+	t.Parallel()
+	m, u, a, o := setupSettleTransaction(t)
+	defer tearDownSettleTransaction(t, m)
+
+	// Credit u[1] on m[0]
+	status, raw := u[0].Post(t,
+		fmt.Sprintf("/transactions"),
+		url.Values{
+			"pair":        {fmt.Sprintf("%s/%s", a[0].Name, a[0].Name)},
+			"amount":      {"10"},
+			"destination": {u[1].Address},
+			"path[]":      {},
+		})
+
+	assert.Equal(t, 201, status)
+
+	var tx mint.TransactionResource
+	err := raw.Extract("transaction", &tx)
+	assert.Nil(t, err)
+
+	status, raw = u[0].Post(t,
+		fmt.Sprintf("/transactions/%s/settle", tx.ID),
+		url.Values{})
+
+	assert.Equal(t, 200, status)
+
+	err = raw.Extract("transaction", &tx)
+	assert.Nil(t, err)
+
+	// Pay u[1] (himself) using his balance at m[0]
+	status, raw = u[1].Post(t,
+		fmt.Sprintf("/transactions"),
+		url.Values{
+			"pair":        {fmt.Sprintf("%s/%s", a[0].Name, a[1].Name)},
+			"amount":      {"5"},
+			"destination": {u[1].Address},
+			"path[]": {
+				o[1].ID,
+			},
+		})
+
+	assert.Equal(t, 201, status)
+
+	var tx1 mint.TransactionResource
+	err = raw.Extract("transaction", &tx1)
+	assert.Nil(t, err)
+
+	status, raw = u[1].Post(t,
+		fmt.Sprintf("/transactions/%s/settle", tx1.ID),
+		url.Values{})
+
+	assert.Equal(t, 200, status)
+
+	err = raw.Extract("transaction", &tx1)
+	assert.Nil(t, err)
+
+	assert.Regexp(t, mint.IDRegexp, tx1.ID)
+	assert.Equal(t, mint.TxStSettled, tx1.Status)
+	assert.Equal(t, 1, len(tx1.Operations))
+	assert.Equal(t, 1, len(tx1.Crossings))
+
+	assert.Equal(t, mint.TxStSettled, tx1.Operations[0].Status)
+	assert.Equal(t, big.NewInt(5), tx1.Operations[0].Amount)
+	assert.Equal(t, u[1].Address, tx1.Operations[0].Destination)
+	assert.Equal(t, u[1].Address, tx1.Operations[0].Source)
+
+	assert.Equal(t, mint.TxStSettled, tx1.Crossings[0].Status)
+	assert.Equal(t, u[1].Address, tx1.Crossings[0].Owner)
+	assert.Equal(t, o[1].ID, tx1.Crossings[0].Offer)
+	assert.Equal(t, big.NewInt(5), tx1.Crossings[0].Amount)
+
+	// Check transaction on m[0].
+	status, raw = u[0].Get(t, fmt.Sprintf("/transactions/%s", tx1.ID))
+
+	assert.Equal(t, 200, status)
+
+	var tx0 mint.TransactionResource
+	err = raw.Extract("transaction", &tx0)
+	assert.Nil(t, err)
+
+	assert.Regexp(t, mint.IDRegexp, tx0.ID)
+	assert.Equal(t, mint.TxStSettled, tx0.Status)
+	assert.Equal(t, 1, len(tx0.Operations))
+	assert.Equal(t, 0, len(tx0.Crossings))
+
+	assert.Equal(t, mint.TxStSettled, tx0.Operations[0].Status)
+	assert.Equal(t, big.NewInt(5), tx0.Operations[0].Amount)
+	assert.Equal(t, u[1].Address, tx0.Operations[0].Destination)
+	assert.Equal(t, u[1].Address, tx0.Operations[0].Source)
+
+	// Check balance on m[1]
+	balance, err := model.LoadCanonicalBalanceByAssetHolder(m[0].Ctx,
+		a[0].Name, u[1].Address)
+	assert.Nil(t, err)
+	// The balance should be 10 (unchanged) because you've settled 5 to
+	// yourself (no change in balance) to issue some of your own asset to
+	// yourself (no change of balance again). So, really it dtrt.
+	assert.Equal(t, big.NewInt(10), (*big.Int)(&balance.Value))
+}
