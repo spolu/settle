@@ -137,7 +137,6 @@ type TransactionResource struct {
 	Path        []string `json:"path"`
 
 	Status TxStatus `json:"status"`
-	Expiry int64    `json:"expiry"`
 	Lock   string   `json:"lock"`
 	Secret *string  `json:"secret"`
 

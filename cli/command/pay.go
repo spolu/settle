@@ -270,6 +270,34 @@ func (c *Pay) Execute(
 		return errors.Trace(err)
 	}
 
+	out.Boldf("Transaction settled:\n")
+	out.Normf("  ID          : ")
+	out.Valuf("%s\n", tx.ID)
+	out.Normf("  Created     : ")
+	out.Valuf("%d\n", tx.Created)
+	out.Normf("  Owner       : ")
+	out.Valuf("%s\n", tx.Owner)
+	out.Normf("  Pair        : ")
+	out.Valuf("%s\n", tx.Pair)
+	out.Normf("  Amount      : ")
+	out.Valuf("%s\n", tx.Amount.String())
+	out.Normf("  Destination : ")
+	out.Valuf("%s\n", tx.Destination)
+	out.Normf("  Path        : ")
+	if len(tx.Path) == 0 {
+		out.Normf("(empty)\n")
+	} else {
+		for j, o := range tx.Path {
+			if j > 0 {
+				out.Normf("\n                ")
+			}
+			out.Valuf(o)
+		}
+		out.Normf("\n")
+	}
+	out.Normf("  Status      : ")
+	out.Valuf("%s\n", tx.Status)
+
 	return nil
 }
 
