@@ -3,13 +3,13 @@ baseurl = "https://settle.network/"
 languageCode = "en-us"
 title = "Settle"
 # Enter your tracking code to enable Google Analytics
-googleAnalytics = ""
+googleAnalytics = "UA-90349426-1"
 # Disable comments by leaving disqusShortname empty
 disqusShortname = ""
 
 [params]
-  name = ""
-  description = "Settle"
+  name = "Settle"
+  description = "Decentralized trust graph for value exchange without a blockchain."
   bio = ""
   # Enter optionally your twitter account
   twitter = "spolu"
