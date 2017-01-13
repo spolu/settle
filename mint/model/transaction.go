@@ -33,7 +33,6 @@ type Transaction struct {
 
 	Status mint.TxStatus
 
-	Expiry time.Time
 	Lock   string
 	Secret *string
 }
@@ -56,7 +55,6 @@ func NewTransactionResource(
 		Amount:      (*big.Int)(&transaction.Amount),
 		Destination: transaction.Destination,
 		Path:        []string(transaction.Path),
-		Expiry:      transaction.Expiry.UnixNano() / mint.TimeResolutionNs,
 		Status:      transaction.Status,
 		Lock:        transaction.Lock,
 		Operations:  []mint.OperationResource{},
@@ -203,7 +201,6 @@ func (t *Transaction) ID() string {
 func (t *Transaction) Save(
 	ctx context.Context,
 ) error {
-	t.Expiry = t.Expiry.UTC()
 	ext := db.Ext(ctx, "mint")
 	_, err := sqlx.NamedExec(ext, `
 UPDATE transactions

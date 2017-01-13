@@ -65,7 +65,7 @@ func (t *ExpireTransaction) DeadlineForRetry(
 	retry uint,
 ) time.Time {
 	expiry := time.Duration(mint.TransactionExpiryMs) * time.Millisecond
-	return t.Created().Add(expiry + time.Duration(retry+1)*expiry)
+	return t.Created().Add(expiry + time.Duration(retry)*expiry)
 }
 
 // Execute idempotently runs the task to completion or errors.

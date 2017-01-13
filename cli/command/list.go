@@ -171,7 +171,6 @@ func (c *List) ExecuteAssets(
 	data := [][][2]string{}
 	for _, a := range assets {
 		data = append(data, [][2]string{
-			[2]string{"ID", a.ID},
 			[2]string{"Created", fmt.Sprintf("%d", a.Created)},
 			[2]string{"Asset", a.Name},
 		})
@@ -207,8 +206,6 @@ func (c *List) ExecuteBalances(
 	data := [][][2]string{}
 	for _, b := range balances {
 		data = append(data, [][2]string{
-			[2]string{"ID", b.ID},
-			[2]string{"Created", fmt.Sprintf("%d", b.Created)},
 			[2]string{"Asset", b.Asset},
 			[2]string{"Holder", b.Holder},
 			[2]string{"Value", b.Value.String()},
@@ -240,8 +237,6 @@ func (c *List) ExecuteTrustlines(
 	data := [][][2]string{}
 	for _, o := range cOffers {
 		data = append(data, [][2]string{
-			[2]string{"ID", o.ID},
-			[2]string{"Created", fmt.Sprintf("%d", o.Created)},
 			[2]string{"Pair", o.Pair},
 			[2]string{"Price", o.Price},
 			[2]string{"Amount", o.Amount.String()},
@@ -259,8 +254,6 @@ func (c *List) ExecuteTrustlines(
 	data = [][][2]string{}
 	for _, o := range pOffers {
 		data = append(data, [][2]string{
-			[2]string{"ID", o.ID},
-			[2]string{"Created", fmt.Sprintf("%d", o.Created)},
 			[2]string{"Pair", o.Pair},
 			[2]string{"Price", o.Price},
 			[2]string{"Amount", o.Amount.String()},
