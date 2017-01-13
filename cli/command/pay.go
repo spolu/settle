@@ -186,7 +186,7 @@ func (c *Pay) Execute(
 		out.Valuf("%s\n", c.Amount.String())
 		out.Normf("      Path      : ")
 		if len(c.Path) == 0 {
-			out.Normf("(empty)")
+			out.Normf("(empty)\n")
 		} else {
 			for j, o := range c.Path {
 				if j > 0 {
@@ -234,7 +234,7 @@ func (c *Pay) Execute(
 	out.Valuf("%s %s\n", c.QuoteAsset, c.Amount.String())
 	out.Normf("  Path         : ")
 	if len(candidate.Path) == 0 {
-		out.Normf("(empty)")
+		out.Normf("(empty)\n")
 	} else {
 		for j, o := range candidate.Path {
 			if j > 0 {
