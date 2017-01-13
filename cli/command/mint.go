@@ -91,12 +91,20 @@ func (c *Mint) Parse(
 func (c *Mint) Execute(
 	ctx context.Context,
 ) error {
+	out.Boldf("Proposed asset:\n")
+	out.Normf("  Asset      : ")
+	out.Valuf("%s\n", c.Asset)
+
+	if err := Confirm(ctx, "mint"); err != nil {
+		return errors.Trace(err)
+	}
+
 	asset, err := CreateAsset(ctx, c.Asset)
 	if err != nil {
 		return errors.Trace(err)
 	}
 
-	out.Boldf("Asset:\n")
+	out.Boldf("Asset created:\n")
 	out.Normf("  ID      : ")
 	out.Valuf("%s\n", asset.ID)
 	out.Normf("  Created : ")

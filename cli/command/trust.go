@@ -194,7 +194,7 @@ func (c *Trust) Parse(
 func (c *Trust) Execute(
 	ctx context.Context,
 ) error {
-	// Retrieve base asset or create it if it does not exist.
+	// Retrieve base asset to check existence
 	asset, err := RetrieveAsset(ctx, c.BaseAsset)
 	if err != nil {
 		return errors.Trace(err)
@@ -208,6 +208,32 @@ func (c *Trust) Execute(
 				"(see `settle help mint`).",
 				bA.Code, bA.Scale))
 	}
+	// Retrieve quote asset to check existence
+	asset, err = RetrieveAsset(ctx, c.QuoteAsset)
+	if err != nil {
+		return errors.Trace(err)
+	} else if asset == nil {
+		qA, err := mint.AssetResourceFromName(ctx, c.QuoteAsset)
+		if err != nil {
+			return errors.Trace(err)
+		}
+		return errors.Trace(
+			errors.Newf("%s does not exists, ask %s to mint %s.%d "+
+				"first (see `settle help mint`).",
+				qA.Name, qA.Owner, qA.Code, qA.Scale))
+	}
+
+	out.Boldf("Proposed trustline:\n")
+	out.Normf("  Pair      : ")
+	out.Valuf("%s\n", fmt.Sprintf("%s/%s", c.BaseAsset, c.QuoteAsset))
+	out.Normf("  Price     : ")
+	out.Valuf("%s\n", c.Price)
+	out.Normf("  Amount    : ")
+	out.Valuf("%s\n", c.Amount.String())
+
+	if err := Confirm(ctx, "trust"); err != nil {
+		return errors.Trace(err)
+	}
 
 	// Create offer.
 	offer, err := CreateOffer(ctx,
@@ -219,7 +245,7 @@ func (c *Trust) Execute(
 		return errors.Trace(err)
 	}
 
-	out.Boldf("Trustline:\n")
+	out.Boldf("Trustline created:\n")
 	out.Normf("  ID        : ")
 	out.Valuf("%s\n", offer.ID)
 	out.Normf("  Created   : ")

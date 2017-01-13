@@ -1,12 +1,14 @@
 package command
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
 	"math/big"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/spolu/settle/cli"
@@ -40,6 +42,26 @@ var PublicMints = []MintRegister{
 			env.QA:         "https://qa-register.settle.network/users",
 		},
 	},
+}
+
+// Confirm asks the user for confirmation.
+func Confirm(
+	ctx context.Context,
+	action string,
+) error {
+	reader := bufio.NewReader(os.Stdin)
+
+	out.Normf(
+		"You are about to %s, do you confirm this information is correct? "+
+			"[Y/n]: ",
+		action)
+	confirmation, _ := reader.ReadString('\n')
+	confirmation = strings.TrimSpace(confirmation)
+	if confirmation != "" && confirmation != "Y" {
+		return errors.Trace(errors.Newf("%s aborted by user.", action))
+	}
+
+	return nil
 }
 
 // RegisterUser registers a user on the provded mint register service.
@@ -143,49 +165,6 @@ func CreateAsset(
 	return &asset, nil
 }
 
-// RetrieveAsset retrieves an asset, returnin nil if it does not exist.
-func RetrieveAsset(
-	ctx context.Context,
-	name string,
-) (*mint.AssetResource, error) {
-	m, err := cli.MintFromContextCredentials(ctx)
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-
-	out.Statf("[Retrieving asset] user=%s@%s asset=%s\n",
-		m.Credentials.Username, m.Credentials.Host,
-		name)
-
-	status, raw, err := m.Get(ctx,
-		fmt.Sprintf("/assets/%s", name),
-		url.Values{})
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-
-	if *status != http.StatusOK {
-		var e errors.ConcreteUserError
-		err = raw.Extract("error", &e)
-		if err != nil {
-			return nil, errors.Trace(err)
-		}
-		if e.ErrCode == "asset_not_found" {
-			return nil, nil
-		}
-		return nil, errors.Trace(
-			errors.Newf("(%s) %s", e.ErrCode, e.ErrMessage))
-	}
-
-	var asset mint.AssetResource
-	err = raw.Extract("asset", &asset)
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-
-	return &asset, nil
-}
-
 // CreateOffer creates an offer for the currently authenticated user.
 func CreateOffer(
 	ctx context.Context,
@@ -231,6 +210,98 @@ func CreateOffer(
 	}
 
 	return &offer, nil
+}
+
+// CreateTransaction creates a transaction for the currently authenticated
+// user.
+func CreateTransaction(
+	ctx context.Context,
+	pair string,
+	amount big.Int,
+	destination string,
+	path []string,
+) (*mint.TransactionResource, error) {
+	m, err := cli.MintFromContextCredentials(ctx)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	out.Statf("[Creating transaction] user=%s@%s pair=%s amount=%s "+
+		"destination=%s\n",
+		m.Credentials.Username, m.Credentials.Host, pair, amount.String(),
+		destination)
+
+	status, raw, err := m.Post(ctx,
+		"/transactions",
+		url.Values{},
+		url.Values{
+			"pair":        {pair},
+			"amount":      {amount.String()},
+			"destination": {destination},
+			"path[]":      path,
+		})
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	if *status != http.StatusCreated {
+		var e errors.ConcreteUserError
+		err = raw.Extract("error", &e)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		return nil, errors.Trace(
+			errors.Newf("(%s) %s", e.ErrCode, e.ErrMessage))
+	}
+
+	var transaction mint.TransactionResource
+	err = raw.Extract("transaction", &transaction)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &transaction, nil
+}
+
+// SettleTransaction settles a transaction for the currently authenticated
+// user.
+func SettleTransaction(
+	ctx context.Context,
+	id string,
+) (*mint.TransactionResource, error) {
+	m, err := cli.MintFromContextCredentials(ctx)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	out.Statf("[Settling transaction] user=%s@%s transaction=%s\n",
+		m.Credentials.Username, m.Credentials.Host, id)
+
+	status, raw, err := m.Post(ctx,
+		fmt.Sprintf("/transactions/%s/settle", id),
+		url.Values{},
+		url.Values{})
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	if *status != http.StatusOK {
+		var e errors.ConcreteUserError
+		err = raw.Extract("error", &e)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		return nil, errors.Trace(
+			errors.Newf("(%s) %s", e.ErrCode, e.ErrMessage))
+	}
+
+	var transaction mint.TransactionResource
+	err = raw.Extract("transaction", &transaction)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &transaction, nil
 }
 
 // ListAssets list assets for the current user.
@@ -348,19 +419,32 @@ func ListAssetBalances(
 	return balances, nil
 }
 
-// ListAssetOffers list offers for one of the current user's asset.
+// ListAssetOffers list offers for the specified asset
 func ListAssetOffers(
 	ctx context.Context,
 	asset string,
 	propagation mint.PgType,
 ) ([]mint.OfferResource, error) {
+	a, err := mint.AssetResourceFromName(ctx, asset)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
 	m, err := cli.MintFromContextCredentials(ctx)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
 
-	out.Statf("[Listing asset offers] user=%s@%s asset=%s propagation=%s\n",
-		m.Credentials.Username, m.Credentials.Host, asset, propagation)
+	if a.Owner !=
+		fmt.Sprintf("%s@%s", m.Credentials.Username, m.Credentials.Host) {
+		_, host, err := mint.UsernameAndMintHostFromAddress(ctx, a.Owner)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		m = &cli.Mint{Host: host}
+	}
+
+	out.Statf("[Listing asset offers] user=%s asset=%s propagation=%s\n",
+		a.Owner, asset, propagation)
 
 	status, raw, err := m.Get(ctx,
 		fmt.Sprintf("/assets/%s/offers", asset),
@@ -388,4 +472,58 @@ func ListAssetOffers(
 	}
 
 	return offers, nil
+}
+
+// RetrieveAsset retrieves an asset, returnin nil if it does not exist.
+func RetrieveAsset(
+	ctx context.Context,
+	name string,
+) (*mint.AssetResource, error) {
+	a, err := mint.AssetResourceFromName(ctx, name)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	m, err := cli.MintFromContextCredentials(ctx)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	if a.Owner !=
+		fmt.Sprintf("%s@%s", m.Credentials.Username, m.Credentials.Host) {
+		_, host, err := mint.UsernameAndMintHostFromAddress(ctx, a.Owner)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		m = &cli.Mint{Host: host}
+	}
+
+	out.Statf("[Retrieving asset] user=%s asset=%s\n", a.Owner, name)
+
+	status, raw, err := m.Get(ctx,
+		fmt.Sprintf("/assets/%s", name),
+		url.Values{})
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	if *status != http.StatusOK {
+		var e errors.ConcreteUserError
+		err = raw.Extract("error", &e)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		if e.ErrCode == "asset_not_found" {
+			return nil, nil
+		}
+		return nil, errors.Trace(
+			errors.Newf("(%s) %s", e.ErrCode, e.ErrMessage))
+	}
+
+	var asset mint.AssetResource
+	err = raw.Extract("asset", &asset)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &asset, nil
 }
