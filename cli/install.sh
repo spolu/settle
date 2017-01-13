@@ -18,7 +18,7 @@ run_it () {
 # This always does a clean install of the latest version of Settle into your
 # ~/.settle, replacing whatever is already there.
 
-RELEASE="0.0.1-pre"
+RELEASE="0.0.2-pre"
 
 ## NOTE sh NOT bash. This script should be POSIX sh only, since we don't
 ## know what shell the user has. Debian uses 'dash' for 'sh', for
