@@ -22,6 +22,8 @@
 
   [ ] pay command
   [ ] close (offer) command
+  [ ] pay with path of length 2
+  [x] check existence of quote asset on trust
   [x] check credentials
   [x] add confirmations to actions (at least register)
   [x] install process

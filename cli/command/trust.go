@@ -194,7 +194,7 @@ func (c *Trust) Parse(
 func (c *Trust) Execute(
 	ctx context.Context,
 ) error {
-	// Retrieve base asset or create it if it does not exist.
+	// Retrieve base asset to check existence
 	asset, err := RetrieveAsset(ctx, c.BaseAsset)
 	if err != nil {
 		return errors.Trace(err)
@@ -207,6 +207,20 @@ func (c *Trust) Execute(
 			errors.Newf("You need to mint %s.%d first "+
 				"(see `settle help mint`).",
 				bA.Code, bA.Scale))
+	}
+	// Retrieve quote asset to check existence
+	asset, err = RetrieveAsset(ctx, c.QuoteAsset)
+	if err != nil {
+		return errors.Trace(err)
+	} else if asset == nil {
+		qA, err := mint.AssetResourceFromName(ctx, c.QuoteAsset)
+		if err != nil {
+			return errors.Trace(err)
+		}
+		return errors.Trace(
+			errors.Newf("%s does not exists, ask %s to mint %s.%d "+
+				"first (see `settle help mint`).",
+				qA.Name, qA.Owner, qA.Code, qA.Scale))
 	}
 
 	// Create offer.

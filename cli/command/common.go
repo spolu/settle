@@ -143,49 +143,6 @@ func CreateAsset(
 	return &asset, nil
 }
 
-// RetrieveAsset retrieves an asset, returnin nil if it does not exist.
-func RetrieveAsset(
-	ctx context.Context,
-	name string,
-) (*mint.AssetResource, error) {
-	m, err := cli.MintFromContextCredentials(ctx)
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-
-	out.Statf("[Retrieving asset] user=%s@%s asset=%s\n",
-		m.Credentials.Username, m.Credentials.Host,
-		name)
-
-	status, raw, err := m.Get(ctx,
-		fmt.Sprintf("/assets/%s", name),
-		url.Values{})
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-
-	if *status != http.StatusOK {
-		var e errors.ConcreteUserError
-		err = raw.Extract("error", &e)
-		if err != nil {
-			return nil, errors.Trace(err)
-		}
-		if e.ErrCode == "asset_not_found" {
-			return nil, nil
-		}
-		return nil, errors.Trace(
-			errors.Newf("(%s) %s", e.ErrCode, e.ErrMessage))
-	}
-
-	var asset mint.AssetResource
-	err = raw.Extract("asset", &asset)
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-
-	return &asset, nil
-}
-
 // CreateOffer creates an offer for the currently authenticated user.
 func CreateOffer(
 	ctx context.Context,
@@ -348,19 +305,32 @@ func ListAssetBalances(
 	return balances, nil
 }
 
-// ListAssetOffers list offers for one of the current user's asset.
+// ListAssetOffers list offers for the specified asset
 func ListAssetOffers(
 	ctx context.Context,
 	asset string,
 	propagation mint.PgType,
 ) ([]mint.OfferResource, error) {
+	a, err := mint.AssetResourceFromName(ctx, asset)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
 	m, err := cli.MintFromContextCredentials(ctx)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
 
-	out.Statf("[Listing asset offers] user=%s@%s asset=%s propagation=%s\n",
-		m.Credentials.Username, m.Credentials.Host, asset, propagation)
+	if a.Owner !=
+		fmt.Sprintf("%s@%s", m.Credentials.Username, m.Credentials.Host) {
+		_, host, err := mint.UsernameAndMintHostFromAddress(ctx, a.Owner)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		m = &cli.Mint{Host: host}
+	}
+
+	out.Statf("[Listing asset offers] user=%s asset=%s propagation=%s\n",
+		a.Owner, asset, propagation)
 
 	status, raw, err := m.Get(ctx,
 		fmt.Sprintf("/assets/%s/offers", asset),
@@ -388,4 +358,58 @@ func ListAssetOffers(
 	}
 
 	return offers, nil
+}
+
+// RetrieveAsset retrieves an asset, returnin nil if it does not exist.
+func RetrieveAsset(
+	ctx context.Context,
+	name string,
+) (*mint.AssetResource, error) {
+	a, err := mint.AssetResourceFromName(ctx, name)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	m, err := cli.MintFromContextCredentials(ctx)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	if a.Owner !=
+		fmt.Sprintf("%s@%s", m.Credentials.Username, m.Credentials.Host) {
+		_, host, err := mint.UsernameAndMintHostFromAddress(ctx, a.Owner)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		m = &cli.Mint{Host: host}
+	}
+
+	out.Statf("[Retrieving asset] user=%s asset=%s\n", a.Owner, name)
+
+	status, raw, err := m.Get(ctx,
+		fmt.Sprintf("/assets/%s", name),
+		url.Values{})
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	if *status != http.StatusOK {
+		var e errors.ConcreteUserError
+		err = raw.Extract("error", &e)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		if e.ErrCode == "asset_not_found" {
+			return nil, nil
+		}
+		return nil, errors.Trace(
+			errors.Newf("(%s) %s", e.ErrCode, e.ErrMessage))
+	}
+
+	var asset mint.AssetResource
+	err = raw.Extract("asset", &asset)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &asset, nil
 }
