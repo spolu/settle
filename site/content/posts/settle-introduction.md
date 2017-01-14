@@ -2,7 +2,7 @@
 type = "post"
 title = "Decentralized trust graph for online value exchange without a blockchain"
 description = "Introductory post about Settle, how it enables value exchange online without a blockchainm, and why it may be useful."
-date = "2017-01-12T10:31:00-07:00"
+date = "2017-01-14T10:31:00-07:00"
 +++
 
 # Settle
@@ -29,11 +29,11 @@ All of the source code is also availabe at: https://github.com/spolu/settle
 
 *Value-exchange for humans and machines alike*
 
-Settle was born out of experimenting with what would be the simplest way to let
-machines and humans issue IOUs ("I owe you") and exchange them safely. Early
-on, I experimented with tooling around Bitcoin (colored coins), Stellar, and
-Ethereum (simple asset contracts), but run into the exact same issues on each
-of these systems:
+Settle was born out of the idea of experimenting with what would be the
+simplest way to let machines and humans issue IOUs ("I owe you") and exchange
+them safely. Early on, I tinkered with tooling around Bitcoin (colored
+coins), Stellar, and Ethereum (simple asset contracts), but run into the exact
+same issues on each of these systems:
 
 - Even if you exchange IOUs, you have to pay transaction fees to maintain the
 blockchain backing each of these systems. So you really can't openly onboard
@@ -42,7 +42,7 @@ some amount of BTC, XLM or ETH to get them started. This is a pretty tough
 barrier to entry, and as a direct consequence, you can't programmatically
 onboard machines at scale without a substantial costs.
 - micro-payments particularly relevant to machine to machine transactions are
-most of the time impractical because of these fees.
+alos most of the time impractical because of these fees[0]
 
 This led me to the obvious realization that:
 
@@ -78,7 +78,7 @@ After 6 months of work on that idea. I believe it's possible.
 
 Since you don't have a shared blockchain, the nodes of your network have to be
 online. So, very much like email, users register on "mints", a server of their
-choice (possibly their own), that manage the asset they issue as well as the
+choice (possibly their own), that manage the assets they issue as well as the
 trust they express between assets in the network.
 
 You can freely register with the `settle` command-line on the mint I opened
@@ -101,9 +101,9 @@ users:
 - an indicative list of offers involving the assets it is authoritative for
   (order book)
 
-Once nice property of this, is that users don't have to manage a private key,
+One nice property of this, is that users don't have to manage a private key,
 they just have credentials with their mint that can be rolled or retrieved
-easily.
+easily. But they do have to trust their mint.
 
 *Value is exchanged by crossing offers across mints*
 
@@ -121,7 +121,7 @@ authoritative for that asset, no synchronization is required with the mint at
 
 Let's assume that both **alan@npl.co.uk[USD.2]** and
 **albert@princetown.edu[USD.2]** were activated by their respective users on
-their respective mints with the following command:
+their respective mints.
 ```
 settle mint USD.2    # activates USD.2
 ```
@@ -158,7 +158,7 @@ After this operation is complete, Alan will have a balance of
 offer will be valid for a remaining **19000** and Kurt's offer for **9000**.
 
 The mint protocol provides a mechanism called transactions (backing the `pay`
-command above) to cross a chain of offers atomically and safely[0][1]. A
+command above) to cross a chain of offers atomically and safely[1][2]. A
 transaction involves reserving funds along that chain and then committing the
 balance operations on each mints that participate once the offers are secured.
 Transactions, if successful, are instantaneously confirmed and fee-less.
@@ -185,25 +185,36 @@ assets as well as a guide to setup your own mint:
 - [Guide: Setting up a mint](/posts/guide-setting-up-a-mint/)
 - [Community](/community)
 
-/Start your own mint!/
+/Mint your assets!/
 
-I'd like to create a few more posts in the coming weeks reflecting on how
-Settle could be used in couple interesting situations related to self-driving
-car networks[2] or e-commerce[3], but the first strong use-case for Settle is
-likely to come from somewhere else, the community! 
+I'd like to write a few more posts exploring how Settle could be used in a
+couple of interesting situations related to self-driving car networks[3] and
+e-commerce[4], but the first strong use-case for Settle is very likely to come
+from somewhere else, you.
 
-So I definitely invite you to play with the `settle` command line, eventually
-start your own mint. And if you really want to get your hands dirty, building
-an app or a gateway[4], are definitely things that I would love to collaborate
-on in the future.
+So I definitely invite you to play with the `settle` command line. When you
+mint assets, feel free to ping me on IRC (spolu in #settle on FreeNode), I'd be
+more than happy to trust you for a few cents and transact with you to test the
+system.
+
+Setting up your own mint is also definitely a great way to learn more and help
+the community grow. If you setup a mint, let's add it to the `settle register`
+command!
+
+And if you really want to get your hands dirty, building an app or a
+gateway[5], are definitely things that I would love to collaborate on in the
+future.
 
 -stan
 
-[0] see the [Mint documentation](/documentation). In particular, the protocol
+[0] Lightning networks elegantly circumvent the problem of per transaction fees
+but don't help with the "onboarding" problem.
+
+[1] see the [Mint documentation](/documentation). In particular, the protocol
 is safe in the sense that there is no double-spend but users can loose money if
 they trust malicious users.
 
-[1] skipping a few steps and notions, but for reference, the exact commitment
+[2] skipping a few steps and notions, but for reference, the exact commitment
 (ensuring safety) that a mint is doing when accepting to participate in a
 transaction is the following:
 ```
@@ -217,7 +228,7 @@ Mint at hop h (position along the offer path), commits to:
     - node at h+1 has canceled.
 ```
 
-[2] The main idea here would be to configure Teslas to trust the Tesla Network
+[3] The main idea here would be to configure Teslas to trust the Tesla Network
 solely **modelx_AX7GD@telsa.com[USD.2]/network@tesla.com[USD.2] 1/1** and have
 the Tesla Network trust various entities with a discount
 **network@telsa.com[USD.2]/settle@sfgov.org[USD.2] 100/110** such that Tesla
@@ -227,12 +238,12 @@ trust **network@telsa.com[USD.2]** to use these credits at supercharger
 stations, enabling Telsas on the Tesla Network to pay for their recharge at
 home owner's garages.
 
-[3] E-commerce website could use Settle to issue store credit that is easily
+[4] E-commerce website could use Settle to issue store credit that is easily
 usable at other place. This could potentially solve the problem of unlinked
 refunds in e-commerce while ensuring merchants that these credits would, by
 construction, be used at their store.
 
-[4] Lets users deposit fiat currency in exchange for trust on the network, or
+[5] Lets users deposit fiat currency in exchange for trust on the network, or
 get back fiat currency by paying the gateway on the network.
 
 
