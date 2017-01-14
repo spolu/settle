@@ -185,7 +185,7 @@ curl -XPOST https://foo.bar:2406/transactions \
 ```
 
 Commiting this transaction to the network requires the mint **corewars.org**
-and **foo.bar** to syncrhonize their state. They do so using the algorithm
+and **foo.bar** to synchronize their state. They do so using the algorithm
 described in the next subsections.
 
 #### Transaction creation and reservation
@@ -226,7 +226,7 @@ replies with a **reserved** status, the next mint on the path is able to make
 the same commitment and commit the transaction as **reserved** as well,
 recursively to the last mint of the path.
 
-Once this chain of commitments is made, the creation is created and is
+Once this chain of commitments is made, the transaction is created and
 **reserved** on all mints.
 
 Implementation of the reservation algorithm can be found at:
