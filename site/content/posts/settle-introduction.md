@@ -221,7 +221,7 @@ transaction is the following:
 Mint at hop h (position along the offer path), commits to:
   - settle (irrevocably issue/credit the funds) if:
     - it has not yet canceled the transaction.
-    - it is presented with the lock.
+    - it is presented with the lock secret.
     - node at h-1 has made the same commitment.
   - cancel the transaction if:
     - it has not yet settled the transaction.
