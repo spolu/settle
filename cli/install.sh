@@ -52,9 +52,7 @@ if [ "$UNAME" = "Darwin" ] ; then
 elif [ "$UNAME" = "Linux" ] ; then
   ### Linux ###
   LINUX_ARCH=$(uname -m)
-  if [ "${LINUX_ARCH}" = "i686" ] ; then
-    PLATFORM="linux-x86_32"
-  elif [ "${LINUX_ARCH}" = "x86_64" ] ; then
+  if [ "${LINUX_ARCH}" = "x86_64" ] ; then
     PLATFORM="linux-x86_64"
   else
     echo "Unusable architecture: ${LINUX_ARCH}"

@@ -1,7 +1,7 @@
 +++
 type = "post"
 title = "Decentralized trust graph for online value exchange without a blockchain"
-description = "Introductory post about Settle, how it enables value exchange online without a blockchainm, and why it may be useful."
+description = "Introductory post about Settle, how it enables value exchange online without a blockchain, and why it may be useful."
 date = "2017-01-14T10:31:00-07:00"
 +++
 
@@ -14,8 +14,8 @@ Settle's goal is to explore a new financial trust primitive on the Internet,
 and doing so, construct a decentralized trust graph enabling (totally) free
 exchange of value without relying on a blockchain.
 
-If you really can't wait to play with it, you can install it locally (under
-`~/.settle`) with the following command:
+If you'd like to play with the `settle` command-line as you read the post, you
+can install it locally (under `~/.settle`) with the following command:
 ```
 curl -L https://settle.network/install | sh && export PATH=$PATH:~/.settle
 ```
@@ -189,21 +189,27 @@ assets as well as a guide to setup your own mint:
 
 I'd like to write a few more posts exploring how Settle could be used in a
 couple of interesting situations related to self-driving car networks[3] and
-e-commerce[4], but the first strong use-case for Settle is very likely to come
-from somewhere else, you.
+e-commerce[4], but I'm convinced that a successful use-case for Settle, if any,
+is very likely to come from somewhere unexpected.
 
-So I definitely invite you to play with the `settle` command line. When you
-mint assets, feel free to ping me on IRC (spolu in #settle on FreeNode), I'd be
-more than happy to trust you for a few cents and transact with you to test the
-system.
+So I definitely invite you to play with the `settle` command line and register
+on **m.settle.network**. When you mint assets, feel free to ping me on IRC
+(spolu in #settle on FreeNode), I'd be more than happy to trust you for a few
+cents and transact with you to test the system.
 
 Setting up your own mint is also definitely a great way to learn more and help
 the community grow. If you setup a mint, let's add it to the `settle register`
 command!
 
-And if you really want to get your hands dirty, building an app or a
+Finally, if you really want to get your hands dirty, building an app or a
 gateway[5], are definitely things that I would love to collaborate on in the
 future.
+
+In the meantime, I hope you enjoy learning more about Settle and the model it
+proposes. Don't hesitate to reach out directly or on the public mailing list[6]
+if you have any question!
+
+Have fun minting.
 
 -stan
 
@@ -246,4 +252,6 @@ construction, be used at their store.
 [5] Lets users deposit fiat currency in exchange for trust on the network, or
 get back fiat currency by paying the gateway on the network.
 
+[6]
+[settle-public@googlegroups.com](https://groups.google.com/d/forum/settle-public)
 
