@@ -171,7 +171,7 @@ func (c *Pay) Execute(
 		return errors.Trace(err)
 	} else if len(candidates) == 0 {
 		return errors.Trace(errors.Newf(
-			"No turst path was found to %s for %s.",
+			"No trust path was found to %s for %s.",
 			c.QuoteAsset, c.Amount.String()))
 	}
 

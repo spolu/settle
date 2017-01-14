@@ -234,15 +234,20 @@ Mint at hop h (position along the offer path), commits to:
     - node at h+1 has canceled.
 ```
 
-[3] The main idea here would be to configure Teslas to trust the Tesla Network
-solely **modelx_AX7GD@telsa.com[USD.2]/network@tesla.com[USD.2] 1/1** and have
-the Tesla Network trust various entities with a discount
-**network@telsa.com[USD.2]/settle@sfgov.org[USD.2] 100/110** such that Tesla
-gets a cut of each transactions without necessarily enforcing the use of a
-particular currency to pay your trip on a Tesla. Conversely car-owners could
-trust **network@telsa.com[USD.2]** to use these credits at supercharger
-stations, enabling Telsas on the Tesla Network to pay for their recharge at
-home owner's garages.
+[3] The main idea here would be to pay rides on the Tesla Network in **KWH.2**
+instead of any specific currency. Teslas could be configured to trust the Tesla
+Network solely **modelx_AX7GD@telsa.com[KWH.2]/network@tesla.com[KWH.2] 1/1**
+with the Tesla Network trusting the Superchargers Network with
+**network@telsa.com[KWH.2]/superchargers@tesla.com[KWH.2] 11/10** such that
+Tesla would get a cut of each transactions (10% here). Reciprocally the
+Superchargers Network could trust the Tesla Network at a flat rate
+**network@telsa.com[KWH.2]/superchargers@tesla.com[KWH.2] 1/1** to let Teslas
+pay for their recharge as they earn **KWH.2**.  Car-owners would also trust
+**superchargers@telsa.com[KWH.2]** using it to "pay" at Supercharger stations
+when they ride their own Tesla which would in turn enable Teslas to pay for
+charges at home stations. From there Tesla could set prices for their
+Supercharger in each currency by trusting local nodes at various rate, or even
+local power plants for **KWH.2** directly.
 
 [4] E-commerce website could use Settle to issue store credit that is easily
 usable at other place. This could potentially solve the problem of unlinked
