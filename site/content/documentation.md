@@ -204,7 +204,7 @@ the first one.
 
 The first mint on the path, commits the transaction as **reserved**. When
 committing a transaction as **reserved**, a mint makes the following
-commitment:
+commitment on behalf of its user:
 
 ```
 Mint at hop h (position along the offer path), commits to:

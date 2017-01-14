@@ -72,7 +72,20 @@ possible to instead create a decentralized trust graph between user-issued
 assets and leverage it to safely exchange value without a central authority or
 shared blockchain to maintain.
 
-After 6 months of work on that idea. I believe it's possible. 
+After 6 months of work on that idea. I believe it's possible.
+
+In particular, the "research-y" contribution of this work, I believe, is that
+it demonstrates that it is possible to operate a safe credit network (a
+currency system without double-spend) without requiring global consensus (a
+shared global state machine, or blockchain) if you accept the following two
+constraints:
+
+- nodes have to be online
+- trust between nodes has to be expressed explicitly
+
+It's still a work in progress and nowhere close to being a research paper (or a
+white paper for that matter), but most of the element that demostrates this can
+be found in the documentation[1][2].
 
 *The Settle network is operated by mints.*
 
@@ -221,8 +234,8 @@ is safe in the sense that there is no double-spend but users can loose money if
 they trust malicious users.
 
 [2] skipping a few steps and notions, but for reference, the exact commitment
-(ensuring safety) that a mint is doing when accepting to participate in a
-transaction is the following:
+(ensuring safety) that a mint is doing on behalf of its user when accepting to
+participate in a transaction is the following:
 ```
 Mint at hop h (position along the offer path), commits to:
   - settle (irrevocably issue/credit the funds) if:
