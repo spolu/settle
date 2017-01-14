@@ -57,7 +57,7 @@ func Confirm(
 		action)
 	confirmation, _ := reader.ReadString('\n')
 	confirmation = strings.TrimSpace(confirmation)
-	if confirmation != "" && confirmation != "Y" {
+	if confirmation != "" && confirmation != "Y" && confirmation != "y" {
 		return errors.Trace(errors.Newf("%s aborted by user.", action))
 	}
 
