@@ -1,9 +1,7 @@
 <nav class="main-nav">
   {{ $url := replace .Permalink .Site.BaseURL "" }}
-  {{ if not .IsHome }}
-  	<a href='{{ .Site.BaseURL }}'> <span class="arrow">←</span>{{ with .Site.Params.home }}{{ . }}{{ else }}Home{{ end }}</a>
-  {{ end }}
-
+  <a href='{{ .Site.BaseURL }}'> <span class="arrow">←</span>{{ with .Site.Params.home }}{{ . }}{{ else }}Home{{ end }}</a>
   <a href='{{ .Site.BaseURL }}documentation'>Documentation</a>
+  <a href='{{ .Site.BaseURL }}community'>Community</a>
   <a href='{{ .Site.BaseURL }}posts'>Posts</a>
 </nav>

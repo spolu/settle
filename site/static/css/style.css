@@ -47,8 +47,10 @@ h1, h2, h3, h4, h5, h6, p, #post-list li, pre {
   margin-bottom: 20px;
 }
 
-ul, li {
-  margin-bottom: 10px;
+ul {
+  margin-bottom: 20px;
+}
+li {
 }
 
 /* Before */
@@ -118,8 +120,9 @@ h6 {
   margin-bottom: 6px;
 }
 
-ul 	{ margin:0; padding:0; }
-li	{ list-style-position:outside; line-height:1.7; }
+li {
+  list-style-position:outside;
+}
 
 em, i {
   color: #777;
@@ -188,7 +191,9 @@ a,
 p a { color: #5694f1; }
 
 /* Line Height */
-#post-body, p { line-height:1.7; }
+#post-body, p, li {
+  line-height:1.7;
+}
 
 #title {
   display: inline-block;
@@ -215,6 +220,7 @@ p a { color: #5694f1; }
   color: #222;
   font-size: 1.4em;
   font-weight: bold;
+  line-height: 1.5;
 }
 
 .post h2.headline {

@@ -9,12 +9,32 @@ date = "2016-11-04T17:28:19-07:00"
 *Decentralized trust graph for value exchange without a blockchain.*
 
 While cryptocurrencies are maintained by distributed ledgers with no central
-authority, their trust model and graph is still fully centralized: everyone has
-to trust the currency.
+authority, their trust graph is still fully centralized: everyone has to trust
+the currency that powers the blockahin (**BTC**, **ETH**, **XLM**...).
 
 Settle's goal is to explore a new financial trust primitive on the Internet,
 and doing so, construct a decentralized trust graph enabling (totally) free
 exchange of value without relying on a blockchain.
+
+The Settle transaction protocol allows users to safely transfer value along
+pre-expressed trust paths without a shared blockchain (see [Mint
+documentation](/documentation)). Very much like email, users register on
+"mints", a server of their choice (possibly their own), that manage the assets
+they issue as well as the trust they express between assets in the network.
+
+Settle distributes a command line utility, `settle`, to interact with mints. It
+lets you register on a publicly available mint (or login on a mint of your
+choice), create assets, express trust between your assets and others', and
+transact using these trust pathes.
+
+Settle also maintains a publicly available mint **m.settle.network** on which you
+can register freely.
+
+Additional resources:
+
+- [Settle introductory blog post](posts/settle-introduction)
+- [Mint documentation](documentation)
+- [Community](community)
 
 ## Installation
 
@@ -34,17 +54,17 @@ Register on a mint:
 settle register
 ```
 
-Mint your first asset (`USD` in cents):
+Mint your first asset (**USD** in cents):
 ```
 settle mint USD.2
 ```
 
-Trust your friend for $10:
+Trust your friend for **$10**:
 ```
 settle trust friend@m.settle.network USD.2 1000
 ```
 
-Pay someone $1 (assuming a trust path exists):
+Pay someone **$1** (assuming a trust path exists):
 ```
 settle pay someone@m.settle.network USD.2 100
 ```

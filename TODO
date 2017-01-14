@@ -136,14 +136,3 @@
     [x] operation propagation
     [x] transaction expiry
     [x] settlement propagation
-
-# r? preview
-
-  dm
-  gdb
-  rauchg
-  gabhubert
-  acavailhez
-  kwi
-  gyril
-  migliris
