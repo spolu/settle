@@ -42,7 +42,7 @@ some amount of BTC, XLM or ETH to get them started. This is a pretty tough
 barrier to entry, and as a direct consequence, you can't programmatically
 onboard machines at scale without a substantial costs.
 - micro-payments particularly relevant to machine to machine transactions are
-alos most of the time impractical because of these fees[0]
+also most of the time impractical because of these fees[0]
 
 This led me to the obvious realization that:
 
@@ -67,25 +67,25 @@ The centralized nature of the trust involved in these cryptocurrencies being
 actually at the core of how these currencies operate, as the only viable way so
 far to properly incentivize a proof-of-work system.
 
-From that realization, I embarked on the task of exploring whether it would be
-possible to instead create a decentralized trust graph between user-issued
-assets and leverage it to safely exchange value without a central authority or
-shared blockchain to maintain.
+From that realization, I decided to focus on the task of exploring whether it
+would be possible to instead create a decentralized trust graph between
+user-issued assets and leverage it to safely exchange value without a central
+authority or shared blockchain to maintain.
 
 After 6 months of work on that idea. I believe it's possible.
 
-In particular, the "research-y" contribution of this work, I believe, is that
-it demonstrates that it is possible to operate a safe credit network (a
-currency system without double-spend) without requiring global consensus (a
-shared global state machine, or blockchain) if you accept the following two
-constraints:
+In particular, the "research-y" contribution of this work, is that it
+demonstrates that it is possible to operate a safe credit network (a currency
+system without double-spend) without requiring global consensus (a shared
+global state machine, or blockchain) if you accept the following constraints:
 
 - nodes have to be online
 - trust between nodes has to be expressed explicitly
+- when trusting a malicious node, users can loose up to the amount of trust
+  they placed in it.
 
-It's still a work in progress and nowhere close to being a research paper (or a
-white paper for that matter), but most of the element that demostrates this can
-be found in the documentation[1][2].
+It's still a work in progress, but a lot more information can be found in the
+documentation[1][2].
 
 *The Settle network is operated by mints.*
 
