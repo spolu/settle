@@ -57,7 +57,7 @@ machines (and humans).
 
 These transactions would require to come at very little or no fee which rules
 out fiat currencies (also why would a machine trust a nation-state backing?)
-but also most cryptocurrencies backed by a blockchan as maintaining the
+but also most cryptocurrencies backed by a blockchain as maintaining the
 blockchain generally costs quite a lot on a per transaction basis (if only to
 prevent spam).
 
