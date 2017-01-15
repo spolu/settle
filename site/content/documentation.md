@@ -36,9 +36,7 @@ A few examples of valid assets are:
 - **info@sightglasscofee.com:AU-LAIT.0 2**: represents **2 au laits** issued by
   Sightglass Coffee. "Au laits" are not fungible and therefore have scale of 0.
 
-## Mint API
-
-### Authentication and registration
+## Authentication and registration
 
 User onboarding for the Mint API is left to the discretion of the mint
 implementor or administrator.
@@ -51,7 +49,7 @@ database used by the mint (see
 [register](https://github.com/spolu/settle/blob/master/register) for the
 registration service used by the mint maintained by the Settle developers).
 
-### Create an offer
+## Offers
 
 Trust in the network is expressed by offers. Offers are always represented as
 asks:
@@ -108,7 +106,7 @@ curl -XGET https://sightglasscofee.com:2406/offers/stan@foo.bar[offer_7t3sk24sdv
 }
 ```
 
-#### Semantics of offers
+### Semantics of offers
 
 Since offers are offers to **issue** and exchange an asset against another, the
 base asset of an offer must always be controlled by the owner of the offer,
@@ -125,7 +123,7 @@ Chain of offers can therefore be leveraged to transact between users of the
 settle network. The network provides a primitive to do so safely and
 atomically: transactions.
 
-### Create a transaction
+## Transactions
 
 Creating a simple transaction can let you credit a user account with a given
 asset you issue or own:
@@ -188,7 +186,7 @@ Commiting this transaction to the network requires the mint **corewars.org**
 and **foo.bar** to synchronize their state. They do so using the algorithm
 described in the next subsections.
 
-#### Transaction creation and reservation
+### Creation and reservation
 
 When creating a transaction, a mint will retrieve the offers involved in the
 transaction path, compute a transaction plan to verify its validity and commit
@@ -232,7 +230,7 @@ Once this chain of commitments is made, the transaction is created and
 Implementation of the reservation algorithm can be found at:
 https://github.com/spolu/settle/blob/master/mint/endpoint/create_transaction.go
 
-#### Transaction settlement
+### Settlement
 
 Each of these mints are now willing to release the funds to make the
 transaction happen in exchange for the secret (without talking to other mints)

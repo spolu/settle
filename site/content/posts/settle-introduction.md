@@ -14,7 +14,7 @@ Settle's goal is to explore a new financial trust primitive on the Internet,
 and doing so, construct a decentralized trust graph enabling (totally) free
 exchange of value without relying on a blockchain.
 
-In a nutshell, Settle lets you:
+Settle lets you:
 
 - `mint` (activate) assets (IOUs) on your account:
 ```
@@ -43,36 +43,39 @@ can install it locally (under `~/.settle`) with the following command:
 curl -L https://settle.network/install | sh && export PATH=$PATH:~/.settle
 ```
 
-... and read the command-line help with:
+... and register on the publicly accessible mint **m.settle.network**:
 ```
-settle help
+settle register
 ```
 
 All of the source code is also availabe at: https://github.com/spolu/settle
 
-*Value-exchange for humans and machines alike*
+*Value-exchange for humans and machines*
 
-Settle was born out of the idea of experimenting with what would be the
-simplest way to let machines and humans issue IOUs ("I owe you") and exchange
-them safely. Early on, I tinkered with tooling around Bitcoin (colored
-coins), Stellar, and Ethereum (simple asset contracts), but run into the exact
-same issues on each of these systems:
+There are still barriers to enabling at scale and fluid transactions between
+machines (and humans).
 
-- Even if you exchange IOUs, you have to pay transaction fees to maintain the
-blockchain backing each of these systems. So you really can't openly onboard
-users on whichever tool you create as you have to credit their account with
-some amount of BTC, XLM or ETH to get them started. This is a pretty tough
-barrier to entry, and as a direct consequence, you can't programmatically
-onboard machines at scale without a substantial costs.
-- micro-payments particularly relevant to machine to machine transactions are
-also most of the time impractical because of these fees[0]
+These transactions would require to come at very little or no fee which rules
+out fiat currencies (also why would a machine trust a nation-state backing?)
+but also most cryptocurrencies backed by a blockchan as maintaining the
+blockchain generally costs quite a lot on a per transaction basis (if only to
+prevent spam).
 
-This led me to the obvious realization that:
+Lightning networks resolve that issue at the transcation level, but one still
+has to get his hands on the underlying currency to set up channels, which
+creates a huge barrier to entry for machines.
+
+Also, and this is more likely a hunch, machine to machine transactions at scale
+won't happen on "global currencies". They'll transact in **KWH** of energy,
+**KB** of bandwidth and storage, **FLOPSH** of computing power, **APICALL**, or
+**KM** of drone delivery directly, in a decentralized way, without jumping
+through a shared, centrally trusted and therefore expensive currency (expensive
+in transaction fee, or expensive to setup, or expensive in regulation burden).
 
 *Currencies operate on a centralized trust graph.*
 
-This sentence is almost tautological but let's consider both fiat and crypto
-currencies:
+This sentence is almost tautological but let's consider both fiat and
+cryptocurrencies:
 
 Fiat currencies value is by definition backed by the government that issued it.
 Hence, by construction, the trust graph powering exchanges based on fiat
@@ -90,29 +93,30 @@ The centralized nature of the trust involved in these cryptocurrencies being
 actually at the core of how these currencies operate, as the only viable way so
 far to properly incentivize a proof-of-work system.
 
-From that realization, I decided to focus on the task of exploring whether it
-would be possible to instead create a decentralized trust graph between
-user-issued assets and leverage it to safely exchange value without a central
-authority or shared blockchain to maintain.
+*Explore decentralized currencies*
 
-After 6 months of work on that idea. I believe it's possible.
+Settle was motivated by the exploration of whether it would be possible to
+create a decentralized trust graph between user-issued IOUs ("I owe you") and
+leverage it to safely exchange value without a central authority or shared
+blockchain to maintain, getting in exchange free transactions and free
+onboarding, specifically important for machine to machine transactions.
 
-In particular, the "research-y" contribution of this work, is that it
-demonstrates that it is possible to operate a safe credit network (a currency
-system without double-spend) without requiring global consensus (a shared
-global state machine, or blockchain) if you accept the following constraints:
+Rephrased in researchy terms, Settle demonstrates that it is possible to
+operate a safe credit network (a currency system without double-spend) without
+requiring global consensus (a shared global state machine, or blockchain) if
+you accept the following constraints:
 
 - nodes have to be online
 - trust between nodes has to be expressed explicitly
 - when trusting a malicious node, users can loose up to the amount of trust
   they placed in it.
 
-It's still a work in progress, but a lot more information can be found in the
-documentation[1][2].
+It's still a work in progress, but more information can be found on these
+claims in the documentation[1][2].
 
 *The Settle network is operated by mints.*
 
-Since you don't have a shared blockchain, the nodes of your network have to be
+Since there is no shared blockchain, the nodes of the network have to be
 online. So, very much like email, users register on "mints", a server of their
 choice (possibly their own), that manage the assets they issue as well as the
 trust they express between assets in the network.
@@ -190,8 +194,9 @@ settle pay alan@npl.co.uk USD.2 1000    # albert runs this
 ```
 
 After this operation is complete, Alan will have a balance of
-**kurt@princetown.edu[USD.2] 1000** on the mint at **princetown.edu**, Alan's
-offer will be valid for a remaining **19000** and Kurt's offer for **9000**.
+**kurt@princetown.edu[USD.2] 1000** on the mint at **princetown.edu**, and Kurt
+will have a balance of **albert@princetown.edu[USD.2] 1000**. Alan's offer will
+be valid for a remaining **19000** and Kurt's offer for a remaining **9000**.
 
 The mint protocol provides a mechanism called transactions (backing the `pay`
 command above) to cross a chain of offers atomically and safely[1][2]. A
@@ -205,7 +210,7 @@ risk) or an exchange rate, as an example:
 ```
 setlle trust alan@npl.co.uk GBP.2 120 with USD.2 at 122/100
 ```
-/The settle.network mint/
+/The m.settle.network mint/
 
 With this post, I'm releasing an open-source implementation for mints, as well
 as the command-line tool `settle`. That you can install locally with:
