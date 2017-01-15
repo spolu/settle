@@ -8,13 +8,36 @@ date = "2017-01-14T10:31:00-07:00"
 # Settle
 
 I'm happy to release Settle, a personal research project I've been working on
-over the past 8 months!
+over the past 8 months.
 
 Settle's goal is to explore a new financial trust primitive on the Internet,
 and doing so, construct a decentralized trust graph enabling (totally) free
 exchange of value without relying on a blockchain.
 
-If you'd like to play with the `settle` command-line as you read the post, you
+In a nutshell, Settle lets you:
+
+- `mint` (activate) assets (IOUs) on your account:
+```
+settle mint EUR.2    # activates you@yourdomain[EUR.2] (EUR in cents)
+```
+
+- `trust` others's assets, that is, express your willingnes to issue your own
+  asset (**you@yourdomain.com[EUR.2]**) in exchange for an another user's asset
+(here **kurt@princetown.edu/[USD.2]**) for up to a specified amount **10000**
+at the specified price (**106/100**):
+```
+settle trust kurt@princetown.edu USD.2 10000 with EUR.2 at 106/100
+```
+
+- `pay` arbitrary users in their own assets. Settle will discover a trust path
+(if it exists) between your assets (that you can issue) or assets you have a
+balance in and **alan@npl.co[EUR.2]**, without requiring to have a
+pre-existing direct trust relationship with **alan@npl.co.uk**:
+```
+settle pay alan@npl.co EUR.2 100
+```
+
+If you'd like to play with the `settle` command-line as you read this post, you
 can install it locally (under `~/.settle`) with the following command:
 ```
 curl -L https://settle.network/install | sh && export PATH=$PATH:~/.settle
@@ -227,7 +250,9 @@ Have fun minting.
 -stan
 
 [0] Lightning networks elegantly circumvent the problem of per transaction fees
-but don't help with the "onboarding" problem.
+but don't help with the "onboarding" problem. Settle is deeply inspired by
+lightning networks and shares many aspects with them, replacing the backing
+cryptocurrency by pre-expressed user trust.
 
 [1] see the [Mint documentation](/documentation). In particular, the protocol
 is safe in the sense that there is no double-spend but users can loose money if
