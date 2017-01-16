@@ -54,7 +54,7 @@ Register on a mint:
 settle register
 ```
 
-Mint (activate) your first asset (**USD** in cents):
+Mint (activate) your first asset (**USD** with a scale of 2, i.e expressed in cents):
 ```
 settle mint USD.2
 ```
