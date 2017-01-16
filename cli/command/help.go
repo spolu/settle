@@ -73,8 +73,8 @@ func (c *Help) Help(
 	out.Normf("\n")
 
 	out.Boldf("  register\n")
-	out.Normf("    Register on publicy available mints.\n")
-	out.Valuf("    settle login\n")
+	out.Normf("    Register on publicly available mints.\n")
+	out.Valuf("    settle register\n")
 	out.Normf("\n")
 
 	out.Boldf("  logout\n")
