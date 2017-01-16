@@ -54,17 +54,22 @@ Register on a mint:
 settle register
 ```
 
-Mint your first asset (**USD** in cents):
+Mint (activate) your first asset (**USD** in cents):
 ```
 settle mint USD.2
 ```
 
-Trust your friend for **$10**:
+Trust someone for **$10**:
 ```
-settle trust friend@m.settle.network USD.2 1000
+settle trust kurt@princetown.edu USD.2 1000
 ```
 
-Pay someone **$1** (assuming a trust path exists):
+Trust at a specific rate:
 ```
-settle pay someone@m.settle.network USD.2 100
+settle trust supercharger@tesla.com KWH.2 10000 with USD.2 at 20/100
+```
+
+Pay someone **1€** (assuming a trust path exists):
+```
+settle pay alan@npl.co EUR.2 100
 ```
