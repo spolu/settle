@@ -10,7 +10,7 @@ date = "2016-11-04T17:28:19-07:00"
 
 While cryptocurrencies are maintained by distributed ledgers with no central
 authority, their trust graph is still fully centralized: everyone has to trust
-the currency that powers the blockahin (**BTC**, **ETH**, **XLM**...).
+the currency that powers the blockchain (**BTC**, **ETH**, **XLM**...).
 
 Settle's goal is to explore a new financial trust primitive on the Internet,
 and doing so, construct a decentralized trust graph enabling (totally) free
@@ -18,14 +18,14 @@ exchange of value without relying on a blockchain.
 
 The Settle transaction protocol allows users to safely transfer value along
 pre-expressed trust paths without a shared blockchain (see [Mint
-documentation](/documentation)). Very much like email, users register on
-"mints", a server of their choice (possibly their own), that manage the assets
-they issue as well as the trust they express between assets in the network.
+documentation](/documentation)). Similarly to email, users register on
+a "mint": a server of their choice (possibly their own) that manage the assets
+they issue as well as the trust they express towards assets in the network.
 
 Settle distributes a command line utility, `settle`, to interact with mints. It
 lets you register on a publicly available mint (or login on a mint of your
 choice), create assets, express trust between your assets and others', and
-transact using these trust pathes.
+transact using these trust paths.
 
 Settle also maintains a publicly available mint **m.settle.network** on which you
 can register freely.
