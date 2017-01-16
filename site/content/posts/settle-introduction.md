@@ -65,7 +65,7 @@ Lightning networks resolve that issue at the transcation level, but one still
 has to get his hands on the underlying currency to set up channels, which
 creates a huge barrier to entry for machines.
 
-Also, and this is more likely a hunch, machine to machine transactions at scale
+Also, and this is more likely a hunch[0], machine to machine transactions at scale
 won't happen on "global currencies". They'll transact in **KWH** of energy,
 **KB** of bandwidth and storage, **FLOPSH** of computing power, **APICALL**, or
 **KM** of drone delivery directly, in a decentralized way, without jumping
@@ -93,7 +93,7 @@ The centralized nature of the trust involved in these cryptocurrencies being
 actually at the core of how these currencies operate, as the only viable way so
 far to properly incentivize a proof-of-work system.
 
-*Explore decentralized currencies*
+*Explore decentralized trust based value exchange*
 
 Settle was motivated by the exploration of whether it would be possible to
 create a decentralized trust graph between user-issued IOUs ("I owe you") and
@@ -113,6 +113,10 @@ you accept the following constraints:
 
 It's still a work in progress, but more information can be found on these
 claims in the documentation[1][2].
+
+Even more importantly, the engineering contribution of Settle, is a simple
+HTTPS API to operate such network and an even simpler command-line to
+interact with it.
 
 *The Settle network is operated by mints.*
 
@@ -254,16 +258,14 @@ Have fun minting.
 
 -stan
 
-[0] Lightning networks elegantly circumvent the problem of per transaction fees
-but don't help with the "onboarding" problem. Settle is deeply inspired by
-lightning networks and shares many aspects with them, replacing the backing
-cryptocurrency by pre-expressed user trust.
+[0] That's the great thing about personal projects, it's OK to invest time and
+build stuff on a hunch!
 
-[1] see the [Mint documentation](/documentation). In particular, the protocol
+[1] See the [Mint documentation](/documentation). In particular, the protocol
 is safe in the sense that there is no double-spend but users can loose money if
 they trust malicious users.
 
-[2] skipping a few steps and notions, but for reference, the exact commitment
+[2] Skipping a few steps and notions, but for reference, the exact commitment
 (ensuring safety) that a mint is doing on behalf of its user when accepting to
 participate in a transaction is the following:
 ```
