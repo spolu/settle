@@ -16,10 +16,13 @@ exchange of value without relying on a blockchain.
 
 Settle lets you:
 
-- `mint` (activate) assets (IOUs really) on your account:
+- `mint` (activate) assets (IOUs really) on your account.
 ```
 settle mint EUR.2    # activates you@yourdomain[EUR.2] (EUR in cents)
 ```
+(Assets are expressed as `{CODE}.{SCALE}` where the scale, or decimal length, is
+an integer representing the factor by which the asset native amount is scaled
+down when represented as a signed integer).
 
 - `trust` others's assets, that is, express your willingnes to issue your own
   asset (**you@yourdomain.com[EUR.2]**) in exchange for an another user's asset
