@@ -66,7 +66,7 @@ settle trust kurt@princetown.edu USD.2 1000
 
 Trust at a specific rate:
 ```
-settle trust supercharger@tesla.com KWH.2 10000 with USD.2 at 100/20
+settle trust supercharger@tesla.com KWH.2 10000 with USD.2 at 20/100
 ```
 
 Pay someone **1€** (assuming a trust path exists):

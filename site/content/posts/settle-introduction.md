@@ -218,7 +218,7 @@ Of course users can also specify trust with a discount (because of a possible
 risk) or an exchange rate, as an example:
 
 ```
-setlle trust alan@npl.co.uk GBP.2 120 with USD.2 at 122/100
+setlle trust alan@npl.co.uk GBP.2 1000 with USD.2 at 100/122
 ```
 /The m.settle.network mint/
 
