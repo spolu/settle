@@ -65,7 +65,7 @@ are expressed as a quotient of signed integers (always positive). The price of
 ask **stan@foobar.com[USD.2]/info@sightglasscofee.com:AU-LAIT.0** can be
 expressed as **320/1**.
 
-Offers amount are always expressed in the unit of the quote asset (the asset on
+Offer amounts are always expressed in the unit of the quote asset (the asset on
 the right).
 
 Offers to exchange assets can be created and publicized on the network. Users
