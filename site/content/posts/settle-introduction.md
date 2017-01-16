@@ -20,9 +20,10 @@ Settle lets you:
 ```
 settle mint EUR.2    # activates you@yourdomain[EUR.2] (EUR in cents)
 ```
-(Assets are expressed as `{CODE}.{SCALE}` where the scale, or decimal length, is
-an integer representing the factor by which the asset native amount is scaled
-down when represented as a signed integer).
+(Assets are expressed as `{CODE}.{SCALE}` where the code is an alphanumeric
+string of your choice and the scale, or decimal length, is an integer
+representing the factor by which the asset native amount is scaled down when
+represented as a signed integer).
 
 - `trust` others's assets, that is, express your willingnes to issue your own
   asset (**you@yourdomain.com[EUR.2]**) in exchange for an another user's asset
