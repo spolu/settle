@@ -32,6 +32,9 @@ at the specified price (**106/100**):
 ```
 settle trust kurt@princetown.edu USD.2 10000 with EUR.2 at 106/100
 ```
+(Prices are expressed as `base_asset/quote_asset` where the base asset is your
+own asset (here **you@yourdomain.com[EUR.2]**) and the quote asset is the asset
+you trust (here **kurt@princetown.edu[USD.2]**).
 
 - `pay` arbitrary users in their own assets. Settle will discover a trust path
 (if it exists) between your assets (the ones you've minted and can issue, or

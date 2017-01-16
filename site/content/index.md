@@ -58,16 +58,24 @@ Mint (activate) your first asset (**USD** with a scale of 2, i.e expressed in ce
 ```
 settle mint USD.2
 ```
+(Assets are expressed as `{CODE}.{SCALE}` where the code is an alphanumeric
+string of your choice and the scale, or decimal length, is an integer
+representing the factor by which the asset native amount is scaled down when
+represented as a signed integer).
 
 Trust someone for **$10**:
 ```
 settle trust kurt@princetown.edu USD.2 1000
 ```
 
-Trust at a specific rate:
+Trust at a specific price:
 ```
 settle trust supercharger@tesla.com KWH.2 10000 with USD.2 at 20/100
 ```
+(Prices are expressed as `base_asset/quote_asset` where the base asset is your
+own asset (here **you@yourdomain.com[USD.2]**) and the quote asset is the asset
+you trust (here **supercharger@tesla.com[KWH.2]**).
+
 
 Pay someone **1€** (assuming a trust path exists):
 ```
