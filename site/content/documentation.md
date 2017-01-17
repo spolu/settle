@@ -145,7 +145,8 @@ curl -XPOST https://foo.bar:2406/transactions \
     destination: "bob@corewars.com",
     amount: 500,
     status: "reserved"
-  }]
+  }],
+  crossings: []
 }
 ```
 
@@ -178,7 +179,8 @@ curl -XPOST https://foo.bar:2406/transactions \
     destination: "bob@corewars.org",
     amount: 200,
     status: "reserved"
-  }]
+  }],
+  crossings: []
 }
 ```
 
@@ -264,3 +266,72 @@ cancelled.
 
 Implementation of the cancellation algorithm can be found at:
 https://github.com/spolu/settle/blob/master/mint/endpoint/cancel_transaction.go
+
+### Safety
+
+Let's assume that a mint at hop `h` has received the secret. It then release
+the funds associated with the transaction immediately in accordance with the
+commitments it made at reservation, allowing the transaction to take place. It
+then attempts to recover funds, from the mint at hop `h-1` by propagating the
+secret.
+
+The mint at hop `h-1` will release the funds as well since it made the
+commitment to do so and it can't have cancelled the transaction since the mint
+at hop `h` has not. If it does not, it's either because it had a technical
+issue or it is malicious. In that situation, the mint at hop `h` (only) will
+not get paid for the transaction but the rest of the transaction will take
+place safely.
+
+In that sense, users participating in transactions can only lose up to the
+amount of trust they placed in malicious nodes.
+
+## API Reference (WIP)
+
+Work in progress.
+
+Endpoint implementations can be found at:
+https://github.com/spolu/settle/blob/master/mint/endpoint
+
+### `POST /assets`
+
+Create an asset.
+
+### `GET /assets`
+
+List assets
+
+### `GET /asset/:asset/balances`
+
+List all balances of an asset.
+
+### `GET /balances`
+
+List balances of the authenticated user.
+
+### `POST /offers`
+
+Create an offer.
+
+### `GET /offers/:offer`
+
+Retrieve an offer.
+
+### `POST /offers/:offer/close`
+
+Close an offer.
+
+### `GET /asset/:asset/offers`
+
+List all offers for an asset.
+
+### `POST /transactions`
+
+Crete a transaction.
+
+### `GET /transactions/:transaction`
+
+Retrieve a transaction.
+
+### `POST /transactions/:transaction/settle`
+
+Settle a transaction.
