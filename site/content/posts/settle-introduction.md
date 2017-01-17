@@ -30,7 +30,7 @@ represented as a signed integer).
 (here **kurt@princetown.edu[USD.2]**) for up to a specified amount **10000**
 at the specified price (**106/100**):
 ```
-settle trust kurt@princetown.edu USD.2 10000 with EUR.2 at 106/100
+settle trust kurt@princetown.edu USD.2 10000 with EUR.2 at 100/106
 ```
 (Prices are expressed as `base_asset/quote_asset` where the base asset is your
 own asset (here **you@yourdomain.com[EUR.2]**) and the quote asset is the asset
