@@ -1,22 +1,3 @@
-# reservation commitments
-
-  Node at hop, commits to:
-    - settle (irrevocably issue/credit the funds) if:
-      - it has not yet canceled the transaction.
-      - it is presented with the lock.
-      - node at hop-1 has made the same commitment.
-    - cancel the transaction if:
-      - it has not yet settled the transaction.
-      - node at hop+1 has canceled.
-
-# preview
-
-  [ ] finish site
-    [ ] cut 0.0.2-pre
-    [ ] blog post draft
-    [ ] documentation
-  [ ] send r?
-
 # cli
 
   [ ] close (offer) command

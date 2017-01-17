@@ -65,9 +65,9 @@ machines (and humans).
 
 These transactions would have to come at very little or no fee which rules out
 fiat currencies (also why would a machine trust a nation-state backing?) but
-also most cryptocurrencies backed by a blockchain as maintaining the blockchain
-generally costs quite a lot on a per transaction basis (if only to prevent
-spam).
+also most cryptocurrencies backed by a blockchain, as maintaining the
+blockchain generally costs quite a lot on a per transaction basis (if only to
+prevent spam).
 
 Lightning networks resolve that issue at the transcation level, but users still
 have to get their hands on the underlying currency to set up channels, which
@@ -239,31 +239,48 @@ assets as well as a guide to setup your own mint:
 - [Guide: Setting up a mint](/posts/guide-setting-up-a-mint/)
 - [Community](/community)
 
-/Mint your assets!/
+/Getting involved/
 
-I'd like to write a few more posts exploring how Settle could be used in a
-couple of interesting situations related to self-driving car networks[3] and
-e-commerce[4], but I'm convinced that a successful use-case for Settle, if any,
-is very likely to come from somewhere unexpected.
+At the end of the day, Settle's goal is to make currency issuance and exchange
+easy and available to everyone (even machines). I think that Settle can be
+particularly useful in situations where currency issuance is implicit and
+therefore often lacks liquidity.
 
-So I definitely invite you to play with the `settle` command line and register
-on **m.settle.network**. When you mint assets, feel free to ping me on IRC
-(spolu in #settle on FreeNode), I'd be more than happy to trust you for a few
-cents and transact with you to test the system.
+One perfect (though rather mundane) example where Settle could potentially
+inject liquidity in an implicit network of IOUs, are the balances we maintain
+with our friends and family. Settle could (at least with your technophile
+friends until we have more than a command-line) let you use the balance you
+have with one friend to pay another one, or even buy stuff, depending on the
+topology of the trust graph. Even if mundane, powered by a mobile app, this
+could be a pretty exciting application of Settle.
 
-Setting up your own mint is also definitely a great way to learn more and help
-the community grow. If you setup a mint, let's add it to the `settle register`
-command!
+While I'm also excited by potential use-cases related to self-driving car
+networks[3] or online commerce[4], I'm convinced that a first successful
+use-case for Settle, if any, is very likely to come from somewhere unexpected.
 
-Finally, if you really want to get your hands dirty, building an app or a
-gateway[5], are definitely things that I would love to collaborate on in the
-future.
+With that in mind, if you whish to get involved here are a few
+things you can do today:
 
-In the meantime, I hope you enjoy learning more about Settle and the model it
-proposes. Don't hesitate to reach out directly or on the public mailing list[6]
-if you have any question!
+- First and foremost, install `settle`, register, mint a few assets, ask your
+friends, colleagues, drones, self-driving cars to do so, trust them and ask
+(instruct?) them to trust you back and attempt to run a few transactions.
+That's the best way to test the system and discover interesting use-cases.
+- If you want to learn more about the underlying protocol, you can play with
+setting up your own mint: that's definitely beneficial for the comunity and if
+you do so, let's add it to the `register` command. 
+- If you think of, work in, or have heard of implicit networks of IOUs that are
+lacking liquidity, let's try to apply Settle to it and see if it can solve a
+pain point experienced in that market. (Another hunch: I'm quite convinced,
+despite not being an expert at all, that online games artifacts could be a good
+fit?)
+- Finally, there are many large-scale engineering projects that can be built on
+top of Settle. Most obvious ones I can think of are: an offer path discovery
+service, a mobile app (and probably service as well) that makes it easy to use
+Settle for non-technical users, or a variety of gateways[5].
 
-Have fun minting.
+In any case, I hope that you'll enjoy learning more about Settle and the model
+it proposes. Please don't hesitate to reach out directly or on the public
+mailing list[6] if you have any question!
 
 -stan
 
@@ -308,8 +325,9 @@ usable at other places. This could potentially solve the problem of unlinked
 refunds in e-commerce while ensuring merchants that these credits would, by
 construction, be eventually used at their store.
 
-[5] Lets users deposit fiat currency in exchange for trust on the network, or
-get back fiat currency by paying the gateway on the network.
+[5] Lets users deposit currencies (fiat or cryptocurrencies) in exchange for
+trust on the network, and get that currency deposited back to their account by
+paying the gateway on the network.
 
 [6]
 [settle-public@googlegroups.com](https://groups.google.com/d/forum/settle-public)
