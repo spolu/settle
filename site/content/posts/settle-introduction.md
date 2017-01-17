@@ -132,7 +132,7 @@ interact with it.
 Since there is no shared blockchain, the nodes of the network have to be
 online. So, very much like email, users register on "mints", a server of their
 choice (possibly their own), that manage the assets they issue as well as the
-trust they express between assets in the network.
+trust they express towards other assets in the network.
 
 You can freely register with the `settle` command-line on the mint I opened
 publicly at `m.settle.network` (no need to be human, you just need to be able
