@@ -242,9 +242,9 @@ func Compute(
 		}
 		amount := new(big.Int).Mul(
 			plan.Hops[hop].OpAction.Amount,
-			basePrice)
+			quotePrice)
 		amount, remainder := new(big.Int).QuoRem(
-			amount, quotePrice, new(big.Int))
+			amount, basePrice, new(big.Int))
 
 		// Transactions do cross offers on non congruent prices, costing one
 		// base unit of quote asset. If the difference of scale between assets

@@ -42,7 +42,7 @@ func setupCreateTransaction(
 			"100/100", big.NewInt(100)),
 		u[2].CreateOffer(t,
 			fmt.Sprintf("%s/%s", a[2].Name, a[1].Name),
-			"100/98", big.NewInt(100)),
+			"98/100", big.NewInt(100)),
 	}
 
 	return m, u, a, o
@@ -265,13 +265,13 @@ func TestCreateTransactionWithUserUsedTwice(
 		"100/100", big.NewInt(100))
 	o2 := u3.CreateOffer(t,
 		fmt.Sprintf("%s[USD.2]/%s[USD.2]", u3.Address, u[1].Address),
-		"100/120", big.NewInt(100))
+		"120/100", big.NewInt(100))
 	o3 := u[1].CreateOffer(t,
 		fmt.Sprintf("%s[USD.2]/%s[USD.2]", u[1].Address, u3.Address),
 		"100/100", big.NewInt(100))
 	o4 := u[2].CreateOffer(t,
 		fmt.Sprintf("%s[USD.2]/%s[USD.2]", u[2].Address, u[1].Address),
-		"100/98", big.NewInt(100))
+		"98/100", big.NewInt(100))
 
 	status, raw := u[0].Post(t,
 		fmt.Sprintf("/transactions"),

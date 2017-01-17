@@ -43,7 +43,7 @@ func setupListAssetOffers(
 			"100/100", big.NewInt(100)),
 		u[2].CreateOffer(t,
 			fmt.Sprintf("%s[USD.2]/%s[USD.2]", u[2].Address, u[0].Address),
-			"100/98", big.NewInt(100)),
+			"98/100", big.NewInt(100)),
 	}
 
 	// Propagate m[1], m[2] offers to m[0].
