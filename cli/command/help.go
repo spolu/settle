@@ -62,9 +62,14 @@ func (c *Help) Help(
 	out.Valuf("    settle pay von.neumann@ias.edu GBP.2 20\n")
 	out.Normf("\n")
 
-	out.Boldf("  list <object>\n")
+	out.Boldf("  list <type>\n")
 	out.Normf("    List balances, assets, trustlines.\n")
 	out.Valuf("    settle list balances\n")
+	out.Normf("\n")
+
+	out.Boldf("  close <trustline>\n")
+	out.Normf("    Close a trustline.\n")
+	out.Valuf("    settle close spolu@m.settle.network[offer_Z1vJtLYFUFgSWwy0]\n")
 	out.Normf("\n")
 
 	out.Boldf("  login\n")

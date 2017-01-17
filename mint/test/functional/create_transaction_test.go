@@ -726,3 +726,66 @@ func TestCreateTransactionUsingOfferToPayOneself(
 	// go back at 10 post settlement).
 	assert.Equal(t, big.NewInt(5), (*big.Int)(&balance.Value))
 }
+
+func TestCreateTransactionBasicEURUSD(
+	t *testing.T,
+) {
+	t.Parallel()
+	m, u, a, _ := setupCreateTransaction(t)
+	defer tearDownCreateTransaction(t, m)
+
+	eur := u[1].CreateAsset(t, "EUR", 2)
+	eurOffer := u[1].CreateOffer(t,
+		fmt.Sprintf("%s/%s", eur.Name, a[0].Name),
+		"100/106", big.NewInt(100))
+
+	status, raw := u[0].Post(t,
+		fmt.Sprintf("/transactions"),
+		url.Values{
+			"pair":        {fmt.Sprintf("%s/%s", a[0].Name, eur.Name)},
+			"amount":      {"10"},
+			"destination": {u[1].Address},
+			"path[]": {
+				eurOffer.ID,
+			},
+		})
+
+	assert.Equal(t, 201, status)
+
+	var tx0 mint.TransactionResource
+	err := raw.Extract("transaction", &tx0)
+	assert.Nil(t, err)
+
+	assert.Regexp(t, mint.IDRegexp, tx0.ID)
+	assert.Equal(t, mint.TxStReserved, tx0.Status)
+	assert.Equal(t, 1, len(tx0.Operations))
+	assert.Equal(t, 0, len(tx0.Crossings))
+
+	assert.Equal(t, mint.TxStReserved, tx0.Operations[0].Status)
+	assert.Equal(t, big.NewInt(11), tx0.Operations[0].Amount)
+	assert.Equal(t, u[1].Address, tx0.Operations[0].Destination)
+	assert.Equal(t, u[0].Address, tx0.Operations[0].Source)
+
+	// Check transaction on m[0].
+	status, raw = u[1].Get(t, fmt.Sprintf("/transactions/%s", tx0.ID))
+	assert.Equal(t, 200, status)
+
+	var tx1 mint.TransactionResource
+	err = raw.Extract("transaction", &tx1)
+	assert.Nil(t, err)
+
+	assert.Regexp(t, mint.IDRegexp, tx1.ID)
+	assert.Equal(t, mint.TxStReserved, tx1.Status)
+	assert.Equal(t, 1, len(tx1.Operations))
+	assert.Equal(t, 1, len(tx1.Crossings))
+
+	assert.Equal(t, mint.TxStReserved, tx1.Operations[0].Status)
+	assert.Equal(t, big.NewInt(10), tx1.Operations[0].Amount)
+	assert.Equal(t, u[1].Address, tx1.Operations[0].Destination)
+	assert.Equal(t, u[1].Address, tx1.Operations[0].Source)
+
+	assert.Equal(t, mint.TxStReserved, tx1.Crossings[0].Status)
+	assert.Equal(t, u[1].Address, tx1.Crossings[0].Owner)
+	assert.Equal(t, eurOffer.ID, tx1.Crossings[0].Offer)
+	assert.Equal(t, big.NewInt(11), tx1.Crossings[0].Amount)
+}
