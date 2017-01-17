@@ -2,7 +2,7 @@
 type = "post"
 title = "Decentralized trust graph for online value exchange without a blockchain"
 description = "Introductory post about Settle, how it enables value exchange online without a blockchain, and why it may be useful."
-date = "2017-01-14T10:31:00-07:00"
+date = "2017-01-17T08:30:00-07:00"
 +++
 
 # Settle
@@ -69,7 +69,7 @@ also most cryptocurrencies backed by a blockchain, as maintaining the
 blockchain generally costs quite a lot on a per transaction basis (if only to
 prevent spam).
 
-Lightning networks resolve that issue at the transcation level, but users still
+Lightning networks resolve that issue at the transaction level, but users still
 have to get their hands on the underlying currency to set up channels, which
 creates a real barrier to entry as well for machines.
 
@@ -117,7 +117,7 @@ you accept the following constraints:
 
 - nodes have to be online
 - trust between nodes has to be expressed explicitly
-- when trusting a malicious node, users can loose up to the amount of trust
+- when trusting a malicious node, users can lose up to the amount of trust
   they placed in it.
 
 It's still a work in progress, but more information can be found on these
@@ -206,10 +206,11 @@ back to Alan in exchange for the part.
 settle pay alan@npl.co.uk USD.2 1000    # john runs this
 ```
 
-After this operation is complete, Alan will have a balance of
-**kurt@princetown.edu[USD.2] 1000** on the mint at **princetown.edu**, and Kurt
-will have a balance of **john@lanl.gov[USD.2] 1000**. Alan's offer will
-be valid for a remaining **19000** and Kurt's offer for a remaining **9000**.
+After this operation is complete, Alan holds an IOU from Kurt for $10, i.e. he
+will have a balance of **kurt@princetown.edu[USD.2] 1000** on the mint at
+**princetown.edu**, and Kurt holds an IOU from John for $10, i.e.  he will have
+a balance of **john@lanl.gov[USD.2] 1000**. Alan's offer will be valid for a
+remaining **19000** and Kurt's offer for a remaining **9000**.
 
 The mint protocol provides a mechanism called transactions (backing the `pay`
 command above) to cross a chain of offers atomically and safely[1][2]. A
@@ -258,8 +259,8 @@ While I'm also excited by potential use-cases related to self-driving car
 networks[3] or online commerce[4], I'm convinced that a first successful
 use-case for Settle, if any, is very likely to come from somewhere unexpected.
 
-With that in mind, if you whish to get involved here are a few
-things you can do today:
+With that in mind, if you wish to get involved here are a few things you can do
+today:
 
 - First and foremost, install `settle`, register, mint a few assets, ask your
 friends, colleagues, drones, self-driving cars to do so, trust them and ask
@@ -267,7 +268,7 @@ friends, colleagues, drones, self-driving cars to do so, trust them and ask
 That's the best way to test the system and discover interesting use-cases.
 - If you want to learn more about the underlying protocol, you can play with
 setting up your own mint: that's definitely beneficial for the comunity and if
-you do so, let's add it to the `register` command. 
+you do so, let's add it to the `register` command.
 - If you think of, work in, or have heard of implicit networks of IOUs that are
 lacking liquidity, let's try to apply Settle to it and see if it can solve a
 pain point experienced in that market. (Another hunch: I'm quite convinced,
@@ -288,7 +289,7 @@ mailing list[6] if you have any question!
 work on a hunch!
 
 [1] See the [Mint documentation](/documentation). In particular, the protocol
-is safe in the sense that there is no double-spend (but users can loose up to
+is safe in the sense that there is no double-spend (but users can lose up to
 the amount of trust they place in malicious users).
 
 [2] Skipping a few steps and notions, but for reference, the exact commitment
@@ -317,7 +318,7 @@ pay for their recharge as they earn **KWH.2**.  Car-owners would also trust
 **superchargers@tesla.com[KWH.2]** using it to "pay" at Supercharger stations
 when they ride their own Tesla which would in turn enable Teslas to pay for
 charges at home stations. From there Tesla could set prices for their
-Supercharger in each currency by trusting local nodes at various rate, or even
+Supercharger in each currency by trusting local nodes at various rates, or even
 local power plants for **KWH.2** directly.
 
 [4] Online merchants could use Settle to issue store credit that is easily
@@ -327,7 +328,11 @@ construction, be eventually used at their store.
 
 [5] Lets users deposit currencies (fiat or cryptocurrencies) in exchange for
 trust on the network, and get that currency deposited back to their account by
-paying the gateway on the network.
+paying the gateway on the network: by depositing $20 at acme.com (using a card
+payment or transfer), I would receive a trustline from **gw@acme.com[USD.2]**
+to **spolu@m.settle.network[USD.2]**. Conversely, when paying **gw@acme.com
+USD.2 100**, it would automatically deposit back the associated funds to my
+bank account.
 
 [6]
 [settle-public@googlegroups.com](https://groups.google.com/d/forum/settle-public)
