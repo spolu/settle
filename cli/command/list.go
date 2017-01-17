@@ -67,10 +67,10 @@ func (c *List) Help(
 	out.Valuf("    USD.2 HOUR-OF-WORK.0 BTC.7 EUR.2 DRINK.0\n")
 	out.Normf("\n")
 	out.Normf("Examples:\n")
-	out.Valuf("   setlle list assets\n")
-	out.Valuf("   setlle list balances\n")
-	out.Valuf("   setlle list balances USD.2\n")
-	out.Valuf("   setlle list trustlines EUR.2\n")
+	out.Valuf("  setlle list assets\n")
+	out.Valuf("  setlle list balances\n")
+	out.Valuf("  setlle list balances USD.2\n")
+	out.Valuf("  setlle list trustlines EUR.2\n")
 	out.Normf("\n")
 }
 
@@ -151,7 +151,11 @@ func (c *List) OutList(
 		out.Normf(" ")
 		for _, v := range d {
 			out.Normf(" %s: ", v[0])
-			out.Valuf("%s", v[1])
+			if v[0] == "Status" && v[1] == string(mint.OfStClosed) {
+				out.Errof("%s", v[1])
+			} else {
+				out.Valuf("%s", v[1])
+			}
 		}
 		out.Normf("\n")
 	}
@@ -237,6 +241,7 @@ func (c *List) ExecuteTrustlines(
 	data := [][][2]string{}
 	for _, o := range cOffers {
 		data = append(data, [][2]string{
+			[2]string{"ID", o.ID},
 			[2]string{"Pair", o.Pair},
 			[2]string{"Price", o.Price},
 			[2]string{"Amount", o.Amount.String()},
@@ -254,6 +259,7 @@ func (c *List) ExecuteTrustlines(
 	data = [][][2]string{}
 	for _, o := range pOffers {
 		data = append(data, [][2]string{
+			[2]string{"ID", o.ID},
 			[2]string{"Pair", o.Pair},
 			[2]string{"Price", o.Price},
 			[2]string{"Amount", o.Amount.String()},

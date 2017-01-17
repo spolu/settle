@@ -304,6 +304,46 @@ func SettleTransaction(
 	return &transaction, nil
 }
 
+// CloseOffer closes an offer specified by token.
+func CloseOffer(
+	ctx context.Context,
+	id string,
+) (*mint.OfferResource, error) {
+	m, err := cli.MintFromContextCredentials(ctx)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	out.Statf("[Closing offer] user=%s@%s offer=%s\n",
+		m.Credentials.Username, m.Credentials.Host, id)
+
+	status, raw, err := m.Post(ctx,
+		fmt.Sprintf("/offers/%s/close", id),
+		url.Values{},
+		url.Values{})
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	if *status != http.StatusOK {
+		var e errors.ConcreteUserError
+		err = raw.Extract("error", &e)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		return nil, errors.Trace(
+			errors.Newf("(%s) %s", e.ErrCode, e.ErrMessage))
+	}
+
+	var offer mint.OfferResource
+	err = raw.Extract("offer", &offer)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &offer, nil
+}
+
 // ListAssets list assets for the current user.
 func ListAssets(
 	ctx context.Context,
@@ -474,7 +514,7 @@ func ListAssetOffers(
 	return offers, nil
 }
 
-// RetrieveAsset retrieves an asset, returnin nil if it does not exist.
+// RetrieveAsset retrieves an asset, returning nil if it does not exist.
 func RetrieveAsset(
 	ctx context.Context,
 	name string,
@@ -526,4 +566,58 @@ func RetrieveAsset(
 	}
 
 	return &asset, nil
+}
+
+// RetrieveOffer retrieves an offer, returning nil if it does not exist.
+func RetrieveOffer(
+	ctx context.Context,
+	id string,
+) (*mint.OfferResource, error) {
+	owner, _, err := mint.NormalizedOwnerAndTokenFromID(ctx, id)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	m, err := cli.MintFromContextCredentials(ctx)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	if owner !=
+		fmt.Sprintf("%s@%s", m.Credentials.Username, m.Credentials.Host) {
+		_, host, err := mint.UsernameAndMintHostFromAddress(ctx, owner)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		m = &cli.Mint{Host: host}
+	}
+
+	out.Statf("[Retrieving offer] user=%s offer=%s\n", owner, id)
+
+	status, raw, err := m.Get(ctx,
+		fmt.Sprintf("/offers/%s", id),
+		url.Values{})
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	if *status != http.StatusOK {
+		var e errors.ConcreteUserError
+		err = raw.Extract("error", &e)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		if e.ErrCode == "offer_not_found" {
+			return nil, nil
+		}
+		return nil, errors.Trace(
+			errors.Newf("(%s) %s", e.ErrCode, e.ErrMessage))
+	}
+
+	var offer mint.OfferResource
+	err = raw.Extract("offer", &offer)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return &offer, nil
 }
