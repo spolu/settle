@@ -242,8 +242,8 @@ but not preventing the transaction from happening).
 To settle a transaction, the originating mint release the secret to the last
 mint of the path which accepts the transaction as **settled** without any
 communication (at this point the transaction is effectively settled). The last
-mint then asyncrhonously settles the transaction at the mint before it by
-sending the secret there. Mints recursively and asyncrhonously settle the
+mint then asynchronously settles the transaction at the mint before it by
+sending the secret there. Mints recursively and asynchronously settle the
 transaction along the path.
 
 Implementation of the settlement algorithm can be found at:
