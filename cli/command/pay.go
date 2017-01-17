@@ -373,9 +373,9 @@ func (c *Pay) ComputeCandidates(
 			// ignore error.
 			continue
 		}
-		amount := new(big.Int).Mul(&c.Amount, basePrice)
+		amount := new(big.Int).Mul(&c.Amount, quotePrice)
 		amount, remainder := new(big.Int).QuoRem(
-			amount, quotePrice, new(big.Int))
+			amount, basePrice, new(big.Int))
 
 		// Transactions do cross offers on non congruent prices, costing one
 		// base unit of quote asset. If the difference of scale between assets

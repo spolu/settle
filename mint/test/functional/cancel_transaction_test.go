@@ -40,7 +40,7 @@ func setupCancelTransaction(
 			"100/100", big.NewInt(100)),
 		u[2].CreateOffer(t,
 			fmt.Sprintf("%s/%s", a[2].Name, a[1].Name),
-			"100/98", big.NewInt(100)),
+			"98/100", big.NewInt(100)),
 	}
 
 	return m, u, a, o

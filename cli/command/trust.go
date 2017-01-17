@@ -86,7 +86,7 @@ func (c *Trust) Help(
 	out.Normf("\n")
 	out.Boldf("  price\n")
 	out.Normf("    The price at which you are committing to exchange the user asset for your\n")
-	out.Normf("    asset. The price has the form {base_asset_price}/{quote_asset_price}.\n")
+	out.Normf("    asset. The price is expressed in {base_asset}/{quote_asset}.\n")
 	out.Valuf("    1/1 100/125 4500/1\n")
 	out.Normf("\n")
 	out.Normf("Examples:\n")
