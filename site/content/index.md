@@ -32,7 +32,7 @@ can register freely.
 
 Additional resources:
 
-- [Settle introductory blog post](posts/settle-introduction)
+- [Settle introductory blog post](posts/intro)
 - [Mint documentation](documentation)
 - [Community](community)
 
