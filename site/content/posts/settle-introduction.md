@@ -275,7 +275,7 @@ pain point experienced in that market. (Another hunch: I'm quite convinced,
 despite not being an expert at all, that online games artifacts could be a good
 fit?)
 - Finally, there are many large-scale engineering projects that can be built on
-top of Settle. Most obvious ones I can think of are: an offer path discovery
+top of Settle. Most obvious ones I can think of are: a trust path discovery
 service, a mobile app (and probably service as well) that makes it easy to use
 Settle for non-technical users, or a variety of gateways[5].
 
