@@ -7,7 +7,7 @@ date = "2017-01-17T08:30:00-07:00"
 
 # Settle
 
-I'm happy to release Settle, a personal research project I've been working on
+I'm happy to share Settle, a personal research project I've been working on
 over the past 8 months.
 
 Settle's goal is to explore a new financial trust primitive, and doing so,
@@ -182,14 +182,14 @@ settle trust alan@npl.co.uk GBP.2 1000 with USD.2 at 122/100
 ```
 /The m.settle.network mint/
 
-With this post, I'm releasing an open-source implementation for mints, as well
-as the command-line tool `settle`. That you can install locally with:
+Available  open-source is a Go implementation for mints, as well as a
+command-line tool `settle`, that you can install locally with:
 ```
 curl -L https://settle.network/install | sh && export PATH=$PATH:~/.settle
 ```
 
-I'm also opening a mint at `m.settle.network` to let people issue and exchange
-assets as well as a guide to setup your own mint:
+I'm also maintaining a mint at `m.settle.network` to let people issue and
+exchange assets as well as a guide to setup your own mint:
 
 - [Source code](https://github.com/spolu/settle)
 - [Documentation](/documentation)
@@ -198,10 +198,10 @@ assets as well as a guide to setup your own mint:
 
 /Getting involved/
 
-At the end of the day, Settle's goal is to make currency issuance and exchange
-easy and available to everyone (including machines). I think that Settle can be
-particularly useful in situations where currency issuance is implicit and
-therefore often lacks liquidity.
+At the end of the day, Settle's motivation is to make currency issuance and
+exchange easy and available to everyone (including machines). I think that
+Settle can be particularly useful in situations where currency issuance is
+implicit and therefore often lacks liquidity.
 
 One perfect (though rather mundane) example where Settle could potentially
 inject liquidity in an implicit network of IOUs, are the balances we maintain
@@ -212,8 +212,8 @@ topology of the trust graph. Even if mundane, powered by a mobile app, this
 could be a pretty exciting application of Settle.
 
 While I'm also excited by potential use-cases related to self-driving car
-networks[3] or online commerce[4], I'm convinced that a first successful
-use-case for Settle, if any, is very likely to come from somewhere unexpected.
+networks[3] or online commerce[4], I'm convinced that a any successful
+use-case for Settle, is very likely to come from somewhere unexpected.
 
 With that in mind, if you wish to get involved here are a few things you can do
 today:
