@@ -1,6 +1,6 @@
 +++
 type = "post"
-title = "Value exchange between machines (and humans)"
+title = "Value exchange for machines (and humans)"
 description = "Introductory post about Settle, and how it is particulary fitted for machine to machine transations."
 date = "2017-01-17T08:30:00-07:00"
 +++
