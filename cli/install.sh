@@ -133,11 +133,20 @@ mv "${BINARY_FILE}" "$HOME/.settle"
 # just double-checking :)
 test -x "$HOME/.settle/settle"
 
-BASHRC_PATH="export PATH=\$PATH:$HOME/.settle"
-if ! grep -q "$BASHRC_PATH" "$HOME/.bashrc"; then
-  echo "> Adding '$BASHRC_PATH' to your .bashrc file."
-  touch "$HOME/.bashrc"
-  echo "\n# settle path\n$BASHRC_PATH" >> "$HOME/.bashrc"
+EXPORT_PATH="export PATH=\$PATH:$HOME/.settle"
+if ["$PLATOFRM" = "linux-x86_64" ]
+  if ! grep -q "$EXPORT_PATH" "$HOME/.bashrc"; then
+    echo "> Adding '$EXPORT_PATH' to your .bashrc file."
+    touch "$HOME/.bashrc"
+    echo "\n# settle path\n$EXPORT_PATH" >> "$HOME/.bashrc"
+  fi
+fi
+if ["$PLATOFRM" = "osx-x86_64" ]
+  if ! grep -q "$EXPORT_PATH" "$HOME/.profile"; then
+    echo "> Adding '$EXPORT_PATH' to your .profile file."
+    touch "$HOME/.profile"
+    echo "\n# settle path\n$EXPORT_PATH" >> "$HOME/.profile"
+  fi
 fi
 
 # The `trap cleanUp EXIT` line above won't actually fire after the exec
