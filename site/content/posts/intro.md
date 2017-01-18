@@ -194,7 +194,6 @@ exchange assets as well as a guide to setup your own mint:
 - [Source code](https://github.com/spolu/settle)
 - [Documentation](/documentation)
 - [Guide: Setting up a mint](/posts/guide-setting-up-a-mint/)
-- [Community](/community)
 
 /Getting involved/
 
@@ -230,10 +229,10 @@ lacking liquidity, let's try to apply Settle to it and see if it can solve a
 pain point experienced in that market. (Another hunch: I'm quite convinced,
 despite not being an expert at all, that online games artifacts could be a good
 fit?)
-- Finally, there are many large-scale engineering projects that can be built on
-top of Settle. Most obvious ones I can think of are: a trust path discovery
-service, a mobile app (and probably service as well) that makes it easy to use
-Settle for non-technical users, or a variety of gateways[5].
+- Finally, there are quite a few large-scale engineering projects that can be
+built on top of Settle. Most obvious ones I can think of are: a trust path
+discovery service, a mobile app (and probably service as well) that makes it
+easy to use Settle for non-technical users, or a variety of gateways[5].
 
 In any case, I hope that you'll enjoy learning more about Settle and the model
 it proposes. Please don't hesitate to reach out directly or on the public
