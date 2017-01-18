@@ -213,7 +213,7 @@ could be a pretty exciting application of Settle.
 
 While I'm also excited by potential use-cases related to self-driving car
 networks[3] or online commerce[4], I'm convinced that a any successful
-use-case for Settle, is very likely to come from somewhere unexpected.
+use-case for Settle, is likely to come from somewhere unexpected.
 
 With that in mind, if you wish to get involved here are a few things you can do
 today:
