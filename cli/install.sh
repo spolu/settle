@@ -134,7 +134,7 @@ mv "${BINARY_FILE}" "$HOME/.settle"
 test -x "$HOME/.settle/settle"
 
 EXPORT_PATH="export PATH=\$PATH:$HOME/.settle"
-if ["$PLATFORM" = "linux-x86_64" ] ; then
+if [ "$PLATFORM" = "linux-x86_64" ] ; then
   if ! grep -q "$EXPORT_PATH" "$HOME/.bashrc"; then
     echo "> Adding '$EXPORT_PATH' to your .bashrc file."
     touch "$HOME/.bashrc"
@@ -142,7 +142,7 @@ if ["$PLATFORM" = "linux-x86_64" ] ; then
   fi
 fi
 
-if ["$PLATOFRM" = "osx-x86_64" ] ; then
+if [ "$PLATFORM" = "osx-x86_64" ] ; then
   if ! grep -q "$EXPORT_PATH" "$HOME/.profile"; then
     echo "> Adding '$EXPORT_PATH' to your .profile file."
     touch "$HOME/.profile"
