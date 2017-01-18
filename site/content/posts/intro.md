@@ -1,6 +1,6 @@
 +++
 type = "post"
-title = "Value exchange between machines (and humans)"
+title = "Decentralized trust graph for online value exchange without a blockchain"
 description = "Introductory post about Settle, and how it is particulary fitted for machine to machine transations."
 date = "2017-01-17T08:30:00-07:00"
 +++
@@ -12,8 +12,7 @@ over the past 8 months.
 
 Settle's goal is to explore a new financial trust primitive, and doing so,
 construct a decentralized trust graph enabling (totally) free exchange of value
-without relying on a blockchain particularly adapted to machine-to-machine
-transactions.
+without relying on a blockchain.
 
 *Value-exchange for humans and machines*
 
