@@ -1,7 +1,7 @@
 +++
 type = "post"
-title = "Decentralized trust graph for online value exchange without a blockchain"
-description = "Introductory post about Settle, how it enables value exchange online without a blockchain, and why it may be useful."
+title = "Value exchange between machines (and humans)"
+description = "Introductory post about Settle, and how it is particulary fitted for machine to machine transations."
 date = "2017-01-17T08:30:00-07:00"
 +++
 
@@ -13,50 +13,6 @@ over the past 8 months.
 Settle's goal is to explore a new financial trust primitive on the Internet,
 and doing so, construct a decentralized trust graph enabling (totally) free
 exchange of value without relying on a blockchain.
-
-Settle lets you:
-
-- `mint` (activate) assets (IOUs really) on your account.
-```
-settle mint EUR.2    # activates you@yourdomain[EUR.2] (EUR in cents)
-```
-(Assets are expressed as `{CODE}.{SCALE}` where the code is an alphanumeric
-string of your choice and the scale, or decimal length, is an integer
-representing the factor by which the asset native amount is scaled down when
-represented as a signed integer).
-
-- `trust` others's assets, that is, express your willingnes to issue your own
-  asset (**you@yourdomain.com[EUR.2]**) in exchange for an another user's asset
-(here **kurt@princetown.edu[USD.2]**) for up to a specified amount **10000**
-at the specified price (**106/100**):
-```
-settle trust kurt@princetown.edu USD.2 10000 with EUR.2 at 100/106
-```
-(Prices are expressed as `base_asset/quote_asset` where the base asset is your
-own asset (here **you@yourdomain.com[EUR.2]**) and the quote asset is the asset
-you trust (here **kurt@princetown.edu[USD.2]**).
-
-- `pay` arbitrary users in their own assets. Settle will discover a trust path
-(if it exists) between your assets (the ones you've minted and can issue, or
-the ones you hold a balance in) and the destination asset
-**alan@npl.co[EUR.2]**, without requiring to have a pre-existing direct trust
-relationship with **alan@npl.co.uk**:
-```
-settle pay alan@npl.co EUR.2 100
-```
-
-If you'd like to play with the `settle` command-line as you read this post, you
-can install it locally (under `~/.settle`) with the following command:
-```
-curl -L https://settle.network/install | sh && export PATH=$PATH:~/.settle
-```
-
-... and register on the publicly accessible mint **m.settle.network**:
-```
-settle register
-```
-
-All of the source code is also availabe at: https://github.com/spolu/settle
 
 *Value-exchange for humans and machines*
 
@@ -243,7 +199,7 @@ assets as well as a guide to setup your own mint:
 /Getting involved/
 
 At the end of the day, Settle's goal is to make currency issuance and exchange
-easy and available to everyone (even machines). I think that Settle can be
+easy and available to everyone (including machines). I think that Settle can be
 particularly useful in situations where currency issuance is implicit and
 therefore often lacks liquidity.
 
