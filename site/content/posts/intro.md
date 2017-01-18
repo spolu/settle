@@ -10,9 +10,10 @@ date = "2017-01-17T08:30:00-07:00"
 I'm happy to release Settle, a personal research project I've been working on
 over the past 8 months.
 
-Settle's goal is to explore a new financial trust primitive on the Internet,
-and doing so, construct a decentralized trust graph enabling (totally) free
-exchange of value without relying on a blockchain.
+Settle's goal is to explore a new financial trust primitive, and doing so,
+construct a decentralized trust graph enabling (totally) free exchange of value
+without relying on a blockchain particularly adapted to machine-to-machine
+transactions.
 
 *Value-exchange for humans and machines*
 

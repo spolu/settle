@@ -12,9 +12,10 @@ While cryptocurrencies are maintained by distributed ledgers with no central
 authority, their trust graph is still fully centralized: everyone has to trust
 the currency that powers the blockchain (**BTC**, **ETH**, **XLM**...).
 
-Settle's goal is to explore a new financial trust primitive on the Internet,
-and doing so, construct a decentralized trust graph enabling (totally) free
-exchange of value without relying on a blockchain.
+Settle's goal is to explore a new financial trust primitive, and doing so,
+construct a decentralized trust graph enabling (totally) free exchange of value
+without relying on a blockchain making it particularly adapted to
+machine-to-machine transactions.
 
 The Settle transaction protocol allows users to safely transfer value along
 pre-expressed trust paths without a shared blockchain (see [Mint
