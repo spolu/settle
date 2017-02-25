@@ -90,10 +90,10 @@ func (c *Trust) Help(
 	out.Valuf("    1/1 100/125 4500/1\n")
 	out.Normf("\n")
 	out.Normf("Examples:\n")
-	out.Valuf("  setlle trust von.neumann@ias.edu USD.2 150\n")
-	out.Valuf("  setlle trust kurt@princetown.edu USD.2 150 with USD.2 at 1/1\n")
-	out.Valuf("  setlle trust alan@npl.co.uk GBP.2 120 with USD.2 at 125/100\n")
-	out.Valuf("  setlle trust venture@risky.co USD.2 1200 with USD.2 at 100/75\n")
+	out.Valuf("  settle trust von.neumann@ias.edu USD.2 150\n")
+	out.Valuf("  settle trust kurt@princetown.edu USD.2 150 with USD.2 at 1/1\n")
+	out.Valuf("  settle trust alan@npl.co.uk GBP.2 120 with USD.2 at 125/100\n")
+	out.Valuf("  settle trust venture@risky.co USD.2 1200 with USD.2 at 100/75\n")
 	out.Normf("\n")
 }
 

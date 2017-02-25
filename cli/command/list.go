@@ -67,10 +67,10 @@ func (c *List) Help(
 	out.Valuf("    USD.2 HOUR-OF-WORK.0 BTC.7 EUR.2 DRINK.0\n")
 	out.Normf("\n")
 	out.Normf("Examples:\n")
-	out.Valuf("  setlle list assets\n")
-	out.Valuf("  setlle list balances\n")
-	out.Valuf("  setlle list balances USD.2\n")
-	out.Valuf("  setlle list trustlines EUR.2\n")
+	out.Valuf("  settle list assets\n")
+	out.Valuf("  settle list balances\n")
+	out.Valuf("  settle list balances USD.2\n")
+	out.Valuf("  settle list trustlines EUR.2\n")
 	out.Normf("\n")
 }
 
