@@ -55,9 +55,9 @@ func (c *Mint) Help(
 	out.Valuf("    USD.2 HOUR-OF-WORK.0 BTC.7 EUR.2 DRINK.0\n")
 	out.Normf("\n")
 	out.Normf("Examples:\n")
-	out.Valuf("  setlle mint USD.2\n")
-	out.Valuf("  setlle mint BTC.7\n")
-	out.Valuf("  setlle mint HOUR-Of-WORK.0\n")
+	out.Valuf("  settle mint USD.2\n")
+	out.Valuf("  settle mint BTC.7\n")
+	out.Valuf("  settle mint HOUR-Of-WORK.0\n")
 	out.Normf("\n")
 }
 

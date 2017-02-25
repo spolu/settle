@@ -108,7 +108,7 @@ func (c *Pay) Help(
 	out.Valuf("    42\n")
 	out.Normf("\n")
 	out.Normf("Examples:\n")
-	out.Valuf("  setlle pay von.neumann@ias.edu EUR.2 150\n")
+	out.Valuf("  settle pay von.neumann@ias.edu EUR.2 150\n")
 	out.Normf("\n")
 }
 
