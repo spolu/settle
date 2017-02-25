@@ -34,7 +34,8 @@ A few examples of valid assets are:
 
 - **stan@foobar.com[USD.2] 320** represents **$3.20** issued by Stan.
 - **info@sightglasscofee.com:AU-LAIT.0 2**: represents **2 au laits** issued by
-  Sightglass Coffee. "Au laits" are not fungible and therefore have scale of 0.
+  Sightglass Coffee. "Au laits" are not divisible and therefore have scale of
+  0.
 
 ## Authentication and registration
 
