@@ -35,6 +35,7 @@ Additional resources:
 
 - [Settle introductory blog post](posts/intro)
 - [Mint documentation](documentation)
+- [Source code](https://github.com/spolu/settle)
 
 ## Installation
 
