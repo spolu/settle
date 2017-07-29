@@ -1,8 +1,8 @@
 # cli
 
-  [ ] close (offer) command
   [ ] pay with path of length 2
-  [ ] list transactions (canonical or destination)
+  [x] list transactions (canonical or destination)
+  [x] close (offer) command
   [x] pay command
   [x] check existence of quote asset on trust
   [x] check credentials
