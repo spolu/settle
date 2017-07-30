@@ -8,7 +8,7 @@ exchange of value without relying on a blockchain.
 
 [https://settle.network](https://settle.network)
 
-## Installation
+## Installing the `settle` client
 
 Install `settle` locally (under `~/.settle`):
 ```
@@ -20,3 +20,18 @@ Or from the source, assuming you have [Go](https://golang.org/) installed:
 go get -u github.com/spolu/settle/...
 ```
 
+## Building and running tests
+
+To speed up build and test execution, run `go install` from the following
+vendored packages to avoid recompiling them at each build or test run:
+
+```
+./vendor/github.com/mattn/go-sqlite3
+```
+
+To run tests you may need to increase the number of open files permitted on
+your account with:
+
+```
+ulimit -n 4096
+```
