@@ -1,5 +1,6 @@
 # mint
 
+  [ ] allow cancellation from hop 0 by attempted propagation to last node
   [ ] transaction reference and metadata
   [ ] async webhooks
     [ ] asset.created
