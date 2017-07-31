@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS transactions(
   lock VARCHAR(256) NOT NULL,        -- lock = hex(scrypt(secret, id))
   secret VARCHAR(256),               -- lock secret
 
+  memo VARCHAR(1024),                -- memo
+
   PRIMARY KEY(owner, token)
 );
 `

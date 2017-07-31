@@ -259,3 +259,22 @@ func ValidatePropagation(
 
 	return &p, nil
 }
+
+// ValidateMemo validates a memo.
+func ValidateMemo(
+	ctx context.Context,
+	memo string,
+) (*string, error) {
+	if int64(len(memo)) > mint.MemoMaxLength {
+		return nil, errors.Trace(errors.NewUserErrorf(nil,
+			400, "memo_invalid",
+			"The memo you provided exceeds the maximum length (%d): %s.",
+			mint.MemoMaxLength, memo,
+		))
+	}
+
+	if len(memo) == 0 {
+		return nil, nil
+	}
+	return &memo, nil
+}
