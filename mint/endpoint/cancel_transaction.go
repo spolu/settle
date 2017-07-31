@@ -194,8 +194,8 @@ func (e *CancelTransaction) ExecuteAuthenticated(
 
 	// We mark the transaction as cancelled if the hop of this is the minimal
 	// one for this mint. Cancelation checks only use operations and crossings
-	// anre the status of a transaction is mostly indicative, but we want to
-	// mark it as cancelled only after it is cancelled at all hops.
+	// so the status of a transaction is mostly indicative, but we want to mark
+	// it as cancelled only after it is cancelled at all hops.
 	if e.Hop == *minHop {
 		e.Tx.Status = mint.TxStCanceled
 		err = e.Tx.Save(ctx)
@@ -272,7 +272,7 @@ func (e *CancelTransaction) ExecutePropagated(
 	pl, err := plan.Compute(ctx, e.Client, e.Tx, false)
 	if err != nil {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(err,
-			402, "settlement_failed",
+			402, "cancellation_failed",
 			"The plan computation for the transaction failed: %s", e.ID,
 		))
 	}
@@ -289,7 +289,7 @@ func (e *CancelTransaction) ExecutePropagated(
 	if int(e.Hop) >= len(e.Plan.Hops) ||
 		e.Plan.Hops[e.Hop].Mint != mint.GetHost(ctx) {
 		return nil, nil, errors.Trace(errors.NewUserErrorf(nil,
-			402, "settlement_failed",
+			402, "cancellation_failed",
 			"The hop provided (%d) does not match the current mint (%s) for "+
 				"transaction: %s", e.Hop, mint.GetHost(ctx), e.ID,
 		))
@@ -319,8 +319,8 @@ func (e *CancelTransaction) ExecutePropagated(
 
 	// We mark the transaction as cancelled if the hop of this is the minimal
 	// one for this mint. Cancelation checks only use operations and crossings
-	// anre the status of a transaction is mostly indicative, but we want to
-	// mark it as cancelled only after it is cancelled at all hops.
+	// so the status of a transaction is mostly indicative, but we want to mark
+	// it as cancelled only after it is cancelled at all hops.
 	if e.Hop == *minHop {
 		e.Tx.Status = mint.TxStCanceled
 		err = e.Tx.Save(ctx)
@@ -339,7 +339,7 @@ func (e *CancelTransaction) ExecutePropagated(
 		return nil, nil, errors.Trace(err) // 500
 	}
 
-	// Commit the transaction as well as operations and crossings as settled.
+	// Commit the transaction as well as operations and crossings as canceled..
 	db.Commit(ctx)
 
 	err = e.Propagate(ctx)
