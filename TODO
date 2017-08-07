@@ -1,7 +1,7 @@
 # mint
 
-  [ ] allow cancellation from hop 0 by attempted propagation to last node
-  [ ] transaction reference and metadata
+  [ ] allow cancellation from hop k<n by attempted propagation to last node
+  [ ] transaction memo
   [ ] async webhooks
     [ ] asset.created
     [ ] balance.updated

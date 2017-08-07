@@ -70,6 +70,7 @@ func TestCreateTransactionWith2Offers(
 			"pair":        {fmt.Sprintf("%s/%s", a[0].Name, a[2].Name)},
 			"amount":      {"10"},
 			"destination": {u[2].Address},
+			"memo":        {"test-20162017"},
 			"path[]": {
 				o[1].ID,
 				o[2].ID,
@@ -111,6 +112,7 @@ func TestCreateTransactionWith2Offers(
 	assert.Equal(t, mint.TxStReserved, tx0.Operations[0].Status)
 	assert.Equal(t, tx0.ID, *tx0.Operations[0].Transaction)
 	assert.Equal(t, int8(0), *tx0.Operations[0].TransactionHop)
+	assert.Equal(t, "test-20162017", *tx0.Memo)
 
 	// Check transaction on m[1].
 	status, raw = m[1].Get(t, nil, fmt.Sprintf("/transactions/%s", tx0.ID))
@@ -162,6 +164,7 @@ func TestCreateTransactionWith2Offers(
 	assert.Equal(t, mint.TxStReserved, tx1.Operations[0].Status)
 	assert.Equal(t, tx1.ID, *tx1.Operations[0].Transaction)
 	assert.Equal(t, int8(1), *tx1.Operations[0].TransactionHop)
+	assert.Equal(t, "test-20162017", *tx1.Memo)
 
 	// Check transaction on m[2].
 	status, raw = m[2].Get(t, nil, fmt.Sprintf("/transactions/%s", tx0.ID))
@@ -213,6 +216,7 @@ func TestCreateTransactionWith2Offers(
 	assert.Equal(t, mint.TxStReserved, tx2.Operations[0].Status)
 	assert.Equal(t, tx2.ID, *tx2.Operations[0].Transaction)
 	assert.Equal(t, int8(2), *tx2.Operations[0].TransactionHop)
+	assert.Equal(t, "test-20162017", *tx2.Memo)
 }
 
 func TestCreateTransactionWithInsufficientOfferAmount(
@@ -351,6 +355,7 @@ func TestCreateTransactionWith1Offer(
 	assert.Equal(t, big.NewInt(10), tx0.Operations[0].Amount)
 	assert.Equal(t, u[1].Address, tx0.Operations[0].Destination)
 	assert.Equal(t, u[0].Address, tx0.Operations[0].Source)
+	assert.Nil(t, tx0.Memo)
 
 	// Check transaction on m[1].
 	status, raw = m[1].Get(t, nil, fmt.Sprintf("/transactions/%s", tx0.ID))
@@ -373,6 +378,7 @@ func TestCreateTransactionWith1Offer(
 	assert.Equal(t, mint.TxStReserved, tx1.Operations[0].Status)
 	assert.Equal(t, tx1.ID, *tx1.Operations[0].Transaction)
 	assert.Equal(t, int8(1), *tx1.Operations[0].TransactionHop)
+	assert.Nil(t, tx1.Memo)
 }
 
 func TestCreateTransactionWithRemoteBaseAsset(
