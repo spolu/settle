@@ -247,7 +247,6 @@ func TestSettleTransactionWithRemoteBaseAsset(
 			"pair":        {fmt.Sprintf("%s/%s", a[1].Name, a[1].Name)},
 			"amount":      {"11"},
 			"destination": {u[0].Address},
-			"memo":        {"test-20162017"},
 			"path[]":      {},
 		})
 
@@ -269,6 +268,7 @@ func TestSettleTransactionWithRemoteBaseAsset(
 			"pair":        {fmt.Sprintf("%s/%s", a[1].Name, a[2].Name)},
 			"amount":      {"10"},
 			"destination": {u[2].Address},
+			"memo":        {"test-20162017"},
 			"path[]": {
 				o[2].ID,
 			},
@@ -292,7 +292,7 @@ func TestSettleTransactionWithRemoteBaseAsset(
 	assert.Equal(t, mint.TxStSettled, tx0.Status)
 	assert.Equal(t, 0, len(tx0.Operations))
 	assert.Equal(t, 0, len(tx0.Crossings))
-	assert.Equal(t, "test-20162107", *tx0.Memo)
+	assert.Equal(t, "test-20162017", *tx0.Memo)
 
 	// Check transaction on m[1].
 	status, raw = m[1].Get(t, nil, fmt.Sprintf("/transactions/%s", tx0.ID))
@@ -305,7 +305,7 @@ func TestSettleTransactionWithRemoteBaseAsset(
 	assert.Equal(t, mint.TxStSettled, tx1.Status)
 	assert.Equal(t, 0, len(tx1.Crossings))
 	assert.Equal(t, 1, len(tx1.Operations))
-	assert.Equal(t, "test-20162107", *tx1.Memo)
+	assert.Equal(t, "test-20162017", *tx1.Memo)
 
 	assert.Equal(t, mint.TxStSettled, tx1.Operations[0].Status)
 
@@ -320,7 +320,7 @@ func TestSettleTransactionWithRemoteBaseAsset(
 	assert.Equal(t, mint.TxStSettled, tx2.Status)
 	assert.Equal(t, 1, len(tx2.Crossings))
 	assert.Equal(t, 1, len(tx2.Operations))
-	assert.Equal(t, "test-20162107", *tx2.Memo)
+	assert.Equal(t, "test-20162017", *tx2.Memo)
 
 	assert.Equal(t, mint.TxStSettled, tx2.Crossings[0].Status)
 	assert.Equal(t, mint.TxStSettled, tx2.Operations[0].Status)
