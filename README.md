@@ -15,7 +15,7 @@ Install `settle` locally (under `~/.settle`):
 curl -L https://settle.network/install | sh && export PATH=$PATH:~/.settle
 ```
 
-Or from the source, assuming you have [Go](https://golang.org/) installed:
+Or from the source, assuming you have [Go](https://golang.org/) installed (version 1.10 or higher):
 ```
 go get -u github.com/spolu/settle/...
 ```
