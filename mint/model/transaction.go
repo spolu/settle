@@ -35,6 +35,8 @@ type Transaction struct {
 
 	Lock   string
 	Secret *string
+
+	Memo *string
 }
 
 // NewTransactionResource generates a new resource.
@@ -57,6 +59,7 @@ func NewTransactionResource(
 		Path:        []string(transaction.Path),
 		Status:      transaction.Status,
 		Lock:        transaction.Lock,
+		Memo:        transaction.Memo,
 		Operations:  []mint.OperationResource{},
 		Crossings:   []mint.CrossingResource{},
 	}
@@ -84,6 +87,7 @@ func CreateCanonicalTransaction(
 	destination string,
 	path []string,
 	status mint.TxStatus,
+	memo *string,
 ) (*Transaction, error) {
 	tok := token.New("transaction")
 
@@ -109,16 +113,18 @@ func CreateCanonicalTransaction(
 
 		Lock:   lock,
 		Secret: &secret,
+
+		Memo: memo,
 	}
 
 	ext := db.Ext(ctx, "mint")
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO transactions
   (owner, token, created, propagation, base_asset, quote_asset,
-   amount, destination, path, status, lock, secret)
+   amount, destination, path, status, lock, secret, memo)
 VALUES
   (:owner, :token, :created, :propagation, :base_asset, :quote_asset,
-   :amount, :destination, :path, :status,  :lock, :secret)
+   :amount, :destination, :path, :status,  :lock, :secret, :memo)
 `, transaction); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:
@@ -150,6 +156,7 @@ func CreatePropagatedTransaction(
 	path []string,
 	status mint.TxStatus,
 	lock string,
+	memo *string,
 ) (*Transaction, error) {
 	transaction := Transaction{
 		Owner:       owner,
@@ -165,16 +172,17 @@ func CreatePropagatedTransaction(
 		Status:      status,
 		Lock:        lock,
 		Secret:      nil,
+		Memo:        memo,
 	}
 
 	ext := db.Ext(ctx, "mint")
 	if _, err := sqlx.NamedExec(ext, `
 INSERT INTO transactions
   (owner, token, created, propagation, base_asset, quote_asset,
-   amount, destination, path, status, lock, secret)
+   amount, destination, path, status, lock, secret, memo)
 VALUES
   (:owner, :token, :created, :propagation, :base_asset, :quote_asset,
-   :amount, :destination, :path, :status, :lock, :secret)
+  :amount, :destination, :path, :status, :lock, :secret, :memo)
 `, transaction); err != nil {
 		switch err := err.(type) {
 		case *pq.Error:

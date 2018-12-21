@@ -11,6 +11,8 @@ const (
 	// TransactionExpiryMs is the time it takes to attempt to cancel a
 	// transaction for this mint. Expressed in ms.
 	TransactionExpiryMs int64 = 1000 * 60 * 60
+	// MemoMaxLength is the maximal length of a transaction's memo string.
+	MemoMaxLength int64 = 1024
 )
 
 // PgType is the propagation type of an object.
@@ -139,6 +141,8 @@ type TransactionResource struct {
 	Status TxStatus `json:"status"`
 	Lock   string   `json:"lock"`
 	Secret *string  `json:"secret"`
+
+	Memo *string `json:"memo"`
 
 	Operations []OperationResource `json:"operations"`
 	Crossings  []CrossingResource  `json:"crossings"`

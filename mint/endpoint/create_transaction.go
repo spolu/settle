@@ -44,6 +44,7 @@ type CreateTransaction struct {
 	Amount      big.Int
 	Destination string
 	Path        []string
+	Memo        *string
 
 	// State
 	Tx   *model.Transaction
@@ -133,6 +134,13 @@ func (e *CreateTransaction) Validate(
 			return errors.Trace(err)
 		}
 		e.Path = path
+
+		// Validate memo.
+		memo, err := ValidateMemo(ctx, r.PostFormValue("memo"))
+		if err != nil {
+			return errors.Trace(err)
+		}
+		e.Memo = memo
 	}
 
 	return nil
@@ -172,6 +180,7 @@ func (e *CreateTransaction) ExecuteCanonical(
 		e.Destination,
 		model.OfPath(e.Path),
 		mint.TxStPending,
+		e.Memo,
 	)
 	if err != nil {
 		return nil, nil, errors.Trace(err) // 500
@@ -326,6 +335,7 @@ func (e *CreateTransaction) ExecutePropagated(
 			model.OfPath(e.Path),
 			mint.TxStPending,
 			transaction.Lock,
+			transaction.Memo,
 		)
 		if err != nil {
 			return nil, nil, errors.Trace(err) // 500
